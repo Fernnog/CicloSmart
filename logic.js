@@ -2,129 +2,11 @@
 
 /**
  * CICLOSMART CORE v1.2.0
- * Features: SRS Engine, ICS Export, LocalStorage Persistence, Heatmap & Visual Refinements
+ * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression Logic
  */
 
 // ==========================================
-// 1.1. (Helper de Toast)
-// ==========================================
-
-const toast = {
-    show: (msg, type = 'info') => {
-        const container = document.getElementById('toast-container');
-        const el = document.createElement('div');
-        const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 'bg-slate-800 text-white';
-        
-        el.className = `toast show mb-2 p-4 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 min-w-[320px] max-w-md ${colors}`;
-        el.innerHTML = msg; // Permite HTML na mensagem
-        
-        container.appendChild(el);
-        setTimeout(() => {
-            el.classList.remove('show');
-            setTimeout(() => el.remove(), 300);
-        }, 5000);
-    }
-};
-
-// 2. SUBSTITUIR COMPLETAMENTE a função 'handleNewEntry' dentro do objeto 'app'
-handleNewEntry: (e) => {
-    e.preventDefault();
-    
-    // Coleta dados
-    const select = document.getElementById('input-subject');
-    const subjectName = select.options[select.selectedIndex].text;
-    const subjectColor = select.options[select.selectedIndex].dataset.color;
-    const topic = document.getElementById('input-topic').value;
-    const studyTime = parseInt(document.getElementById('input-study-time').value);
-
-    // CONSTANTES DE REGRA DE NEGÓCIO
-    // Fatores de compressão: R1=20%, R2=10%, R3=5% do tempo original
-    const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
-    // Teto máximo de revisão: 40% da capacidade total diária
-    const REVIEW_CEILING_RATIO = 0.40; 
-    const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
-
-    const today = new Date();
-    const newReviews = [];
-    let blocker = null;
-
-    // SIMULAÇÃO: Verifica se adicionar estas revisões quebra a regra dos 40% no futuro
-    for (let interval of CONFIG.intervals) {
-        const targetDate = new Date();
-        targetDate.setDate(today.getDate() + interval);
-        const isoDate = targetDate.toISOString().split('T')[0];
-        
-        // Tempo estimado comprimido (mínimo de 2 min)
-        const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
-
-        // Carga já existente nesse dia futuro (apenas pendentes)
-        const existingLoad = store.reviews
-            .filter(r => r.date === isoDate && r.status !== 'DONE')
-            .reduce((acc, curr) => acc + curr.time, 0);
-        
-        const projectedLoad = existingLoad + estimatedTime;
-
-        // A REGRA DE OURO: Se a projeção passar de 40% da capacidade total
-        if (projectedLoad > reviewLimitMinutes) {
-            blocker = {
-                date: formatDateDisplay(isoDate),
-                load: projectedLoad,
-                limit: reviewLimitMinutes,
-                interval: interval
-            };
-            break; // Encontrou um bloqueio, para a simulação
-        }
-
-        newReviews.push({
-            id: Date.now() + interval,
-            subject: subjectName,
-            color: subjectColor,
-            topic: topic,
-            time: estimatedTime,
-            date: isoDate,
-            type: interval === 1 ? '24h' : interval === 7 ? '7d' : '30d',
-            status: 'PENDING'
-        });
-    }
-
-    // AÇÃO: Bloquear ou Salvar
-    if (blocker) {
-        // Encontrar sugestão de data (Lógica simplificada: +1 dia após o bloqueio)
-        // Numa implementação completa, buscaríamos o próximo slot livre recursivamente
-        const suggestDate = new Date();
-        suggestDate.setDate(today.getDate() + 1); 
-        const suggestStr = formatDateDisplay(suggestDate.toISOString().split('T')[0]);
-
-        toast.show(`
-            <div>
-                <strong class="block text-red-700 mb-1"><i data-lucide="shield-alert" class="inline w-4 h-4"></i> Bloqueio de Segurança</strong>
-                <span class="block mb-2">Adicionar este estudo faria o dia <b>${blocker.date}</b> exceder o limite de revisões (40%).</span>
-                <span class="text-xs bg-white/50 px-2 py-1 rounded border border-red-200 block">
-                    Carga Projetada: <b>${blocker.load}m</b> / Limite: <b>${blocker.limit}m</b>
-                </span>
-                <div class="mt-2 text-xs font-bold text-red-800">
-                    💡 Sugestão: Dedique hoje apenas a revisões pendentes. Tente adicionar matéria nova a partir de ${suggestStr}.
-                </div>
-            </div>
-        `, 'error');
-        lucide.createIcons(); // Atualiza ícones dentro do toast
-        return; 
-    }
-
-    // Se passou na validação, salva
-    store.addReviews(newReviews);
-    ui.toggleModal('modal-new', false);
-    toast.show(`
-        <div>
-            <strong class="block text-emerald-400 mb-1">Sucesso!</strong>
-            Estudo registrado. Revisões agendadas com compressão inteligente.
-        </div>
-    `);
-    e.target.reset();
-},
-
-// ==========================================
-// 1.2. CONFIGURAÇÃO & STORE (PERSISTÊNCIA)
+// 1. CONFIGURAÇÃO & STORE (PERSISTÊNCIA)
 // ==========================================
 
 const CONFIG = {
@@ -142,42 +24,26 @@ const defaultSubjects = [
 
 const changelogData = [
     { 
-        version: '1.0.2', 
+        version: '1.2.0', 
         date: 'Hoje', 
         changes: [
-            '🛡️ <strong>Guardião de Capacidade:</strong> O sistema impede novos registros se houver sobrecarga futura (Bola de Neve).',
-            '📉 <strong>Compressão de Tempo:</strong> Informe o tempo de estudo e calculamos as revisões (20% -> 10% -> 5%).',
-            '🔔 <strong>Notificações Inteligentes:</strong> Alertas visuais (Toasts) substituem pop-ups intrusivos.'
+            '🛡️ <strong>Trava de Segurança (40/60):</strong> Bloqueio automático de novos estudos se a carga de revisão futura exceder 40% da capacidade.',
+            '📉 <strong>Compressão Temporal:</strong> Tempo de revisão calculado automaticamente (20%/10%/5%) baseado no tempo de estudo original.',
+            '🔔 <strong>Notificações Inteligentes:</strong> Feedback visual (Toasts) para ações e bloqueios.'
         ] 
     },
     { 
         version: '1.0.1', 
         date: 'Anterior', 
         changes: [
-            '✨ <strong>Novo Radar de Carga:</strong> Visualize sua ocupação futura em um calendário térmico (Heatmap).',
-            '🎨 <strong>Refinamento Visual:</strong> Nome da matéria agora segue a cor da disciplina; Badges de tempo com visual neutro.',
-            '✅ <strong>Feedback de Conclusão:</strong> Cards marcados como feitos ficam riscados e com menor opacidade.',
-            '⚙️ <strong>Configuração Dinâmica:</strong> Defina sua capacidade de minutos por dia diretamente no Radar.'
+            '✨ Novo Radar de Carga (Heatmap).',
+            '🎨 Refinamento Visual e Feedback de Conclusão.'
         ] 
     },
     { 
         version: '1.0.0', 
-        date: 'Anterior', 
-        changes: [
-            'Persistência de Dados (LocalStorage)', 
-            'Gestão de Matérias Personalizadas', 
-            'Edição de Revisões e Exclusão', 
-            'Navegação por Abas no Mobile'
-        ] 
-    },
-    { 
-        version: '0.9.0', 
-        date: 'Alpha', 
-        changes: [
-            'MVP Inicial', 
-            'Algoritmo SRS', 
-            'Exportação ICS'
-        ] 
+        date: 'Legacy', 
+        changes: ['Persistência LocalStorage', 'Algoritmo SRS Básico'] 
     }
 ];
 
@@ -193,26 +59,25 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
-// Sistema de Notificações (Toast)
+// Utilitário de Notificação (Toast)
 const toast = {
     show: (msg, type = 'info') => {
         const container = document.getElementById('toast-container');
-        // Fallback se o container não existir no HTML ainda
-        if(!container) return alert(msg.replace(/<[^>]*>?/gm, '')); 
+        if(!container) return; // Segurança caso o container não exista no HTML ainda
         
         const el = document.createElement('div');
-        const colors = type === 'error' ? 'bg-red-100 border-red-500 text-red-700' : 'bg-slate-800 text-white';
+        const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 'bg-slate-800 text-white';
         
-        el.className = `toast show mb-2 p-4 rounded-lg shadow-lg border-l-4 text-sm font-medium flex items-center gap-2 min-w-[300px] ${colors}`;
-        el.innerHTML = `<span>${msg}</span>`;
+        el.className = `toast show mb-2 p-4 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 min-w-[320px] max-w-md ${colors}`;
+        el.innerHTML = msg; // Permite HTML na mensagem
         
         container.appendChild(el);
         
-        // Remove após 4 segundos
+        // Remove automaticamente após 5 segundos
         setTimeout(() => {
             el.classList.remove('show');
             setTimeout(() => el.remove(), 300);
-        }, 4000);
+        }, 5000);
     }
 };
 
@@ -316,83 +181,113 @@ const app = {
         ui.render();
         
         // Listeners
-        document.getElementById('form-study').addEventListener('submit', app.handleNewEntry);
+        const form = document.getElementById('form-study');
+        if(form) form.addEventListener('submit', app.handleNewEntry);
         
         // Define aba inicial mobile
         ui.switchTab('today');
     },
 
+    // --- NOVA LÓGICA DE ENTRADA COM TRAVA 40/60 E COMPRESSÃO ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
-        // Coleta dados do Select de Matéria
+        // Coleta dados
         const select = document.getElementById('input-subject');
-        const selectedOption = select.options[select.selectedIndex];
-        const subjectName = selectedOption.text;
-        const subjectColor = selectedOption.dataset.color;
-
+        const subjectName = select.options[select.selectedIndex].text;
+        const subjectColor = select.options[select.selectedIndex].dataset.color;
         const topic = document.getElementById('input-topic').value;
         
-        // MUDANÇA v1.0.2: Agora capturamos o tempo de ESTUDO original
-        // Importante: O HTML deve ter o ID atualizado para 'input-study-time'
-        const studyTimeElement = document.getElementById('input-study-time');
-        // Fallback para input antigo caso o HTML não tenha sido atualizado ainda
-        const studyTime = parseInt(studyTimeElement ? studyTimeElement.value : document.getElementById('input-time').value);
+        // Captura o TEMPO DE ESTUDO (Matéria Nova), não a revisão
+        const studyTimeInput = document.getElementById('input-study-time');
+        const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; // Fallback seguro
 
-        // Fatores de Compressão (Neurociência): R1=20%, R2=10%, R3=5%
-        const compressionFactors = { 1: 0.20, 7: 0.10, 30: 0.05 };
+        // CONSTANTES DE REGRA DE NEGÓCIO (Neurociência)
+        // Fatores de compressão: R1=20%, R2=10%, R3=5% do tempo original
+        const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
+        
+        // Teto máximo de revisão: 40% da capacidade total diária
+        // Ex: Se Capacidade = 240min (4h), Teto de Revisão = 96min.
+        const REVIEW_CEILING_RATIO = 0.40; 
+        const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
         const today = new Date();
         const newReviews = [];
-        let overloadedDate = null;
+        let blocker = null;
 
-        // Loop de Simulação e Validação
+        // SIMULAÇÃO: Verifica se adicionar estas revisões quebra a regra dos 40% no futuro
         for (let interval of CONFIG.intervals) {
-            const rDate = new Date();
-            rDate.setDate(today.getDate() + interval);
-            const dateStr = rDate.toISOString().split('T')[0];
+            const targetDate = new Date();
+            targetDate.setDate(today.getDate() + interval);
+            const isoDate = targetDate.toISOString().split('T')[0];
             
-            // Cálculo do Tempo de Revisão Comprimido
-            const factor = compressionFactors[interval] || 0.1; 
-            const estimatedReviewTime = Math.ceil(studyTime * factor);
-            const finalTime = Math.max(2, estimatedReviewTime); // Mínimo de 2 minutos
+            // Tempo estimado comprimido (mínimo de 2 min para ser viável)
+            const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
-            // VERIFICAÇÃO DE CAPACIDADE (Bola de Neve)
-            // 1. Calcula carga existente no dia alvo
+            // Carga já existente nesse dia futuro (apenas pendentes)
             const existingLoad = store.reviews
-                .filter(r => r.date === dateStr && r.status !== 'DONE')
+                .filter(r => r.date === isoDate && r.status !== 'DONE')
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
-            // 2. Verifica se estoura a capacidade
-            if ((existingLoad + finalTime) > store.capacity) {
-                overloadedDate = formatDateDisplay(dateStr);
-                // Interrompe o loop imediatamente ao encontrar o primeiro gargalo
-                break; 
+            const projectedLoad = existingLoad + estimatedTime;
+
+            // A REGRA DE OURO: Se a projeção passar de 40% da capacidade total
+            if (projectedLoad > reviewLimitMinutes) {
+                blocker = {
+                    date: formatDateDisplay(isoDate),
+                    load: projectedLoad,
+                    limit: reviewLimitMinutes,
+                    interval: interval
+                };
+                break; // Encontrou um bloqueio, para a simulação imediatamente
             }
 
-            const rType = interval === 1 ? '24h' : interval === 7 ? '7d' : '30d';
-
+            // Prepara o objeto se passou no teste
             newReviews.push({
-                id: Date.now() + interval, // Simple ID gen
+                id: Date.now() + interval, // ID único
                 subject: subjectName,
                 color: subjectColor,
                 topic: topic,
-                time: finalTime,
-                date: dateStr,
-                type: rType,
+                time: estimatedTime,
+                date: isoDate,
+                type: interval === 1 ? '24h' : interval === 7 ? '7d' : '30d',
                 status: 'PENDING'
             });
         }
 
-        // Decisão do Guardião
-        if (overloadedDate) {
-            toast.show(`⚠️ <b>Sobrecarga Detectada!</b><br>Não é possível adicionar. O dia ${overloadedDate} excederá sua capacidade diária.`, 'error');
-            return; // ABORTA A OPERAÇÃO
+        // AÇÃO: Bloquear ou Salvar
+        if (blocker) {
+            // Encontrar sugestão de data simples (dia seguinte ao estudo atual)
+            const suggestDate = new Date();
+            suggestDate.setDate(today.getDate() + 1); 
+            const suggestStr = formatDateDisplay(suggestDate.toISOString().split('T')[0]);
+
+            toast.show(`
+                <div>
+                    <strong class="block text-red-700 mb-1"><i data-lucide="shield-alert" class="inline w-4 h-4"></i> Bloqueio de Segurança</strong>
+                    <span class="block mb-2">Adicionar este estudo faria o dia <b>${blocker.date}</b> exceder o limite de revisões (40%).</span>
+                    <span class="text-xs bg-white/50 px-2 py-1 rounded border border-red-200 block mb-1">
+                        Carga Projetada: <b>${blocker.load}m</b> / Limite: <b>${blocker.limit}m</b>
+                    </span>
+                    <div class="mt-2 text-xs font-bold text-red-800">
+                        💡 Sugestão: Dedique hoje apenas a revisões pendentes. Tente adicionar matéria nova a partir de ${suggestStr}.
+                    </div>
+                </div>
+            `, 'error');
+            
+            if(window.lucide) lucide.createIcons(); // Atualiza ícones dentro do toast
+            return; // ABORTA
         }
 
+        // Se passou na validação, salva
         store.addReviews(newReviews);
         ui.toggleModal('modal-new', false);
-        toast.show('✅ Estudo registrado e revisões agendadas com sucesso!');
+        toast.show(`
+            <div>
+                <strong class="block text-emerald-400 mb-1">Sucesso!</strong>
+                Estudo registrado. Revisões agendadas com compressão inteligente.
+            </div>
+        `);
         e.target.reset();
     },
 
@@ -404,6 +299,8 @@ const app = {
             store.save();
             ui.renderHeatmap(); // Atualiza visual do grid
             ui.render(); // Atualiza barra de progresso principal
+            // Opcional: Feedback visual
+            // toast.show(`Capacidade ajustada para ${min} min/dia`);
         }
     },
 
@@ -416,7 +313,7 @@ const app = {
             store.addSubject(nameInput.value.trim(), colorInput.value);
             nameInput.value = ''; // Limpar input
         } else {
-            toast.show("Digite o nome da matéria.", 'error');
+            alert("Digite o nome da matéria.");
         }
     },
 
@@ -430,7 +327,6 @@ const app = {
             const newTime = prompt("Editar Tempo (min):", r.time);
             if (newTime !== null && !isNaN(newTime)) {
                 store.updateReview(id, newTopic, newTime);
-                toast.show("Revisão atualizada.");
             }
         }
     },
@@ -438,7 +334,7 @@ const app = {
     // Exportação ICS
     exportICS: () => {
         const pendings = store.reviews.filter(r => r.status === 'PENDING');
-        if (pendings.length === 0) return toast.show("Nada para exportar.", 'error');
+        if (pendings.length === 0) return alert("Nada para exportar.");
 
         let icsLines = [
             "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v1//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
@@ -470,8 +366,6 @@ const app = {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        toast.show("Download do arquivo .ics iniciado!");
     }
 };
 
@@ -483,7 +377,8 @@ const ui = {
     // --- Lógica de Abas (Mobile) ---
     switchTab: (tabName) => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`tab-${tabName}`).classList.add('active');
+        const btn = document.getElementById(`tab-${tabName}`);
+        if(btn) btn.classList.add('active');
 
         const cols = document.querySelectorAll('.kanban-column');
         cols.forEach(c => {
@@ -492,13 +387,16 @@ const ui = {
         });
 
         const activeCol = document.getElementById(`col-${tabName}`);
-        activeCol.classList.remove('hidden');
-        activeCol.classList.add('flex');
+        if(activeCol) {
+            activeCol.classList.remove('hidden');
+            activeCol.classList.add('flex');
+        }
     },
 
     // --- Modais ---
     toggleModal: (id, show) => {
         const el = document.getElementById(id);
+        if(!el) return;
         if (show) {
             el.classList.remove('hidden');
             setTimeout(() => el.classList.remove('opacity-0'), 10);
@@ -511,7 +409,6 @@ const ui = {
     
     // --- Heatmap (Radar de Carga) ---
     openHeatmapModal: () => {
-        // Popula o input com a capacidade atual salva
         const input = document.getElementById('setting-capacity');
         if(input) input.value = store.capacity;
         
@@ -533,16 +430,15 @@ const ui = {
                 // Calcular carga do dia
                 const dayLoad = store.reviews
                     .filter(r => r.date === isoDate && r.status !== 'DONE')
-                    .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0); 
+                    .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
                 
-                // Evitar divisão por zero se capacity for inválido
                 const capacity = store.capacity > 0 ? store.capacity : 240;
                 const percentage = (dayLoad / capacity) * 100;
                 
-                // Lógica de Cores (Mantida)
+                // Lógica de Cores
                 let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700';
                 if (dayLoad === 0) {
-                    colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60'; // Dia vazio fica cinza
+                    colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60';
                 } else if (percentage > 100) {
                     colorClass = 'bg-slate-800 border-slate-900 text-white'; 
                 } else if (percentage > 80) {
@@ -586,23 +482,27 @@ const ui = {
     // --- Renderização de Matérias ---
     initSubjects: () => {
         const select = document.getElementById('input-subject');
-        select.innerHTML = store.subjects.map(s => 
-            `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
-        ).join('');
+        if(select) {
+            select.innerHTML = store.subjects.map(s => 
+                `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
+            ).join('');
+        }
 
         const list = document.getElementById('subject-list');
-        list.innerHTML = store.subjects.map(s => `
-            <li class="flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-lg">
-                <div class="flex items-center gap-3">
-                    <div class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${s.color}"></div>
-                    <span class="text-sm font-medium text-slate-700">${s.name}</span>
-                </div>
-                <button onclick="store.removeSubject('${s.id}')" class="text-slate-400 hover:text-red-500 transition-colors" title="Excluir">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </li>
-        `).join('');
-        lucide.createIcons();
+        if(list) {
+            list.innerHTML = store.subjects.map(s => `
+                <li class="flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${s.color}"></div>
+                        <span class="text-sm font-medium text-slate-700">${s.name}</span>
+                    </div>
+                    <button onclick="store.removeSubject('${s.id}')" class="text-slate-400 hover:text-red-500 transition-colors" title="Excluir">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </li>
+            `).join('');
+            if(window.lucide) lucide.createIcons();
+        }
     },
 
     // --- Renderização Principal (Kanban) ---
@@ -613,6 +513,9 @@ const ui = {
             today: document.getElementById('list-today'),
             future: document.getElementById('list-future')
         };
+
+        // Verifica se elementos existem antes de manipular
+        if(!containers.late || !containers.today || !containers.future) return;
 
         Object.values(containers).forEach(el => el.innerHTML = '');
 
@@ -652,13 +555,12 @@ const ui = {
         if(!counts.future) containers.future.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Sem previsões.</div>`;
 
         ui.updateCapacityStats(todayLoad);
-        lucide.createIcons();
+        if(window.lucide) lucide.createIcons();
     },
 
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
-        // Estilos Condicionais
         const containerClasses = isDone 
             ? 'bg-slate-50 border-slate-200 opacity-60' 
             : 'bg-white border-slate-200 shadow-sm hover:shadow-md';

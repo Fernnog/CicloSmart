@@ -6,18 +6,14 @@
     <title>CicloSmart | Plataforma de Repetição Espaçada</title>
     <meta name="description" content="MVP de Gestão de Estudos com Algoritmo SRS e Exportação ICS">
     
-    <!-- Bibliotecas Externas (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- CSS Customizado -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
 
-    <!-- === HEADER: Navegação e Controles === -->
     <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm z-20 shrink-0">
-        <!-- Identidade e Versão -->
         <div class="flex items-center gap-3">
             <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-indigo-200 shadow-md hidden md:block">
                 <i data-lucide="brain-circuit" class="w-6 h-6"></i>
@@ -25,12 +21,11 @@
             <div>
                 <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
                 <button onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
-                    v1.0.2 • Changelog
+                    v1.3.0 • Changelog
                 </button>
             </div>
         </div>
 
-        <!-- Barra de Capacidade (Visível apenas em Desktop) -->
         <div class="flex-1 max-w-lg mx-8 hidden md:block">
             <div class="flex justify-between text-xs mb-1.5 font-medium">
                 <span class="text-slate-500">Carga Horária Estimada (Hoje)</span>
@@ -43,7 +38,6 @@
             </div>
         </div>
 
-        <!-- Botões de Ação -->
         <div class="flex gap-2">
             <button onclick="ui.toggleSubjectModal(true)" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Gerenciar Matérias">
                 <i data-lucide="settings-2" class="w-5 h-5"></i>
@@ -54,7 +48,6 @@
                 Exportar
             </button>
             
-            <!-- Botão Radar de Carga -->
             <button onclick="ui.openHeatmapModal()" class="hidden md:flex group items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Analisar Carga">
                 <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
                 Radar de Carga
@@ -67,7 +60,6 @@
         </div>
     </header>
 
-    <!-- === NAVEGAÇÃO ABAS (Visível apenas em Mobile) === -->
     <nav class="md:hidden flex bg-white border-b border-slate-200 overflow-x-auto shrink-0 z-10">
         <button onclick="ui.switchTab('late')" id="tab-late" class="tab-btn flex-1 py-3 text-sm font-medium text-slate-500 text-center border-b-2 border-transparent transition-colors focus:outline-none">
             Atrasados (<span id="badge-late-mobile">0</span>)
@@ -80,10 +72,8 @@
         </button>
     </nav>
 
-    <!-- === MAIN: Dashboard Kanban Temporal === -->
     <main class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-200 overflow-hidden relative">
         
-        <!-- COLUNA 1: Atrasados -->
         <section id="col-late" class="kanban-column hidden md:flex flex-col bg-slate-50 h-full min-w-0">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-red-600 flex items-center gap-2 text-sm uppercase tracking-wide">
@@ -92,11 +82,9 @@
                 <span id="count-late" class="bg-red-100 text-red-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-red-200">0</span>
             </div>
             <div id="list-late" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 bg-gradient-to-b from-slate-50 to-red-50/20">
-                <!-- JS Injeta Cards Aqui -->
-            </div>
+                </div>
         </section>
 
-        <!-- COLUNA 2: Foco do Dia (Hoje) -->
         <section id="col-today" class="kanban-column flex flex-col bg-white h-full min-w-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] z-10">
             <div class="px-4 py-3 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
@@ -105,11 +93,9 @@
                 <span id="count-today" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">0</span>
             </div>
             <div id="list-today" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1">
-                <!-- JS Injeta Cards Aqui -->
-            </div>
+                </div>
         </section>
 
-        <!-- COLUNA 3: Previsão Futura -->
         <section id="col-future" class="kanban-column hidden md:flex flex-col bg-slate-50 h-full min-w-0">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-slate-500 flex items-center gap-2 text-sm uppercase tracking-wide">
@@ -118,12 +104,10 @@
                 <span id="count-future" class="bg-slate-200 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-bold border border-slate-300">0</span>
             </div>
             <div id="list-future" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1">
-                <!-- JS Injeta Cards Aqui -->
-            </div>
+                </div>
         </section>
     </main>
 
-    <!-- === MODAL 1: Novo Estudo === -->
     <div id="modal-new" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-all" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -134,7 +118,6 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Matéria / Disciplina</label>
                     <div class="relative">
-                        <!-- Select Preenchido via JS -->
                         <select id="input-subject" class="w-full appearance-none bg-white border border-slate-300 text-slate-700 rounded-lg p-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
                         <i data-lucide="chevron-down" class="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"></i>
                     </div>
@@ -144,7 +127,6 @@
                     <input type="text" id="input-topic" required placeholder="Ex: Controle de Constitucionalidade" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 
-                <!-- ATUALIZAÇÃO v1.0.2: Input de Tempo de Estudo com Disclaimer -->
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Tempo de Estudo (Matéria Nova)</label>
                     <div class="relative">
@@ -164,7 +146,6 @@
         </div>
     </div>
 
-    <!-- === MODAL 2: Gerenciar Matérias === -->
     <div id="modal-subjects" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
@@ -172,10 +153,23 @@
                 <button onclick="ui.toggleSubjectModal(false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             <div class="p-6 space-y-4">
-                <!-- Lista de Matérias -->
                 <ul id="subject-list" class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-2"></ul>
                 
-                <!-- Adicionar Nova -->
+                <div class="border-t border-slate-100 pt-4">
+                    <h4 class="text-xs font-semibold text-slate-500 uppercase mb-3 tracking-wide">Segurança de Dados</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="app.downloadBackup()" class="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            Backup
+                        </button>
+                        <button onclick="document.getElementById('input-restore').click()" class="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-emerald-600 transition-all">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            Restaurar
+                        </button>
+                        <input type="file" id="input-restore" accept=".json" class="hidden" onchange="app.restoreData(this)">
+                    </div>
+                </div>
+
                 <div class="pt-4 border-t border-slate-100">
                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Criar Nova Matéria</label>
                     <div class="flex gap-2">
@@ -188,18 +182,15 @@
         </div>
     </div>
 
-    <!-- === MODAL 3: Changelog (Versões) === -->
     <div id="modal-changelog" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" onclick="if(event.target === this) ui.toggleChangelog(false)">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg m-4 p-6 relative">
             <button onclick="ui.toggleChangelog(false)" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
             <h2 class="text-xl font-bold mb-4 flex items-center gap-2"><i data-lucide="history" class="text-indigo-600"></i> Histórico de Versões</h2>
             <div id="changelog-content" class="space-y-4 max-h-[60vh] overflow-y-auto custom-scroll">
-                <!-- JS Injeta Changelog Aqui -->
-            </div>
+                </div>
         </div>
     </div>
 
-    <!-- === MODAL 4: Radar de Carga (Heatmap) === -->
     <div id="modal-heatmap" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" onclick="if(event.target === this) ui.toggleModal('modal-heatmap', false)">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -210,7 +201,6 @@
             </div>
             
             <div class="p-6 overflow-y-auto custom-scroll">
-                <!-- Configuração de Capacidade -->
                 <div class="mb-6 bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <h4 class="text-sm font-bold text-indigo-900">Sua Capacidade Diária</h4>
@@ -222,24 +212,21 @@
                     </div>
                 </div>
 
-                <!-- Legenda -->
                 <div class="flex gap-4 mb-4 text-xs font-medium text-slate-500 justify-end">
                     <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></span> Leve (<50%)</span>
                     <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> Moderado (50-80%)</span>
                     <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-100 border border-red-200"></span> Pesado (>80%)</span>
                 </div>
 
-                <!-- Grid do Calendário (Heatmap) -->
                 <div id="heatmap-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    <!-- JS Injeta Dias Aqui -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- ATUALIZAÇÃO v1.0.2: Container para Toasts (Notificações Flutuantes) -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 
+    <script src="changelog.js"></script>
     <script src="logic.js"></script>
 </body>
 </html>

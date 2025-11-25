@@ -23,9 +23,35 @@ const defaultSubjects = [
 ];
 
 const changelogData = [
-    { version: '1.2.0', date: 'Hoje', changes: ['Refinamento Visual dos Cards', 'Radar de Carga (Heatmap)', 'Configuração de Capacidade Dinâmica'] },
-    { version: '1.0.0', date: 'Anterior', changes: ['Persistência de Dados (LocalStorage)', 'Gestão de Matérias Personalizadas', 'Edição de Revisões', 'Navegação por Abas no Mobile'] },
-    { version: '0.9.0', date: 'Anterior', changes: ['MVP Inicial', 'Algoritmo SRS', 'Exportação ICS'] }
+    { 
+        version: '1.0.1', 
+        date: 'Hoje', 
+        changes: [
+            '✨ <strong>Novo Radar de Carga:</strong> Visualize sua ocupação futura em um calendário térmico (Heatmap).',
+            '🎨 <strong>Refinamento Visual:</strong> Nome da matéria agora segue a cor da disciplina; Badges de tempo com visual neutro.',
+            '✅ <strong>Feedback de Conclusão:</strong> Cards marcados como feitos ficam riscados e com menor opacidade.',
+            '⚙️ <strong>Configuração Dinâmica:</strong> Defina sua capacidade de minutos por dia diretamente no Radar.'
+        ] 
+    },
+    { 
+        version: '1.0.0', 
+        date: 'Anterior', 
+        changes: [
+            'Persistência de Dados (LocalStorage)', 
+            'Gestão de Matérias Personalizadas', 
+            'Edição de Revisões e Exclusão', 
+            'Navegação por Abas no Mobile'
+        ] 
+    },
+    { 
+        version: '0.9.0', 
+        date: 'Alpha', 
+        changes: [
+            'MVP Inicial', 
+            'Algoritmo SRS', 
+            'Exportação ICS'
+        ] 
+    }
 ];
 
 // Utilitários de Data

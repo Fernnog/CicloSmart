@@ -1,0 +1,67 @@
+/* --- START OF FILE style.css --- */
+
+/* 1. Configurações Globais */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 2. Scrollbars Customizadas */
+.custom-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+/* 3. Utilitários para Input de Cor */
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+/* 4. Animações e Utilitários de UI */
+.fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+[x-cloak] { display: none !important; }
+
+/* 5. Lógica de Navegação: Mobile (Abas) vs Desktop (Grid) */
+
+/* Comportamento Padrão (Mobile First):
+   As colunas (sections) só aparecem se tiverem a classe 'flex',
+   caso contrário ficam 'hidden' (controlado via JS).
+*/
+
+/* Comportamento Desktop (telas maiores que 768px):
+   Forçamos todas as colunas a aparecerem lado a lado, ignorando a lógica de abas.
+*/
+@media (min-width: 768px) {
+    .kanban-column {
+        display: flex !important;
+    }
+}
+
+/* Estilo do Botão de Aba Ativo (Mobile) */
+.tab-btn.active {
+    color: #4f46e5; /* indigo-600 */
+    border-bottom: 2px solid #4f46e5;
+    background-color: #eef2ff; /* indigo-50 */
+}

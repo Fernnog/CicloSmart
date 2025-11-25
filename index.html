@@ -22,7 +22,7 @@
             <div>
                 <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
                 <button onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
-                    v1.3.1 • Changelog
+                    v1.4.0 • Perfil Pendular
                 </button>
             </div>
         </div>
@@ -134,12 +134,15 @@
                     <input type="text" id="input-topic" required placeholder="Ex: Controle de Constitucionalidade" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 
-                <div>
+                <div id="time-input-container">
                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Tempo de Estudo (Matéria Nova)</label>
                     <div class="relative">
-                        <input type="number" id="input-study-time" value="60" min="15" max="300" step="15" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input type="number" id="input-study-time" value="60" min="15" max="300" step="5" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <span class="absolute right-4 top-3 text-slate-400 text-sm font-medium">min</span>
                     </div>
+                    <p id="time-warning" class="text-[10px] text-purple-600 mt-1 hidden font-bold">
+                        *Modo Pendular: Teto máximo de 90min aplicado para garantir qualidade.
+                    </p>
                     <p class="text-[10px] text-slate-400 mt-1">
                         *O tempo das revisões será calculado proporcionalmente (20% → 10% → 5%).
                     </p>
@@ -202,20 +205,45 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="activity" class="text-indigo-600"></i> Radar de Carga
+                    <i data-lucide="activity" class="text-indigo-600"></i> Configuração & Radar
                 </h3>
                 <button onclick="ui.toggleModal('modal-heatmap', false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
             <div class="p-6 overflow-y-auto custom-scroll">
-                <div class="mb-6 bg-indigo-50 p-4 rounded-lg border border-indigo-100 flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h4 class="text-sm font-bold text-indigo-900">Sua Capacidade Diária</h4>
-                        <p class="text-xs text-indigo-700 mt-1">Defina quantos minutos você pode estudar por dia para calcularmos a sobrecarga.</p>
+                <div class="mb-6 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                    <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
+                        <div>
+                            <h4 class="text-sm font-bold text-indigo-900">Sua Capacidade Diária</h4>
+                            <p class="text-xs text-indigo-700 mt-1">Defina quantos minutos você pode estudar por dia.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="setting-capacity" value="240" step="30" class="w-24 border-indigo-200 rounded px-2 py-1 text-center font-bold text-indigo-900 focus:ring-indigo-500" onchange="app.updateCapacitySetting(this.value)">
+                            <span class="text-sm font-medium text-indigo-800">min/dia</span>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="setting-capacity" value="240" step="30" class="w-24 border-indigo-200 rounded px-2 py-1 text-center font-bold text-indigo-900 focus:ring-indigo-500" onchange="app.updateCapacitySetting(this.value)">
-                        <span class="text-sm font-medium text-indigo-800">min/dia</span>
+
+                    <div class="bg-white p-3 rounded-lg border border-indigo-100 shadow-sm">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2">Perfil de Estratégia</h4>
+                        <div class="flex gap-2">
+                            <label class="flex-1 cursor-pointer group">
+                                <input type="radio" name="profile" value="standard" class="peer sr-only" onchange="app.setProfile('standard')" checked>
+                                <div class="p-2 text-center text-xs font-bold rounded border border-slate-200 text-slate-500 bg-slate-50 peer-checked:border-indigo-600 peer-checked:text-indigo-700 peer-checked:bg-indigo-50 transition-all group-hover:border-indigo-200">
+                                    Integrado (Padrão)
+                                    <span class="block font-normal text-[10px] opacity-75 mt-0.5">Estudo + Revisão Diária</span>
+                                </div>
+                            </label>
+                            <label class="flex-1 cursor-pointer group">
+                                <input type="radio" name="profile" value="pendular" class="peer sr-only" onchange="app.setProfile('pendular')">
+                                <div class="p-2 text-center text-xs font-bold rounded border border-slate-200 text-slate-500 bg-slate-50 peer-checked:border-purple-600 peer-checked:text-purple-700 peer-checked:bg-purple-50 transition-all group-hover:border-purple-200">
+                                    Pendular (Ataque/Defesa)
+                                    <span class="block font-normal text-[10px] opacity-75 mt-0.5">Ciclos Alternados (40-90m)</span>
+                                </div>
+                            </label>
+                        </div>
+                        <p id="profile-desc" class="text-[10px] text-slate-500 mt-2 leading-tight pl-1 border-l-2 border-slate-200">
+                            *Alterna entre dias de conteúdo novo (Ataque) e dias exclusivos de revisão (Defesa). Ideal para quem tem pouco tempo.
+                        </p>
                     </div>
                 </div>
 
@@ -236,5 +264,5 @@
     <script src="changelog.js"></script>
     <script src="logic.js"></script>
 </body>
-            </html>
+                    </html>
     

@@ -22,7 +22,7 @@
             <div>
                 <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
                 <button onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
-                    v1.3.0 • Changelog
+                    v1.3.1 • Changelog
                 </button>
             </div>
         </div>
@@ -44,14 +44,14 @@
                 <i data-lucide="settings-2" class="w-5 h-5"></i>
             </button>
             
-            <button onclick="app.exportICS()" class="hidden md:flex group items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none">
+            <button onclick="app.exportICS()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Exportar Calendário">
                 <i data-lucide="calendar-arrow-down" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                Exportar
+                <span class="hidden md:inline">Exportar</span>
             </button>
             
-            <button onclick="ui.openHeatmapModal()" class="hidden md:flex group items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Analisar Carga">
+            <button onclick="ui.openHeatmapModal()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Analisar Carga">
                 <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                Radar de Carga
+                <span class="hidden md:inline">Radar</span>
             </button>
             
             <button onclick="ui.openNewStudyModal()" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -236,4 +236,5 @@
     <script src="changelog.js"></script>
     <script src="logic.js"></script>
 </body>
-    </html>
+            </html>
+    

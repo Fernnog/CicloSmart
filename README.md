@@ -1,13 +1,3 @@
-### **Plano de Evolução: Atualização da Documentação**
-
-**Explicação da Proposta (Para Leigos)**
-Como o software evoluiu de um simples agendador para uma ferramenta de estratégia de aprendizado baseada em neurociência, o "Manual de Instruções" (README) precisa refletir essa maturidade. O novo documento explica não apenas *como* usar, mas *por que* o sistema agora bloqueia novos estudos quando você está sobrecarregado (o Efeito Bola de Neve) e como ele calcula automaticamente tempos menores para revisões futuras (Compressão).
-
----
-
-### **Arquivo Atualizado: README.md**
-
-```markdown
 # CicloSmart - Plataforma de Estratégia de Estudos (Neuro-SRS)
 
 ![Status](https://img.shields.io/badge/Status-Estável%20(v1.2)-success)

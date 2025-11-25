@@ -24,8 +24,17 @@ const defaultSubjects = [
 
 const changelogData = [
     { 
-        version: '1.0.1', 
+        version: '1.0.2', 
         date: 'Hoje', 
+        changes: [
+            '🛡️ <strong>Guardião de Capacidade:</strong> O sistema impede novos registros se houver sobrecarga futura (Bola de Neve).',
+            '📉 <strong>Compressão de Tempo:</strong> Informe o tempo de estudo e calculamos as revisões (20% -> 10% -> 5%).',
+            '🔔 <strong>Notificações Inteligentes:</strong> Alertas visuais (Toasts) substituem pop-ups intrusivos.'
+        ] 
+    },
+    { 
+        version: '1.0.1', 
+        date: 'Anterior', 
         changes: [
             '✨ <strong>Novo Radar de Carga:</strong> Visualize sua ocupação futura em um calendário térmico (Heatmap).',
             '🎨 <strong>Refinamento Visual:</strong> Nome da matéria agora segue a cor da disciplina; Badges de tempo com visual neutro.',
@@ -64,6 +73,29 @@ const getRelativeDate = (daysOffset) => {
 const formatDateDisplay = (isoDate) => {
     const [y, m, d] = isoDate.split('-');
     return `${d}/${m}`;
+};
+
+// Sistema de Notificações (Toast)
+const toast = {
+    show: (msg, type = 'info') => {
+        const container = document.getElementById('toast-container');
+        // Fallback se o container não existir no HTML ainda
+        if(!container) return alert(msg.replace(/<[^>]*>?/gm, '')); 
+        
+        const el = document.createElement('div');
+        const colors = type === 'error' ? 'bg-red-100 border-red-500 text-red-700' : 'bg-slate-800 text-white';
+        
+        el.className = `toast show mb-2 p-4 rounded-lg shadow-lg border-l-4 text-sm font-medium flex items-center gap-2 min-w-[300px] ${colors}`;
+        el.innerHTML = `<span>${msg}</span>`;
+        
+        container.appendChild(el);
+        
+        // Remove após 4 segundos
+        setTimeout(() => {
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 300);
+        }, 4000);
+    }
 };
 
 const store = {
@@ -182,15 +214,44 @@ const app = {
         const subjectColor = selectedOption.dataset.color;
 
         const topic = document.getElementById('input-topic').value;
-        const time = parseInt(document.getElementById('input-time').value);
+        
+        // MUDANÇA v1.0.2: Agora capturamos o tempo de ESTUDO original
+        // Importante: O HTML deve ter o ID atualizado para 'input-study-time'
+        const studyTimeElement = document.getElementById('input-study-time');
+        // Fallback para input antigo caso o HTML não tenha sido atualizado ainda
+        const studyTime = parseInt(studyTimeElement ? studyTimeElement.value : document.getElementById('input-time').value);
+
+        // Fatores de Compressão (Neurociência): R1=20%, R2=10%, R3=5%
+        const compressionFactors = { 1: 0.20, 7: 0.10, 30: 0.05 };
 
         const today = new Date();
         const newReviews = [];
+        let overloadedDate = null;
 
-        // Gera 3 revisões (24h, 7d, 30d)
-        CONFIG.intervals.forEach((interval) => {
+        // Loop de Simulação e Validação
+        for (let interval of CONFIG.intervals) {
             const rDate = new Date();
             rDate.setDate(today.getDate() + interval);
+            const dateStr = rDate.toISOString().split('T')[0];
+            
+            // Cálculo do Tempo de Revisão Comprimido
+            const factor = compressionFactors[interval] || 0.1; 
+            const estimatedReviewTime = Math.ceil(studyTime * factor);
+            const finalTime = Math.max(2, estimatedReviewTime); // Mínimo de 2 minutos
+
+            // VERIFICAÇÃO DE CAPACIDADE (Bola de Neve)
+            // 1. Calcula carga existente no dia alvo
+            const existingLoad = store.reviews
+                .filter(r => r.date === dateStr && r.status !== 'DONE')
+                .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+            
+            // 2. Verifica se estoura a capacidade
+            if ((existingLoad + finalTime) > store.capacity) {
+                overloadedDate = formatDateDisplay(dateStr);
+                // Interrompe o loop imediatamente ao encontrar o primeiro gargalo
+                break; 
+            }
+
             const rType = interval === 1 ? '24h' : interval === 7 ? '7d' : '30d';
 
             newReviews.push({
@@ -198,15 +259,22 @@ const app = {
                 subject: subjectName,
                 color: subjectColor,
                 topic: topic,
-                time: time,
-                date: rDate.toISOString().split('T')[0],
+                time: finalTime,
+                date: dateStr,
                 type: rType,
                 status: 'PENDING'
             });
-        });
+        }
+
+        // Decisão do Guardião
+        if (overloadedDate) {
+            toast.show(`⚠️ <b>Sobrecarga Detectada!</b><br>Não é possível adicionar. O dia ${overloadedDate} excederá sua capacidade diária.`, 'error');
+            return; // ABORTA A OPERAÇÃO
+        }
 
         store.addReviews(newReviews);
         ui.toggleModal('modal-new', false);
+        toast.show('✅ Estudo registrado e revisões agendadas com sucesso!');
         e.target.reset();
     },
 
@@ -230,7 +298,7 @@ const app = {
             store.addSubject(nameInput.value.trim(), colorInput.value);
             nameInput.value = ''; // Limpar input
         } else {
-            alert("Digite o nome da matéria.");
+            toast.show("Digite o nome da matéria.", 'error');
         }
     },
 
@@ -244,6 +312,7 @@ const app = {
             const newTime = prompt("Editar Tempo (min):", r.time);
             if (newTime !== null && !isNaN(newTime)) {
                 store.updateReview(id, newTopic, newTime);
+                toast.show("Revisão atualizada.");
             }
         }
     },
@@ -251,7 +320,7 @@ const app = {
     // Exportação ICS
     exportICS: () => {
         const pendings = store.reviews.filter(r => r.status === 'PENDING');
-        if (pendings.length === 0) return alert("Nada para exportar.");
+        if (pendings.length === 0) return toast.show("Nada para exportar.", 'error');
 
         let icsLines = [
             "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v1//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
@@ -283,6 +352,8 @@ const app = {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        toast.show("Download do arquivo .ics iniciado!");
     }
 };
 
@@ -338,15 +409,13 @@ const ui = {
             
             // Gerar próximos 30 dias
             for (let i = 0; i < 30; i++) {
-                // CORREÇÃO: Usar a mesma função auxiliar que o resto do app usa
-                // Isso garante que "Hoje" no heatmap seja igual a "Hoje" no card.
                 const isoDate = getRelativeDate(i);
                 const displayDate = formatDateDisplay(isoDate);
                 
                 // Calcular carga do dia
                 const dayLoad = store.reviews
                     .filter(r => r.date === isoDate && r.status !== 'DONE')
-                    .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0); // CORREÇÃO: ParseInt para garantir soma numérica
+                    .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0); 
                 
                 // Evitar divisão por zero se capacity for inválido
                 const capacity = store.capacity > 0 ? store.capacity : 240;
@@ -472,12 +541,10 @@ const ui = {
         const isDone = review.status === 'DONE';
         
         // Estilos Condicionais
-        // Se concluído: Fundo cinza claro, opacidade reduzida, sem sombra forte
         const containerClasses = isDone 
             ? 'bg-slate-50 border-slate-200 opacity-60' 
             : 'bg-white border-slate-200 shadow-sm hover:shadow-md';
             
-        // Se concluído: Texto riscado (line-through) e cinza
         const textDecoration = isDone 
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
@@ -488,20 +555,17 @@ const ui = {
                 
                 <div class="flex justify-between items-start mb-1.5">
                     <div class="flex-1 pr-2">
-                        <!-- Nome da Matéria: AGORA COM A COR DA DISCIPLINA -->
                         <span class="text-[11px] font-black uppercase tracking-wider block mb-1" style="color: ${review.color}">
                             ${review.subject}
                         </span>
                         
                         <div class="flex flex-col gap-1">
-                            <!-- Tópico: Riscado se concluído -->
                             <h4 class="text-sm font-bold leading-snug cursor-pointer hover:text-indigo-600 transition-colors ${textDecoration}" 
                                 title="Clique para editar" 
                                 onclick="app.promptEdit(${review.id})">
                                 ${review.topic}
                             </h4>
 
-                            <!-- Badge de Tempo: FUNDO ESCURO PADRÃO (PRETO/CINZA ESCURO) E FONTE BRANCA -->
                             <div class="flex items-center mt-1">
                                 <span class="text-[10px] font-bold text-white bg-slate-700 px-1.5 py-0.5 rounded">
                                     ${review.type}

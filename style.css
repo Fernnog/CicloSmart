@@ -77,3 +77,13 @@ input[type="color"]::-webkit-color-swatch {
     border-bottom: 2px solid #4f46e5;
     background-color: #eef2ff; /* indigo-50 */
 }
+
+/* Adicionar ao final do arquivo */
+.toast {
+    pointer-events: auto;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+.toast.show {
+    transform: translateX(0);
+}

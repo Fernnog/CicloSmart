@@ -108,6 +108,3 @@ Projeto desenvolvido com foco em **Performance** e **Simplicidade de Manutençã
 -----
 
 **Desenvolvido com foco em eficiência cognitiva.**
-
-```
-```

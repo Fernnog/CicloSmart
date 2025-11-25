@@ -1,103 +1,119 @@
-# CicloSmart - Plataforma de Gestão de Estudos (SRS)
+### **Plano de Evolução: Atualização da Documentação**
 
-![Status do Projeto](https://img.shields.io/badge/Status-MVP%20Est%C3%A1vel-success)
-![Versão](https://img.shields.io/badge/Versão-1.0.1-blue)
-![Stack](https://img.shields.io/badge/Tech-JS%20%7C%20Tailwind%20%7C%20HTML5-orange)
-
-> **Resumo:** Uma Aplicação Web (SPA) focada em otimização de aprendizado através da técnica de **Repetição Espaçada (SRS)**. O sistema automatiza o agendamento de revisões baseadas na Curva de Ebbinghaus, gerencia a capacidade diária de estudo através de mapas de calor (Heatmaps) e oferece feedback visual imediato de progresso.
+**Explicação da Proposta (Para Leigos)**
+Como o software evoluiu de um simples agendador para uma ferramenta de estratégia de aprendizado baseada em neurociência, o "Manual de Instruções" (README) precisa refletir essa maturidade. O novo documento explica não apenas *como* usar, mas *por que* o sistema agora bloqueia novos estudos quando você está sobrecarregado (o Efeito Bola de Neve) e como ele calcula automaticamente tempos menores para revisões futuras (Compressão).
 
 ---
 
-## 🚀 Novidades da Versão 1.0.1
-Esta versão foca em **Gestão de Carga** e **Refinamento de UX**:
+### **Arquivo Atualizado: README.md**
 
-*   **🌡️ Radar de Carga (Heatmap):** Um novo painel visual que exibe um calendário térmico dos próximos 30 dias.
-    *   **Verde:** Dia leve/tranquilo.
-    *   **Amarelo:** Carga moderada.
-    *   **Preto/Vermelho:** Sobrecarga (alerta de estouro).
-*   **⚙️ Capacidade Dinâmica:** O usuário agora pode configurar quantos minutos possui disponíveis por dia, e o sistema recalcula todos os indicadores de saúde do cronograma baseando-se nesse número.
-*   **🎨 UI Refinada:** 
-    *   Títulos das matérias agora herdam a cor da disciplina para escaneabilidade rápida.
-    *   Feedback visual de conclusão: itens feitos ficam riscados (*line-through*) e com opacidade reduzida.
-    *   Design de badges neutralizado para reduzir ruído visual.
+```markdown
+# CicloSmart - Plataforma de Estratégia de Estudos (Neuro-SRS)
+
+![Status](https://img.shields.io/badge/Status-Estável%20(v1.2)-success)
+![Versão](https://img.shields.io/badge/Versão-1.2.0-blue)
+![Metodologia](https://img.shields.io/badge/Método-Fluxo%20Anti--Bola%20de%20Neve-purple)
+
+> **Resumo:** Uma Aplicação Web (SPA) que transcende a Repetição Espaçada tradicional. O CicloSmart não apenas agenda revisões, mas gerencia matematicamente a capacidade cognitiva do estudante, impedindo o "Efeito Bola de Neve" através de travas de segurança baseadas em carga horária (Regra 60/40) e compressão temporal de memória.
 
 ---
 
-## 🎯 Funcionalidades Core
+## 🧠 A Ciência por Trás (Neurolearning)
 
-### 1. 🧠 Motor de Agendamento SRS
-Ao registrar um tópico, o sistema projeta automaticamente 3 revisões futuras baseadas na ciência cognitiva:
-*   **R1 (24h):** Fixação Imediata.
-*   **R2 (7 dias):** Memória de Curto Prazo.
-*   **R3 (30 dias):** Consolidação de Longo Prazo.
+Diferente de sistemas que permitem adicionar conteúdo infinitamente até o colapso do estudante, o CicloSmart opera com dois princípios de neurociência aplicada:
 
-### 2. 📊 Dashboard Kanban Temporal
-Organização visual das tarefas em três colunas críticas (com adaptação Mobile/Desktop):
-*   **Atrasados (Backlog):** Itens vencidos (Alerta Vermelho).
-*   **Hoje (Foco):** Metas do dia corrente com barra de progresso em tempo real.
-*   **Futuro (Forecast):** Visão dos próximos vencimentos.
+### 1. Protocolo de Compressão Temporal
+O sistema entende que **Revisar ≠ Reestudar**.
+Ao registrar um tempo de estudo original (ex: 60 min), o algoritmo projeta revisões futuras com carga decrescente, exigindo maior eficiência de recuperação (*Active Recall*):
+*   **Estudo Original:** 100% do tempo.
+*   **R1 (24h):** 20% do tempo original (Fixação).
+*   **R2 (7 dias):** 10% do tempo original (Manutenção).
+*   **R3 (30 dias):** 5% do tempo original (Consolidação).
 
-### 3. 📅 Interoperabilidade (.ICS)
-*   Gerador *Client-Side* de arquivos `iCalendar` (RFC 5545).
-*   Permite exportar o cronograma para **Google Calendar**, **Outlook** ou **Apple Calendar**.
+### 2. Guardião de Capacidade (Anti-Bola de Neve)
+Para garantir sustentabilidade a longo prazo, o sistema aplica a **Regra 60/40**:
+*   **60%** da sua capacidade diária é reservada para Matéria Nova (Aquisição).
+*   **40%** é o teto máximo rígido para Revisões (Manutenção).
 
-### 4. 💾 Persistência Local
-*   Dados salvos no `LocalStorage` do navegador.
-*   Não requer login ou banco de dados externo.
+**O Bloqueio Inteligente:** Se você tentar adicionar uma matéria nova cuja projeção de revisões futuras faria um dia específico ultrapassar o teto de 40%, o sistema **bloqueia a ação** e sugere que você dedique o dia apenas a pagar sua "dívida técnica" de memória.
+
+---
+
+## 🚀 Funcionalidades Chave
+
+### 🛡️ Gestão de Risco
+*   **Input de Matéria Nova:** Você informa o tempo de estudo bruto, o sistema calcula a logística.
+*   **Simulação Futura:** Antes de salvar, o algoritmo "viaja no tempo" (24h, 7d, 30d) para verificar se o cronograma aguenta a nova carga.
+*   **Feedback Visual:** Notificações (Toasts) informam sucesso ou explicam matematicamente o motivo do bloqueio.
+
+### 🌡️ Radar de Carga (Heatmap)
+*   Visualização térmica dos próximos 30 dias.
+*   Identificação visual de dias de "Gargalo" (onde a revisão está perigosamente alta).
+
+### 📊 Dashboard Kanban Temporal
+*   **Atrasados (Backlog):** O que deve ser priorizado antes de estudar coisas novas.
+*   **Hoje (Foco):** Meta do dia com barra de progresso em tempo real.
+*   **Futuro:** Previsão de vencimentos.
+
+### 💾 Privacidade & Dados
+*   **Offline-First:** Tudo é salvo no `LocalStorage` do navegador.
+*   **Exportação .ICS:** Gera calendários compatíveis com Google Calendar/Outlook/Apple para levar seu cronograma no bolso.
 
 ---
 
 ## 🛠 Arquitetura Técnica
 
-O projeto segue uma arquitetura **Serverless Client-Side**. Toda a lógica de negócios reside no navegador do usuário.
+Projeto desenvolvido com foco em **Performance** e **Simplicidade de Manutenção**.
 
-### Stack Tecnológica
-| Componente | Tecnologia | Justificativa |
+| Componente | Tecnologia | Função |
 | :--- | :--- | :--- |
-| **Markup** | **HTML5 Semântico** | Estrutura acessível e organizada. |
-| **Estilização** | **Tailwind CSS (CDN)** | Produtividade e consistência visual sem build steps complexos. |
-| **Lógica** | **Vanilla JavaScript (ES6+)** | Performance nativa. Zero dependências de frameworks pesados. |
-| **Ícones** | **Lucide Icons** | SVG leves e modernos. |
+| **Lógica** | **Vanilla JS (ES6+)** | Algoritmos de compressão e validação de carga. |
+| **Estilo** | **Tailwind CSS** | Design responsivo e sistema de cores semântico. |
+| **Ícones** | **Lucide Icons** | SVG leves renderizados via JS. |
+| **Storage** | **LocalStorage API** | Persistência de dados sem Backend. |
 
 ### Estrutura de Arquivos
 ```text
 /
-│── index.html      # View: Layout, Modais e Componentes UI
-│── logic.js        # Controller/Model: SRS Engine, Store, Heatmap Logic
-│── style.css       # Assets: Customizações de Scrollbar e Animações
-└── README.md       # Documentação
+│── index.html      # UI, Modais e Layout
+│── logic.js        # Core: Store, Algoritmo SRS, Validação 40/60
+│── style.css       # Animações (Toasts) e Scrollbars
+└── README.md       # Documentação Estratégica
 ```
 
 ---
 
 ## 📦 Como Usar
 
-Não é necessária instalação (npm/yarn). Como o projeto usa CDN para as bibliotecas, basta:
-
-1.  Baixar ou clonar este repositório.
-2.  Abrir o arquivo `index.html` em qualquer navegador moderno (Chrome, Firefox, Edge).
-3.  Começar a usar!
+1.  **Defina sua Capacidade:** No menu "Radar de Carga", configure quantos minutos líquidos você tem por dia (ex: 240 min).
+2.  **Registre um Estudo:** Clique em "Novo Estudo".
+    *   Selecione a matéria.
+    *   Insira o tempo gasto aprendendo o conteúdo novo.
+3.  **Aguarde a Análise:**
+    *   ✅ **Sucesso:** O sistema agendará R1, R2 e R3 com tempos comprimidos.
+    *   ⚠️ **Bloqueio:** O sistema avisará que o dia X está cheio e impedirá o agendamento para proteger seu futuro.
+4.  **Execute:** Acompanhe o Kanban "Hoje". Marque como feito para liberar espaço na barra de capacidade.
 
 ---
 
 ## 📝 Histórico de Versões (Changelog)
 
-### v1.0.1 (Atual)
-*   Implementação do **Modal Radar de Carga**.
-*   Lógica de cálculo de porcentagem de ocupação diária.
-*   Refinamento visual dos Cards (Cores de matéria e estado 'Checked').
-*   Input de configuração de minutos diários.
+### v1.2.0 (Atual) - O Salto Estratégico
+*   **Novo:** Lógica de **Compressão de Tempo** (20%/10%/5%).
+*   **Novo:** **Trava de Segurança 40%** (Impede sobrecarga de revisões).
+*   **UX:** Mudança do input para "Tempo de Estudo" (Matéria Nova).
+*   **UX:** Sistema de notificações "Toast" para feedback não intrusivo.
 
-### v1.0.0
-*   Persistência de Dados (LocalStorage).
-*   Gestão de Matérias (CRUD básico).
-*   Navegação por Abas (Mobile First).
+### v1.0.1 - Gestão Visual
+*   Implementação do Radar de Carga (Heatmap).
+*   Configuração dinâmica de minutos diários.
 
-### v0.9.0 (MVP)
-*   Lógica SRS (24h, 7d, 30d).
+### v1.0.0 - MVP
+*   Lógica SRS padrão (24h, 7d, 30d).
+*   Persistência LocalStorage.
 *   Exportação ICS.
-*   Layout Básico.
 
 ---
 
-**Desenvolvido com foco em produtividade e simplicidade.**
+**Desenvolvido com foco em eficiência cognitiva.**
+```

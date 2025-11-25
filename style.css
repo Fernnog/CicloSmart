@@ -43,6 +43,18 @@ input[type="color"]::-webkit-color-swatch {
 
 [x-cloak] { display: none !important; }
 
+/* --- NOVAS REGRAS: Toast Notifications --- */
+/* Gerencia a animação de entrada lateral das notificações de alerta/sucesso */
+.toast {
+    pointer-events: auto; /* Garante que o toast possa ser clicado/fechado se necessário */
+    transform: translateX(120%); /* Começa fora da tela (direita) */
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito elástico suave */
+}
+
+.toast.show {
+    transform: translateX(0); /* Entra na tela */
+}
+
 /* 5. Lógica de Navegação: Mobile (Abas) vs Desktop (Grid) */
 
 /* Comportamento Padrão (Mobile First):

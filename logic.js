@@ -331,47 +331,52 @@ const ui = {
     },
 
     renderHeatmap: () => {
-        const container = document.getElementById('heatmap-grid');
-        if(!container) return;
-        
-        container.innerHTML = '';
-        
-        // Gerar próximos 30 dias
-        for (let i = 0; i < 30; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() + i);
-            const isoDate = date.toISOString().split('T')[0];
-            const displayDate = formatDateDisplay(isoDate);
+            const container = document.getElementById('heatmap-grid');
+            if(!container) return;
             
-            // Calcular carga do dia
-            const dayLoad = store.reviews
-                .filter(r => r.date === isoDate && r.status !== 'PENDING' && r.status !== 'DONE') // Conta tudo que não for lixo, mas aqui queremos carga pendente.
-                // Ajuste: Queremos ver a carga TOTAL agendada (Pendente + Feito no dia? Geralmente carga futura é pendente)
-                // Vamos somar apenas o que está agendado para o futuro ou pendente hoje.
-                .filter(r => r.date === isoDate && r.status !== 'DONE') 
-                .reduce((acc, curr) => acc + curr.time, 0);
+            container.innerHTML = '';
             
-            const percentage = (dayLoad / store.capacity) * 100;
-            
-            // Definição de Cores do Heatmap
-            let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700'; // Verde (Leve)
-            if (percentage > 100) colorClass = 'bg-slate-800 border-slate-900 text-white'; // Estouro Crítico
-            else if (percentage > 80) colorClass = 'bg-red-50 border-red-200 text-red-700'; // Pesado
-            else if (percentage > 50) colorClass = 'bg-amber-50 border-amber-200 text-amber-700'; // Moderado
+            // Gerar próximos 30 dias
+            for (let i = 0; i < 30; i++) {
+                // CORREÇÃO: Usar a mesma função auxiliar que o resto do app usa
+                // Isso garante que "Hoje" no heatmap seja igual a "Hoje" no card.
+                const isoDate = getRelativeDate(i);
+                const displayDate = formatDateDisplay(isoDate);
+                
+                // Calcular carga do dia
+                const dayLoad = store.reviews
+                    .filter(r => r.date === isoDate && r.status !== 'DONE')
+                    .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0); // CORREÇÃO: ParseInt para garantir soma numérica
+                
+                // Evitar divisão por zero se capacity for inválido
+                const capacity = store.capacity > 0 ? store.capacity : 240;
+                const percentage = (dayLoad / capacity) * 100;
+                
+                // Lógica de Cores (Mantida)
+                let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700';
+                if (dayLoad === 0) {
+                    colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60'; // Dia vazio fica cinza
+                } else if (percentage > 100) {
+                    colorClass = 'bg-slate-800 border-slate-900 text-white'; 
+                } else if (percentage > 80) {
+                    colorClass = 'bg-red-50 border-red-200 text-red-700';
+                } else if (percentage > 50) {
+                    colorClass = 'bg-amber-50 border-amber-200 text-amber-700';
+                }
 
-            container.innerHTML += `
-                <div class="p-3 rounded-lg border ${colorClass} flex flex-col justify-between h-24 relative transition-all hover:scale-105 cursor-default">
-                    <span class="text-xs font-bold opacity-70">${displayDate}</span>
-                    <div class="text-center">
-                        <span class="text-2xl font-bold block leading-none mb-1">${dayLoad}m</span>
-                        <span class="text-[10px] uppercase font-semibold tracking-wider opacity-80">
-                            ${percentage > 100 ? '!!!' : percentage.toFixed(0) + '%'}
-                        </span>
+                container.innerHTML += `
+                    <div class="p-3 rounded-lg border ${colorClass} flex flex-col justify-between h-24 relative transition-all hover:scale-105">
+                        <span class="text-xs font-bold opacity-70">${displayDate}</span>
+                        <div class="text-center">
+                            <span class="text-2xl font-bold block">${dayLoad}m</span>
+                            <span class="text-[10px] uppercase font-semibold tracking-wider opacity-80">
+                                ${dayLoad > 0 ? percentage.toFixed(0) + '%' : 'Livre'}
+                            </span>
+                        </div>
                     </div>
-                </div>
-            `;
-        }
-    },
+                `;
+            }
+        },
 
     toggleChangelog: (show) => {
         if(show) {

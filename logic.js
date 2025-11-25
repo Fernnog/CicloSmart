@@ -1,8 +1,8 @@
 /* --- START OF FILE logic.js --- */
 
 /**
- * CICLOSMART CORE v1.2.0
- * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression Logic
+ * CICLOSMART CORE v1.3.0
+ * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression, Backup System
  */
 
 // ==========================================
@@ -20,31 +20,6 @@ const defaultSubjects = [
     { id: 's2', name: 'Português', color: '#ef4444' }, // Red
     { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' }, // Green
     { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet
-];
-
-const changelogData = [
-    { 
-        version: '1.2.0', 
-        date: 'Hoje', 
-        changes: [
-            '🛡️ <strong>Trava de Segurança (40/60):</strong> Bloqueio automático de novos estudos se a carga de revisão futura exceder 40% da capacidade.',
-            '📉 <strong>Compressão Temporal:</strong> Tempo de revisão calculado automaticamente (20%/10%/5%) baseado no tempo de estudo original.',
-            '🔔 <strong>Notificações Inteligentes:</strong> Feedback visual (Toasts) para ações e bloqueios.'
-        ] 
-    },
-    { 
-        version: '1.0.1', 
-        date: 'Anterior', 
-        changes: [
-            '✨ Novo Radar de Carga (Heatmap).',
-            '🎨 Refinamento Visual e Feedback de Conclusão.'
-        ] 
-    },
-    { 
-        version: '1.0.0', 
-        date: 'Legacy', 
-        changes: ['Persistência LocalStorage', 'Algoritmo SRS Básico'] 
-    }
 ];
 
 // Utilitários de Data
@@ -66,7 +41,9 @@ const toast = {
         if(!container) return; // Segurança caso o container não exista no HTML ainda
         
         const el = document.createElement('div');
-        const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 'bg-slate-800 text-white';
+        const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 
+                       type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' :
+                       'bg-slate-800 text-white';
         
         el.className = `toast show mb-2 p-4 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 min-w-[320px] max-w-md ${colors}`;
         el.innerHTML = msg; // Permite HTML na mensagem
@@ -291,6 +268,77 @@ const app = {
         e.target.reset();
     },
 
+    // --- SISTEMA DE BACKUP E RESTAURAÇÃO (NOVO v1.3.0) ---
+    downloadBackup: () => {
+        const data = {
+            version: '1.3',
+            timestamp: new Date().toISOString(),
+            store: {
+                reviews: store.reviews,
+                subjects: store.subjects,
+                capacity: store.capacity
+            }
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ciclosmart-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        toast.show(`
+            <div>
+                <strong class="block text-emerald-500 mb-1">Backup Gerado!</strong>
+                Salve o arquivo .json em local seguro.
+            </div>
+        `, 'success');
+    },
+
+    restoreData: (input) => {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const json = JSON.parse(e.target.result);
+                
+                // Validação básica de estrutura
+                if (!json.store || !Array.isArray(json.store.reviews)) {
+                    throw new Error("Formato de arquivo inválido.");
+                }
+
+                if (confirm(`Restaurar backup de ${formatDateDisplay(json.timestamp.split('T')[0])}? \nISSO SUBSTITUIRÁ OS DADOS ATUAIS.`)) {
+                    // Atualiza a Store
+                    store.reviews = json.store.reviews;
+                    store.subjects = json.store.subjects || defaultSubjects;
+                    store.capacity = json.store.capacity || 240;
+                    store.save(); // Persiste
+                    
+                    // Recarrega UI
+                    ui.initSubjects();
+                    ui.render();
+                    if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
+                        ui.renderHeatmap();
+                    }
+                    
+                    toast.show('Dados restaurados com sucesso!', 'success');
+                    ui.toggleSubjectModal(false);
+                }
+            } catch (err) {
+                console.error(err);
+                toast.show('Erro ao ler arquivo de backup: ' + err.message, 'error');
+            }
+            // Limpa o input para permitir carregar o mesmo arquivo novamente
+            input.value = '';
+        };
+        reader.readAsText(file);
+    },
+
     // Atualiza a capacidade diária (chamado pelo input no Modal Heatmap)
     updateCapacitySetting: (val) => {
         const min = parseInt(val);
@@ -299,8 +347,6 @@ const app = {
             store.save();
             ui.renderHeatmap(); // Atualiza visual do grid
             ui.render(); // Atualiza barra de progresso principal
-            // Opcional: Feedback visual
-            // toast.show(`Capacidade ajustada para ${min} min/dia`);
         }
     },
 
@@ -464,6 +510,7 @@ const ui = {
     toggleChangelog: (show) => {
         if(show) {
             const container = document.getElementById('changelog-content');
+            // AGORA USA A CONSTANTE GLOBAL changelogData
             container.innerHTML = changelogData.map(log => `
                 <div class="mb-4 border-l-2 border-indigo-500 pl-3">
                     <div class="flex justify-between items-center mb-1">

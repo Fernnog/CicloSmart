@@ -1,8 +1,8 @@
 /* --- START OF FILE logic.js --- */
 
 /**
- * CICLOSMART CORE v1.3.1
- * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression, Backup System, Retroactive Entry
+ * CICLOSMART CORE v1.4.0
+ * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression, Backup System, Retroactive Entry, Pendular Profile
  */
 
 // ==========================================
@@ -12,7 +12,11 @@
 const CONFIG = {
     defaultCapacity: 240, // 4 horas (fallback)
     intervals: [1, 7, 30],     // Ebbinghaus
-    storageKey: 'ciclosmart_db_v1'
+    storageKey: 'ciclosmart_db_v1',
+    profiles: {
+        STANDARD: 'standard', // Modo Integrado
+        PENDULAR: 'pendular'  // Modo Ataque/Defesa
+    }
 };
 
 const defaultSubjects = [
@@ -61,6 +65,7 @@ const store = {
     reviews: [],
     subjects: [],
     capacity: 240, // Capacidade diária em minutos
+    profile: 'standard', // 'standard' ou 'pendular'
 
     load: () => {
         const raw = localStorage.getItem(CONFIG.storageKey);
@@ -70,15 +75,18 @@ const store = {
                 store.reviews = data.reviews || [];
                 store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
                 store.capacity = data.capacity || CONFIG.defaultCapacity;
+                store.profile = data.profile || CONFIG.profiles.STANDARD;
             } catch (e) {
                 console.error("Erro ao ler dados", e);
                 store.subjects = defaultSubjects;
                 store.capacity = CONFIG.defaultCapacity;
+                store.profile = CONFIG.profiles.STANDARD;
             }
         } else {
             store.subjects = [...defaultSubjects];
             store.reviews = []; 
             store.capacity = CONFIG.defaultCapacity;
+            store.profile = CONFIG.profiles.STANDARD;
         }
     },
 
@@ -86,7 +94,8 @@ const store = {
         localStorage.setItem(CONFIG.storageKey, JSON.stringify({
             reviews: store.reviews,
             subjects: store.subjects,
-            capacity: store.capacity
+            capacity: store.capacity,
+            profile: store.profile
         }));
     },
 
@@ -156,10 +165,43 @@ const app = {
         const form = document.getElementById('form-study');
         if(form) form.addEventListener('submit', app.handleNewEntry);
         
+        // Inicializar UI do perfil
+        const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
+        if(activeRadio) activeRadio.checked = true;
+        app.updateProfileUI(store.profile); // Atualiza inputs sem toast
+
         ui.switchTab('today');
     },
 
-    // --- NOVA LÓGICA DE ENTRADA COM AQUISIÇÃO, DATAS RETROATIVAS E TRAVAS ---
+    setProfile: (mode) => {
+        store.profile = mode;
+        store.save();
+        app.updateProfileUI(mode);
+        
+        const msg = mode === 'pendular' 
+            ? 'Modo Pendular Ativado: Teto de 90min e ajuste de datas (Ataque/Defesa).' 
+            : 'Modo Integrado Ativado: Sem limites rígidos.';
+        
+        toast.show(msg, 'success');
+    },
+
+    updateProfileUI: (mode) => {
+        const timeInput = document.getElementById('input-study-time');
+        const warning = document.getElementById('time-warning');
+        
+        if(!timeInput) return;
+
+        if (mode === 'pendular') {
+            timeInput.max = 90;
+            if(parseInt(timeInput.value) > 90) timeInput.value = 90;
+            if(warning) warning.classList.remove('hidden');
+        } else {
+            timeInput.max = 300;
+            if(warning) warning.classList.add('hidden');
+        }
+    },
+
+    // --- NOVA LÓGICA DE ENTRADA COM PERFIS PENDULARES ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -171,10 +213,19 @@ const app = {
         const studyTimeInput = document.getElementById('input-study-time');
         const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
 
+        // VALIDAÇÃO DO MODO PENDULAR
+        if (store.profile === 'pendular' && studyTime > 90) {
+            return toast.show(`
+                <div>
+                    <strong class="block text-red-700 mb-1">Atenção: Modo Pendular</strong>
+                    O tempo limite para estudo de qualidade neste modo é <b>90 minutos</b>.
+                </div>
+            `, 'error');
+        }
+
         // --- NOVA CAPTURA DA DATA ---
         const dateInput = document.getElementById('input-study-date');
         const selectedDateStr = dateInput.value; // Formato YYYY-MM-DD
-        // Cria data base forçando meio-dia para evitar problemas de fuso horário na virada
         const baseDate = new Date(selectedDateStr + 'T12:00:00');
 
         // CONSTANTES DE REGRA DE NEGÓCIO
@@ -186,24 +237,30 @@ const app = {
         let blocker = null;
 
         // 1. REGISTRO DO ESTUDO ORIGINAL (AQUISIÇÃO)
-        // Prioridade 1: Inserir o estudo do dia (ou data passada) na meta
         const acquisitionEntry = {
-            id: Date.now() + Math.random(), // Prioridade 3: ID único com random
+            id: Date.now() + Math.random(), 
             subject: subjectName,
             color: subjectColor,
             topic: topic,
             time: studyTime,
-            date: selectedDateStr, // Data escolhida pelo usuário
-            type: 'NOVO', // Tipo Aquisição
+            date: selectedDateStr, 
+            type: 'NOVO', 
             status: 'PENDING'
         };
         newReviews.push(acquisitionEntry);
 
         // 2. SIMULAÇÃO E GERAÇÃO DAS REVISÕES FUTURAS
         for (let interval of CONFIG.intervals) {
-            // Prioridade 1: Cálculo baseado na data selecionada
+            // LÓGICA DO MODO PENDULAR: AJUSTE DE DATAS
+            // Se intervalo for 7 ou 30 dias, somamos +1 para cair no dia de "Defesa" (alternado)
+            let effectiveInterval = interval;
+            if (store.profile === 'pendular') {
+                if (interval === 7) effectiveInterval = 8;
+                if (interval === 30) effectiveInterval = 31;
+            }
+
             const targetDate = new Date(baseDate);
-            targetDate.setDate(baseDate.getDate() + interval);
+            targetDate.setDate(baseDate.getDate() + effectiveInterval);
             const isoDate = targetDate.toISOString().split('T')[0];
             
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
@@ -221,27 +278,32 @@ const app = {
                     date: formatDateDisplay(isoDate),
                     load: projectedLoad,
                     limit: reviewLimitMinutes,
-                    interval: interval
+                    interval: effectiveInterval
                 };
                 break; 
             }
 
+            // Define o rótulo do tipo de revisão
+            let typeLabel = interval === 1 ? '24h' : interval + 'd';
+            if (store.profile === 'pendular') {
+                typeLabel = interval === 1 ? 'Defesa' : effectiveInterval + 'd+'; 
+            }
+
             // Prepara o objeto se passou no teste
             newReviews.push({
-                id: Date.now() + Math.random() + interval, // Prioridade 3: ID robusto
+                id: Date.now() + Math.random() + effectiveInterval,
                 subject: subjectName,
                 color: subjectColor,
                 topic: topic,
                 time: estimatedTime,
                 date: isoDate,
-                type: interval === 1 ? '24h' : interval === 7 ? '7d' : '30d',
+                type: typeLabel,
                 status: 'PENDING'
             });
         }
 
         // AÇÃO: Bloquear ou Salvar
         if (blocker) {
-            // Sugestão simples: +1 dia a partir da data de bloqueio
             toast.show(`
                 <div>
                     <strong class="block text-red-700 mb-1"><i data-lucide="shield-alert" class="inline w-4 h-4"></i> Bloqueio de Segurança</strong>
@@ -276,16 +338,19 @@ const app = {
         `, 'success');
         
         e.target.reset();
+        // Reset manual para garantir visual do profile
+        app.updateProfileUI(store.profile);
     },
 
     downloadBackup: () => {
         const data = {
-            version: '1.3',
+            version: '1.4',
             timestamp: new Date().toISOString(),
             store: {
                 reviews: store.reviews,
                 subjects: store.subjects,
-                capacity: store.capacity
+                capacity: store.capacity,
+                profile: store.profile
             }
         };
         
@@ -324,10 +389,13 @@ const app = {
                     store.reviews = json.store.reviews;
                     store.subjects = json.store.subjects || defaultSubjects;
                     store.capacity = json.store.capacity || 240;
+                    store.profile = json.store.profile || 'standard';
                     store.save(); 
                     
                     ui.initSubjects();
                     ui.render();
+                    app.init(); // Re-init para pegar UI do profile
+                    
                     if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                         ui.renderHeatmap();
                     }
@@ -463,6 +531,8 @@ const ui = {
             const day = String(today.getDate()).padStart(2, '0');
             dateInput.value = `${year}-${month}-${day}`;
         }
+        // Garante que o input de tempo respeite o perfil atual
+        app.updateProfileUI(store.profile);
         ui.toggleModal('modal-new', true);
     },
     
@@ -470,6 +540,10 @@ const ui = {
         const input = document.getElementById('setting-capacity');
         if(input) input.value = store.capacity;
         
+        // Sincroniza radio button
+        const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
+        if(activeRadio) activeRadio.checked = true;
+
         ui.renderHeatmap();
         ui.toggleModal('modal-heatmap', true);
     },
@@ -686,4 +760,3 @@ const ui = {
 };
 
 app.init();
-        

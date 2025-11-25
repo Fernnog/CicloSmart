@@ -1,8 +1,8 @@
 /* --- START OF FILE logic.js --- */
 
 /**
- * CICLOSMART CORE v1.3.0
- * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression, Backup System
+ * CICLOSMART CORE v1.3.1
+ * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression, Backup System, Retroactive Entry
  */
 
 // ==========================================
@@ -38,7 +38,7 @@ const formatDateDisplay = (isoDate) => {
 const toast = {
     show: (msg, type = 'info') => {
         const container = document.getElementById('toast-container');
-        if(!container) return; // Segurança caso o container não exista no HTML ainda
+        if(!container) return; 
         
         const el = document.createElement('div');
         const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 
@@ -46,11 +46,10 @@ const toast = {
                        'bg-slate-800 text-white';
         
         el.className = `toast show mb-2 p-4 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 min-w-[320px] max-w-md ${colors}`;
-        el.innerHTML = msg; // Permite HTML na mensagem
+        el.innerHTML = msg; 
         
         container.appendChild(el);
         
-        // Remove automaticamente após 5 segundos
         setTimeout(() => {
             el.classList.remove('show');
             setTimeout(() => el.remove(), 300);
@@ -63,7 +62,6 @@ const store = {
     subjects: [],
     capacity: 240, // Capacidade diária em minutos
 
-    // Carrega dados do LocalStorage ou usa padrões
     load: () => {
         const raw = localStorage.getItem(CONFIG.storageKey);
         if (raw) {
@@ -84,7 +82,6 @@ const store = {
         }
     },
 
-    // Salva estado atual
     save: () => {
         localStorage.setItem(CONFIG.storageKey, JSON.stringify({
             reviews: store.reviews,
@@ -97,7 +94,7 @@ const store = {
     addSubject: (name, color) => {
         store.subjects.push({ id: 'sub-' + Date.now(), name, color });
         store.save();
-        ui.initSubjects(); // Atualiza UI
+        ui.initSubjects(); 
     },
 
     removeSubject: (id) => {
@@ -121,7 +118,6 @@ const store = {
             r.status = r.status === 'PENDING' ? 'DONE' : 'PENDING';
             store.save();
             ui.render();
-            // Se o heatmap estiver aberto, atualiza ele também
             if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                 ui.renderHeatmap();
             }
@@ -154,18 +150,16 @@ const store = {
 const app = {
     init: () => {
         store.load();
-        ui.initSubjects(); // Inicializa selects e listas
+        ui.initSubjects(); 
         ui.render();
         
-        // Listeners
         const form = document.getElementById('form-study');
         if(form) form.addEventListener('submit', app.handleNewEntry);
         
-        // Define aba inicial mobile
         ui.switchTab('today');
     },
 
-    // --- NOVA LÓGICA DE ENTRADA COM TRAVA 40/60 E COMPRESSÃO ---
+    // --- NOVA LÓGICA DE ENTRADA COM AQUISIÇÃO, DATAS RETROATIVAS E TRAVAS ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -174,41 +168,54 @@ const app = {
         const subjectName = select.options[select.selectedIndex].text;
         const subjectColor = select.options[select.selectedIndex].dataset.color;
         const topic = document.getElementById('input-topic').value;
-        
-        // Captura o TEMPO DE ESTUDO (Matéria Nova), não a revisão
         const studyTimeInput = document.getElementById('input-study-time');
-        const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; // Fallback seguro
+        const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
 
-        // CONSTANTES DE REGRA DE NEGÓCIO (Neurociência)
-        // Fatores de compressão: R1=20%, R2=10%, R3=5% do tempo original
+        // --- NOVA CAPTURA DA DATA ---
+        const dateInput = document.getElementById('input-study-date');
+        const selectedDateStr = dateInput.value; // Formato YYYY-MM-DD
+        // Cria data base forçando meio-dia para evitar problemas de fuso horário na virada
+        const baseDate = new Date(selectedDateStr + 'T12:00:00');
+
+        // CONSTANTES DE REGRA DE NEGÓCIO
         const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
-        
-        // Teto máximo de revisão: 40% da capacidade total diária
-        // Ex: Se Capacidade = 240min (4h), Teto de Revisão = 96min.
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        const today = new Date();
         const newReviews = [];
         let blocker = null;
 
-        // SIMULAÇÃO: Verifica se adicionar estas revisões quebra a regra dos 40% no futuro
+        // 1. REGISTRO DO ESTUDO ORIGINAL (AQUISIÇÃO)
+        // Prioridade 1: Inserir o estudo do dia (ou data passada) na meta
+        const acquisitionEntry = {
+            id: Date.now() + Math.random(), // Prioridade 3: ID único com random
+            subject: subjectName,
+            color: subjectColor,
+            topic: topic,
+            time: studyTime,
+            date: selectedDateStr, // Data escolhida pelo usuário
+            type: 'NOVO', // Tipo Aquisição
+            status: 'PENDING'
+        };
+        newReviews.push(acquisitionEntry);
+
+        // 2. SIMULAÇÃO E GERAÇÃO DAS REVISÕES FUTURAS
         for (let interval of CONFIG.intervals) {
-            const targetDate = new Date();
-            targetDate.setDate(today.getDate() + interval);
+            // Prioridade 1: Cálculo baseado na data selecionada
+            const targetDate = new Date(baseDate);
+            targetDate.setDate(baseDate.getDate() + interval);
             const isoDate = targetDate.toISOString().split('T')[0];
             
-            // Tempo estimado comprimido (mínimo de 2 min para ser viável)
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
-            // Carga já existente nesse dia futuro (apenas pendentes)
+            // Carga já existente nesse dia futuro
             const existingLoad = store.reviews
                 .filter(r => r.date === isoDate && r.status !== 'DONE')
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const projectedLoad = existingLoad + estimatedTime;
 
-            // A REGRA DE OURO: Se a projeção passar de 40% da capacidade total
+            // Bloqueio de segurança
             if (projectedLoad > reviewLimitMinutes) {
                 blocker = {
                     date: formatDateDisplay(isoDate),
@@ -216,12 +223,12 @@ const app = {
                     limit: reviewLimitMinutes,
                     interval: interval
                 };
-                break; // Encontrou um bloqueio, para a simulação imediatamente
+                break; 
             }
 
             // Prepara o objeto se passou no teste
             newReviews.push({
-                id: Date.now() + interval, // ID único
+                id: Date.now() + Math.random() + interval, // Prioridade 3: ID robusto
                 subject: subjectName,
                 color: subjectColor,
                 topic: topic,
@@ -234,11 +241,7 @@ const app = {
 
         // AÇÃO: Bloquear ou Salvar
         if (blocker) {
-            // Encontrar sugestão de data simples (dia seguinte ao estudo atual)
-            const suggestDate = new Date();
-            suggestDate.setDate(today.getDate() + 1); 
-            const suggestStr = formatDateDisplay(suggestDate.toISOString().split('T')[0]);
-
+            // Sugestão simples: +1 dia a partir da data de bloqueio
             toast.show(`
                 <div>
                     <strong class="block text-red-700 mb-1"><i data-lucide="shield-alert" class="inline w-4 h-4"></i> Bloqueio de Segurança</strong>
@@ -247,28 +250,34 @@ const app = {
                         Carga Projetada: <b>${blocker.load}m</b> / Limite: <b>${blocker.limit}m</b>
                     </span>
                     <div class="mt-2 text-xs font-bold text-red-800">
-                        💡 Sugestão: Dedique hoje apenas a revisões pendentes. Tente adicionar matéria nova a partir de ${suggestStr}.
+                        💡 Sugestão: Tente reduzir o tempo de estudo inicial ou agendar para outra data.
                     </div>
                 </div>
             `, 'error');
             
-            if(window.lucide) lucide.createIcons(); // Atualiza ícones dentro do toast
-            return; // ABORTA
+            if(window.lucide) lucide.createIcons();
+            return; 
         }
 
-        // Se passou na validação, salva
         store.addReviews(newReviews);
         ui.toggleModal('modal-new', false);
+        
+        // Feedback diferenciado para registro retroativo
+        const todayStr = new Date().toISOString().split('T')[0];
+        const msg = selectedDateStr < todayStr 
+            ? 'Estudo retroativo registrado. Verifique a lista de "Atrasados".'
+            : 'Estudo registrado e revisões agendadas com sucesso.';
+
         toast.show(`
             <div>
                 <strong class="block text-emerald-400 mb-1">Sucesso!</strong>
-                Estudo registrado. Revisões agendadas com compressão inteligente.
+                ${msg}
             </div>
-        `);
+        `, 'success');
+        
         e.target.reset();
     },
 
-    // --- SISTEMA DE BACKUP E RESTAURAÇÃO (NOVO v1.3.0) ---
     downloadBackup: () => {
         const data = {
             version: '1.3',
@@ -307,19 +316,16 @@ const app = {
             try {
                 const json = JSON.parse(e.target.result);
                 
-                // Validação básica de estrutura
                 if (!json.store || !Array.isArray(json.store.reviews)) {
                     throw new Error("Formato de arquivo inválido.");
                 }
 
                 if (confirm(`Restaurar backup de ${formatDateDisplay(json.timestamp.split('T')[0])}? \nISSO SUBSTITUIRÁ OS DADOS ATUAIS.`)) {
-                    // Atualiza a Store
                     store.reviews = json.store.reviews;
                     store.subjects = json.store.subjects || defaultSubjects;
                     store.capacity = json.store.capacity || 240;
-                    store.save(); // Persiste
+                    store.save(); 
                     
-                    // Recarrega UI
                     ui.initSubjects();
                     ui.render();
                     if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
@@ -333,37 +339,33 @@ const app = {
                 console.error(err);
                 toast.show('Erro ao ler arquivo de backup: ' + err.message, 'error');
             }
-            // Limpa o input para permitir carregar o mesmo arquivo novamente
             input.value = '';
         };
         reader.readAsText(file);
     },
 
-    // Atualiza a capacidade diária (chamado pelo input no Modal Heatmap)
     updateCapacitySetting: (val) => {
         const min = parseInt(val);
         if(min > 0) {
             store.capacity = min;
             store.save();
-            ui.renderHeatmap(); // Atualiza visual do grid
-            ui.render(); // Atualiza barra de progresso principal
+            ui.renderHeatmap(); 
+            ui.render(); 
         }
     },
 
-    // Chamado pelo botão do modal de matérias
     addSubjectUI: () => {
         const nameInput = document.getElementById('new-subj-name');
         const colorInput = document.getElementById('new-subj-color');
         
         if (nameInput.value.trim()) {
             store.addSubject(nameInput.value.trim(), colorInput.value);
-            nameInput.value = ''; // Limpar input
+            nameInput.value = ''; 
         } else {
             alert("Digite o nome da matéria.");
         }
     },
 
-    // Trigger de Edição de Card
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
@@ -377,7 +379,6 @@ const app = {
         }
     },
 
-    // Exportação ICS
     exportICS: () => {
         const pendings = store.reviews.filter(r => r.status === 'PENDING');
         if (pendings.length === 0) return alert("Nada para exportar.");
@@ -420,7 +421,6 @@ const app = {
 // ==========================================
 
 const ui = {
-    // --- Lógica de Abas (Mobile) ---
     switchTab: (tabName) => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         const btn = document.getElementById(`tab-${tabName}`);
@@ -439,7 +439,6 @@ const ui = {
         }
     },
 
-    // --- Modais ---
     toggleModal: (id, show) => {
         const el = document.getElementById(id);
         if(!el) return;
@@ -450,10 +449,23 @@ const ui = {
             el.classList.add('hidden');
         }
     },
-    toggleSubjectModal: (show) => ui.toggleModal('modal-subjects', show),
-    openNewStudyModal: () => ui.toggleModal('modal-new', true),
     
-    // --- Heatmap (Radar de Carga) ---
+    toggleSubjectModal: (show) => ui.toggleModal('modal-subjects', show),
+    
+    // Priority 2: Preencher data atual ao abrir modal
+    openNewStudyModal: () => {
+        const dateInput = document.getElementById('input-study-date');
+        if(dateInput) {
+            // Garante o formato YYYY-MM-DD com base no fuso local
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        }
+        ui.toggleModal('modal-new', true);
+    },
+    
     openHeatmapModal: () => {
         const input = document.getElementById('setting-capacity');
         if(input) input.value = store.capacity;
@@ -468,12 +480,10 @@ const ui = {
             
             container.innerHTML = '';
             
-            // Gerar próximos 30 dias
             for (let i = 0; i < 30; i++) {
                 const isoDate = getRelativeDate(i);
                 const displayDate = formatDateDisplay(isoDate);
                 
-                // Calcular carga do dia
                 const dayLoad = store.reviews
                     .filter(r => r.date === isoDate && r.status !== 'DONE')
                     .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
@@ -481,7 +491,6 @@ const ui = {
                 const capacity = store.capacity > 0 ? store.capacity : 240;
                 const percentage = (dayLoad / capacity) * 100;
                 
-                // Lógica de Cores
                 let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700';
                 if (dayLoad === 0) {
                     colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60';
@@ -510,7 +519,6 @@ const ui = {
     toggleChangelog: (show) => {
         if(show) {
             const container = document.getElementById('changelog-content');
-            // AGORA USA A CONSTANTE GLOBAL changelogData
             container.innerHTML = changelogData.map(log => `
                 <div class="mb-4 border-l-2 border-indigo-500 pl-3">
                     <div class="flex justify-between items-center mb-1">
@@ -526,7 +534,6 @@ const ui = {
         ui.toggleModal('modal-changelog', show);
     },
 
-    // --- Renderização de Matérias ---
     initSubjects: () => {
         const select = document.getElementById('input-subject');
         if(select) {
@@ -552,7 +559,6 @@ const ui = {
         }
     },
 
-    // --- Renderização Principal (Kanban) ---
     render: () => {
         const todayStr = getRelativeDate(0);
         const containers = {
@@ -561,7 +567,6 @@ const ui = {
             future: document.getElementById('list-future')
         };
 
-        // Verifica se elementos existem antes de manipular
         if(!containers.late || !containers.today || !containers.future) return;
 
         Object.values(containers).forEach(el => el.innerHTML = '');
@@ -587,7 +592,6 @@ const ui = {
             }
         });
 
-        // Atualiza Badges
         ['late', 'today', 'future'].forEach(key => {
             const countEl = document.getElementById(`count-${key}`);
             if(countEl) countEl.innerText = counts[key];
@@ -596,7 +600,6 @@ const ui = {
             if(mobileBadge) mobileBadge.innerText = counts[key];
         });
 
-        // Empty States
         if(!counts.late) containers.late.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Nenhum atraso! 🎉</div>`;
         if(!counts.today) containers.today.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Tudo limpo por hoje.</div>`;
         if(!counts.future) containers.future.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Sem previsões.</div>`;
@@ -664,7 +667,6 @@ const ui = {
     },
 
     updateCapacityStats: (todayMinutes) => {
-        // Usa capacidade da store ou fallback
         const limit = store.capacity || CONFIG.defaultCapacity;
         
         const percentage = Math.min((todayMinutes / limit) * 100, 100);
@@ -683,5 +685,5 @@ const ui = {
     }
 };
 
-// Iniciar Aplicação
 app.init();
+        

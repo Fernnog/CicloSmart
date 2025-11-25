@@ -6,7 +6,125 @@
  */
 
 // ==========================================
-// 1. CONFIGURAÇÃO & STORE (PERSISTÊNCIA)
+// 1.1. (Helper de Toast)
+// ==========================================
+
+const toast = {
+    show: (msg, type = 'info') => {
+        const container = document.getElementById('toast-container');
+        const el = document.createElement('div');
+        const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 'bg-slate-800 text-white';
+        
+        el.className = `toast show mb-2 p-4 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 min-w-[320px] max-w-md ${colors}`;
+        el.innerHTML = msg; // Permite HTML na mensagem
+        
+        container.appendChild(el);
+        setTimeout(() => {
+            el.classList.remove('show');
+            setTimeout(() => el.remove(), 300);
+        }, 5000);
+    }
+};
+
+// 2. SUBSTITUIR COMPLETAMENTE a função 'handleNewEntry' dentro do objeto 'app'
+handleNewEntry: (e) => {
+    e.preventDefault();
+    
+    // Coleta dados
+    const select = document.getElementById('input-subject');
+    const subjectName = select.options[select.selectedIndex].text;
+    const subjectColor = select.options[select.selectedIndex].dataset.color;
+    const topic = document.getElementById('input-topic').value;
+    const studyTime = parseInt(document.getElementById('input-study-time').value);
+
+    // CONSTANTES DE REGRA DE NEGÓCIO
+    // Fatores de compressão: R1=20%, R2=10%, R3=5% do tempo original
+    const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
+    // Teto máximo de revisão: 40% da capacidade total diária
+    const REVIEW_CEILING_RATIO = 0.40; 
+    const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
+
+    const today = new Date();
+    const newReviews = [];
+    let blocker = null;
+
+    // SIMULAÇÃO: Verifica se adicionar estas revisões quebra a regra dos 40% no futuro
+    for (let interval of CONFIG.intervals) {
+        const targetDate = new Date();
+        targetDate.setDate(today.getDate() + interval);
+        const isoDate = targetDate.toISOString().split('T')[0];
+        
+        // Tempo estimado comprimido (mínimo de 2 min)
+        const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
+
+        // Carga já existente nesse dia futuro (apenas pendentes)
+        const existingLoad = store.reviews
+            .filter(r => r.date === isoDate && r.status !== 'DONE')
+            .reduce((acc, curr) => acc + curr.time, 0);
+        
+        const projectedLoad = existingLoad + estimatedTime;
+
+        // A REGRA DE OURO: Se a projeção passar de 40% da capacidade total
+        if (projectedLoad > reviewLimitMinutes) {
+            blocker = {
+                date: formatDateDisplay(isoDate),
+                load: projectedLoad,
+                limit: reviewLimitMinutes,
+                interval: interval
+            };
+            break; // Encontrou um bloqueio, para a simulação
+        }
+
+        newReviews.push({
+            id: Date.now() + interval,
+            subject: subjectName,
+            color: subjectColor,
+            topic: topic,
+            time: estimatedTime,
+            date: isoDate,
+            type: interval === 1 ? '24h' : interval === 7 ? '7d' : '30d',
+            status: 'PENDING'
+        });
+    }
+
+    // AÇÃO: Bloquear ou Salvar
+    if (blocker) {
+        // Encontrar sugestão de data (Lógica simplificada: +1 dia após o bloqueio)
+        // Numa implementação completa, buscaríamos o próximo slot livre recursivamente
+        const suggestDate = new Date();
+        suggestDate.setDate(today.getDate() + 1); 
+        const suggestStr = formatDateDisplay(suggestDate.toISOString().split('T')[0]);
+
+        toast.show(`
+            <div>
+                <strong class="block text-red-700 mb-1"><i data-lucide="shield-alert" class="inline w-4 h-4"></i> Bloqueio de Segurança</strong>
+                <span class="block mb-2">Adicionar este estudo faria o dia <b>${blocker.date}</b> exceder o limite de revisões (40%).</span>
+                <span class="text-xs bg-white/50 px-2 py-1 rounded border border-red-200 block">
+                    Carga Projetada: <b>${blocker.load}m</b> / Limite: <b>${blocker.limit}m</b>
+                </span>
+                <div class="mt-2 text-xs font-bold text-red-800">
+                    💡 Sugestão: Dedique hoje apenas a revisões pendentes. Tente adicionar matéria nova a partir de ${suggestStr}.
+                </div>
+            </div>
+        `, 'error');
+        lucide.createIcons(); // Atualiza ícones dentro do toast
+        return; 
+    }
+
+    // Se passou na validação, salva
+    store.addReviews(newReviews);
+    ui.toggleModal('modal-new', false);
+    toast.show(`
+        <div>
+            <strong class="block text-emerald-400 mb-1">Sucesso!</strong>
+            Estudo registrado. Revisões agendadas com compressão inteligente.
+        </div>
+    `);
+    e.target.reset();
+},
+
+// ==========================================
+// 1.2. CONFIGURAÇÃO & STORE (PERSISTÊNCIA)
 // ==========================================
 
 const CONFIG = {

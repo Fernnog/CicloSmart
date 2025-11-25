@@ -101,4 +101,3 @@ Não é necessária instalação (npm/yarn). Como o projeto usa CDN para as bibl
 ---
 
 **Desenvolvido com foco em produtividade e simplicidade.**
-```

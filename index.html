@@ -274,6 +274,39 @@
             </div>
         </div>
     </div>
+    
+    <div id="modal-cycle-confirm" class="fixed inset-0 bg-slate-900/80 z-[60] hidden flex items-center justify-center backdrop-blur-sm transition-all" aria-hidden="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm m-4 overflow-hidden transform transition-all p-6 text-center">
+            <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-600">
+                <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+            </div>
+            
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Definição de Ciclo</h3>
+            <p class="text-sm text-slate-500 mb-6">
+                Como deseja registrar este estudo na sua linha do tempo?
+            </p>
+
+            <div class="space-y-3">
+                <button onclick="app.resolveCycle(false)" class="w-full flex items-center justify-between p-3 border border-slate-200 rounded-lg hover:bg-slate-50 group text-left transition-colors">
+                    <div>
+                        <span class="block text-sm font-bold text-slate-700">Manter Ciclo Atual</span>
+                        <span class="text-xs text-slate-400" id="cycle-option-keep-desc">Será o dia #??</span>
+                    </div>
+                    <i data-lucide="arrow-right" class="w-4 h-4 text-slate-300 group-hover:text-indigo-600"></i>
+                </button>
+
+                <button onclick="app.resolveCycle(true)" class="w-full flex items-center justify-between p-3 border border-indigo-200 bg-indigo-50 rounded-lg hover:bg-indigo-100 group text-left transition-colors">
+                    <div>
+                        <span class="block text-sm font-bold text-indigo-700">Iniciar Novo Ciclo</span>
+                        <span class="text-xs text-indigo-500">Definir como Dia #1</span>
+                    </div>
+                    <i data-lucide="flag" class="w-4 h-4 text-indigo-400 group-hover:text-indigo-700"></i>
+                </button>
+            </div>
+            
+            <button onclick="ui.toggleModal('modal-cycle-confirm', false)" class="mt-6 text-xs text-slate-400 hover:text-slate-600 underline">Cancelar operação</button>
+        </div>
+    </div>
 
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 

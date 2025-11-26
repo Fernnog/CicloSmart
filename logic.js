@@ -1,8 +1,8 @@
 /* --- START OF FILE logic.js --- */
 
 /**
- * CICLOSMART CORE v1.4.0
- * Features: Neuro-SRS Engine, Capacity Lock (40/60 Rule), Compression, Backup System, Retroactive Entry, Pendular Profile
+ * CICLOSMART CORE v1.5.0
+ * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile (Attack/Defense Modes)
  */
 
 // ==========================================
@@ -66,6 +66,7 @@ const store = {
     subjects: [],
     capacity: 240, // Capacidade diária em minutos
     profile: 'standard', // 'standard' ou 'pendular'
+    cycleState: 'ATTACK', // 'ATTACK' (Ataque) ou 'DEFENSE' (Defesa) - Novo v1.5
 
     load: () => {
         const raw = localStorage.getItem(CONFIG.storageKey);
@@ -76,17 +77,20 @@ const store = {
                 store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
                 store.capacity = data.capacity || CONFIG.defaultCapacity;
                 store.profile = data.profile || CONFIG.profiles.STANDARD;
+                store.cycleState = data.cycleState || 'ATTACK';
             } catch (e) {
                 console.error("Erro ao ler dados", e);
                 store.subjects = defaultSubjects;
                 store.capacity = CONFIG.defaultCapacity;
                 store.profile = CONFIG.profiles.STANDARD;
+                store.cycleState = 'ATTACK';
             }
         } else {
             store.subjects = [...defaultSubjects];
             store.reviews = []; 
             store.capacity = CONFIG.defaultCapacity;
             store.profile = CONFIG.profiles.STANDARD;
+            store.cycleState = 'ATTACK';
         }
     },
 
@@ -95,7 +99,8 @@ const store = {
             reviews: store.reviews,
             subjects: store.subjects,
             capacity: store.capacity,
-            profile: store.profile
+            profile: store.profile,
+            cycleState: store.cycleState
         }));
     },
 
@@ -168,7 +173,13 @@ const app = {
         // Inicializar UI do perfil
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
-        app.updateProfileUI(store.profile); // Atualiza inputs sem toast
+        
+        // Listener para o botão Novo Estudo (Interceptação v1.5)
+        const btnNew = document.getElementById('btn-new-study');
+        if(btnNew) btnNew.onclick = app.handleNewStudyClick;
+
+        app.updateProfileUI(store.profile); 
+        ui.updateModeUI(); // Atualiza HUD v1.5
 
         ui.switchTab('today');
     },
@@ -177,12 +188,48 @@ const app = {
         store.profile = mode;
         store.save();
         app.updateProfileUI(mode);
+        ui.updateModeUI(); // Atualiza visibilidade do HUD
         
         const msg = mode === 'pendular' 
-            ? 'Modo Pendular Ativado: Teto de 90min e ajuste de datas (Ataque/Defesa).' 
+            ? 'Modo Pendular Ativado: Teto de 90min e Ciclo Ataque/Defesa.' 
             : 'Modo Integrado Ativado: Sem limites rígidos.';
         
         toast.show(msg, 'success');
+    },
+
+    // --- NOVA LÓGICA v1.5: Alternância de Ciclo ---
+    toggleMode: () => {
+        // Só permite troca se estiver no perfil Pendular
+        if (store.profile !== 'pendular') {
+            toast.show('Alterne para o perfil Pendular nas configurações para usar este modo.', 'info');
+            return;
+        }
+
+        store.cycleState = store.cycleState === 'ATTACK' ? 'DEFENSE' : 'ATTACK';
+        store.save();
+        ui.updateModeUI();
+        
+        const msg = store.cycleState === 'ATTACK' 
+            ? '⚔️ Modo ATAQUE: Matéria nova liberada!' 
+            : '🛡️ Modo DEFESA: Apenas revisões hoje.';
+        
+        // 'error' usa cor vermelha (agressiva/ataque), 'info' azul (defesa)
+        toast.show(msg, store.cycleState === 'ATTACK' ? 'error' : 'info'); 
+    },
+
+    // --- NOVA LÓGICA v1.5: Gatekeeper (Bloqueio) ---
+    handleNewStudyClick: () => {
+        if (store.profile === 'pendular' && store.cycleState === 'DEFENSE') {
+            toast.show(`
+                <div>
+                    <strong class="block text-indigo-700 mb-1">🛡️ Bloqueio de Disciplina</strong>
+                    Hoje é dia de <b>Defesa</b>. Seu foco deve ser zerar as revisões pendentes.<br>
+                    <span class="text-xs opacity-75 mt-1 block">Dica: Se errou o dia, clique no ícone de Escudo no topo para trocar.</span>
+                </div>
+            `, 'info');
+            return;
+        }
+        ui.openNewStudyModal();
     },
 
     updateProfileUI: (mode) => {
@@ -201,7 +248,6 @@ const app = {
         }
     },
 
-    // --- NOVA LÓGICA DE ENTRADA COM PERFIS PENDULARES ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -213,7 +259,7 @@ const app = {
         const studyTimeInput = document.getElementById('input-study-time');
         const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
 
-        // VALIDAÇÃO DO MODO PENDULAR
+        // VALIDAÇÃO DO MODO PENDULAR (Tempo)
         if (store.profile === 'pendular' && studyTime > 90) {
             return toast.show(`
                 <div>
@@ -344,13 +390,14 @@ const app = {
 
     downloadBackup: () => {
         const data = {
-            version: '1.4',
+            version: '1.5',
             timestamp: new Date().toISOString(),
             store: {
                 reviews: store.reviews,
                 subjects: store.subjects,
                 capacity: store.capacity,
-                profile: store.profile
+                profile: store.profile,
+                cycleState: store.cycleState
             }
         };
         
@@ -390,11 +437,12 @@ const app = {
                     store.subjects = json.store.subjects || defaultSubjects;
                     store.capacity = json.store.capacity || 240;
                     store.profile = json.store.profile || 'standard';
+                    store.cycleState = json.store.cycleState || 'ATTACK';
                     store.save(); 
                     
                     ui.initSubjects();
                     ui.render();
-                    app.init(); // Re-init para pegar UI do profile
+                    app.init(); // Re-init para pegar UI do profile e HUD
                     
                     if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                         ui.renderHeatmap();
@@ -507,6 +555,50 @@ const ui = {
         }
     },
 
+    // --- NOVA LÓGICA UI v1.5: Atualiza HUD e Botões ---
+    updateModeUI: () => {
+        const btnMode = document.getElementById('mode-toggle');
+        const iconMode = document.getElementById('mode-icon');
+        const textMode = document.getElementById('mode-text');
+        const btnNew = document.getElementById('btn-new-study');
+        const iconNew = document.getElementById('icon-new-study');
+
+        if (!btnMode || !btnNew) return;
+
+        // 1. Visibilidade do Toggle (Apenas Pendular)
+        if (store.profile !== 'pendular') {
+            btnMode.classList.add('hidden');
+            btnNew.disabled = false;
+            btnNew.classList.remove('opacity-50', 'cursor-not-allowed');
+            if(iconNew) iconNew.setAttribute('data-lucide', 'plus');
+            if(window.lucide) lucide.createIcons();
+            return;
+        }
+
+        btnMode.classList.remove('hidden');
+
+        // 2. Atualiza Estilo do HUD e Botão Principal
+        if (store.cycleState === 'ATTACK') {
+            btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-attack';
+            textMode.innerText = 'Dia de Ataque';
+            iconMode.setAttribute('data-lucide', 'sword');
+            
+            // Libera botão
+            btnNew.disabled = false;
+            iconNew.setAttribute('data-lucide', 'plus');
+        } else {
+            btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-defense';
+            textMode.innerText = 'Dia de Defesa';
+            iconMode.setAttribute('data-lucide', 'shield');
+            
+            // Bloqueia visualmente botão
+            // Nota: O bloqueio lógico está no handleNewStudyClick, mas aqui mudamos o ícone
+            iconNew.setAttribute('data-lucide', 'lock');
+        }
+        
+        if (window.lucide) lucide.createIcons();
+    },
+
     toggleModal: (id, show) => {
         const el = document.getElementById(id);
         if(!el) return;
@@ -520,7 +612,6 @@ const ui = {
     
     toggleSubjectModal: (show) => ui.toggleModal('modal-subjects', show),
     
-    // Priority 2: Preencher data atual ao abrir modal
     openNewStudyModal: () => {
         const dateInput = document.getElementById('input-study-date');
         if(dateInput) {

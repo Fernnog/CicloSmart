@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
- * Update v1.1.1: Sequential Indexing (Useful Days)
+ * Update v1.1.2: Persistent Capacity Bar (Total Load Logic)
  */
 
 // ==========================================
@@ -880,7 +880,11 @@ const ui = {
             } else if (r.date === todayStr) {
                 containers.today.innerHTML += cardHTML;
                 counts.today++;
-                if (r.status !== 'DONE') todayLoad += r.time;
+                
+                // ATUALIZAÇÃO v1.1.2: Soma tempo total, ignorando status
+                // Anteriormente: if (r.status !== 'DONE') todayLoad += r.time;
+                todayLoad += r.time;
+
             } else if (r.date > todayStr) {
                 containers.future.innerHTML += cardHTML;
                 counts.future++;
@@ -976,7 +980,9 @@ const ui = {
         if(bar && text) {
             bar.style.width = `${percentage}%`;
             const remaining = Math.max(0, limit - todayMinutes);
-            text.innerHTML = `Uso: <b>${todayMinutes}m</b> <span class="text-slate-300 mx-1">|</span> Resta: ${remaining}m`;
+            // ATUALIZAÇÃO DE UX SUGERIDA NA ANÁLISE:
+            // Troca de "Resta: X" para "Planejado / Total" para fazer sentido com a nova lógica
+            text.innerHTML = `Planejado: <b>${todayMinutes}m</b> <span class="text-slate-300 mx-1">|</span> Meta: ${limit}m`;
 
             bar.className = `h-full rounded-full transition-all duration-700 ease-out relative ${
                 percentage > 100 ? 'bg-slate-800' : percentage > 80 ? 'bg-red-600' : percentage > 60 ? 'bg-amber-500' : 'bg-indigo-600'

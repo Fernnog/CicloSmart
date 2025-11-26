@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.0.4', 
+        version: '1.0.5', 
         date: 'Hoje', 
+        changes: [
+            '🧠 <strong>Smart Cycle (IA):</strong> O sistema agora tem memória! Se você estudou matéria nova ontem, o app inicia automaticamente em 🛡️ <strong>Modo Defesa</strong> hoje.',
+            '🔄 <strong>Auto-Recuperação:</strong> Se você ficar 2 dias ou mais sem estudar, o sistema entende o descanso e libera o ⚔️ <strong>Modo Ataque</strong> automaticamente.',
+            '💾 <strong>Persistência Avançada:</strong> Ocorrências de estudo (ataque) agora são salvas separadamente para alimentar a inteligência do ciclo.'
+        ] 
+    },
+    { 
+        version: '1.0.4', 
+        date: 'Anterior', 
         changes: [
             '⚔️ <strong>Modo Pendular (HUD):</strong> Novo indicador visual no topo (Espada/Escudo) para alternar entre dias de Ataque e Defesa.',
             '🛡️ <strong>Trava de Disciplina:</strong> O botão "Novo Estudo" agora é bloqueado fisicamente em dias de Defesa para forçar a consolidação da memória.',
@@ -12,7 +21,7 @@ const changelogData = [
     },
     { 
         version: '1.0.3', 
-        date: 'Anterior', 
+        date: 'Legacy', 
         changes: [
             '💾 <strong>Backup & Restore:</strong> Funcionalidade de exportar e importar dados (JSON) para segurança.',
             '📦 <strong>Refatoração:</strong> Separação do histórico de versões em arquivo dedicado.'

@@ -1,12 +1,13 @@
 /* --- START OF FILE logic.js --- */
 
 /**
- * CICLOSMART CORE
- * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile (Attack/Defense Modes)
+ * CICLOSMART CORE v1.0.5
+ * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile
+ * Update v1.0.5: Smart Cycle Automation & Timezone Fix
  */
 
 // ==========================================
-// 1. CONFIGURAÇÃO & STORE (PERSISTÊNCIA)
+// 1. CONFIGURAÇÃO & UTILITÁRIOS
 // ==========================================
 
 const CONFIG = {
@@ -26,11 +27,20 @@ const defaultSubjects = [
     { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet
 ];
 
-// Utilitários de Data
+// Utilitário de Data Robusto (Melhoria v1.0.5)
+// Garante que a data retornada respeite o fuso horário local do usuário
+// Evita bugs onde 'hoje' vira 'amanhã' em chamadas UTC tarde da noite
+const getLocalISODate = (dateObj = new Date()) => {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const getRelativeDate = (daysOffset) => {
     const date = new Date();
     date.setDate(date.getDate() + daysOffset);
-    return date.toISOString().split('T')[0];
+    return getLocalISODate(date);
 };
 
 const formatDateDisplay = (isoDate) => {
@@ -61,12 +71,17 @@ const toast = {
     }
 };
 
+// ==========================================
+// 2. STORE (ESTADO & PERSISTÊNCIA)
+// ==========================================
+
 const store = {
     reviews: [],
     subjects: [],
-    capacity: 240, // Capacidade diária em minutos
-    profile: 'standard', // 'standard' ou 'pendular'
-    cycleState: 'ATTACK', // 'ATTACK' (Ataque) ou 'DEFENSE' (Defesa) - Novo v1.5
+    capacity: 240, 
+    profile: 'standard', 
+    cycleState: 'ATTACK', 
+    lastAttackDate: null, // Novo v1.0.5: Rastreia última inserção de matéria nova
 
     load: () => {
         const raw = localStorage.getItem(CONFIG.storageKey);
@@ -78,20 +93,23 @@ const store = {
                 store.capacity = data.capacity || CONFIG.defaultCapacity;
                 store.profile = data.profile || CONFIG.profiles.STANDARD;
                 store.cycleState = data.cycleState || 'ATTACK';
+                store.lastAttackDate = data.lastAttackDate || null; // Carrega histórico
             } catch (e) {
                 console.error("Erro ao ler dados", e);
-                store.subjects = defaultSubjects;
-                store.capacity = CONFIG.defaultCapacity;
-                store.profile = CONFIG.profiles.STANDARD;
-                store.cycleState = 'ATTACK';
+                store.resetDefaults();
             }
         } else {
-            store.subjects = [...defaultSubjects];
-            store.reviews = []; 
-            store.capacity = CONFIG.defaultCapacity;
-            store.profile = CONFIG.profiles.STANDARD;
-            store.cycleState = 'ATTACK';
+            store.resetDefaults();
         }
+    },
+
+    resetDefaults: () => {
+        store.subjects = [...defaultSubjects];
+        store.reviews = []; 
+        store.capacity = CONFIG.defaultCapacity;
+        store.profile = CONFIG.profiles.STANDARD;
+        store.cycleState = 'ATTACK';
+        store.lastAttackDate = null;
     },
 
     save: () => {
@@ -100,7 +118,8 @@ const store = {
             subjects: store.subjects,
             capacity: store.capacity,
             profile: store.profile,
-            cycleState: store.cycleState
+            cycleState: store.cycleState,
+            lastAttackDate: store.lastAttackDate
         }));
     },
 
@@ -158,12 +177,16 @@ const store = {
 };
 
 // ==========================================
-// 2. LÓGICA DO APP (CONTROLLER)
+// 3. LÓGICA DO APP (CONTROLLER)
 // ==========================================
 
 const app = {
     init: () => {
         store.load();
+        
+        // Novo v1.0.5: Verifica estado do ciclo baseado no histórico
+        app.checkSmartCycle();
+
         ui.initSubjects(); 
         ui.render();
         
@@ -174,32 +197,68 @@ const app = {
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
         
-        // Listener para o botão Novo Estudo (Interceptação v1.5)
         const btnNew = document.getElementById('btn-new-study');
         if(btnNew) btnNew.onclick = app.handleNewStudyClick;
 
         app.updateProfileUI(store.profile); 
-        ui.updateModeUI(); // Atualiza HUD v1.5
+        ui.updateModeUI(); 
 
         ui.switchTab('today');
     },
 
+    /**
+     * Lógica v1.0.5: Smart Switch
+     * Verifica a data do último "Ataque" e define automaticamente o modo de hoje.
+     */
+    checkSmartCycle: () => {
+        // A automação só roda se estiver no perfil Pendular e tiver histórico
+        if (store.profile !== 'pendular' || !store.lastAttackDate) return;
+        
+        const todayStr = getLocalISODate();
+        const dateLast = new Date(store.lastAttackDate + 'T00:00:00'); // Força meia-noite local
+        const dateToday = new Date(todayStr + 'T00:00:00');
+        
+        // Diferença em milissegundos convertida para dias
+        const diffTime = dateToday - dateLast;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+        // 1. Cenário: Estudou ONTEM (1 dia atrás) -> Forçar DEFESA
+        if (diffDays === 1) {
+            if (store.cycleState !== 'DEFENSE') {
+                store.cycleState = 'DEFENSE';
+                store.save();
+                setTimeout(() => toast.show('🔄 <b>Smart Cycle:</b> Como você estudou matéria nova ontem, hoje ativamos o <b>Modo Defesa</b> para consolidação.', 'info'), 800);
+            }
+        } 
+        // 2. Cenário: Pausa de 2+ dias -> Reiniciar para ATAQUE
+        else if (diffDays >= 2) {
+            if (store.cycleState !== 'ATTACK') {
+                store.cycleState = 'ATTACK';
+                store.save();
+                setTimeout(() => toast.show('⚔️ <b>Smart Cycle:</b> Após o descanso, seu ciclo reiniciou. <b>Modo Ataque</b> liberado!', 'error'), 800);
+            }
+        }
+        // 3. Se diffDays === 0 (Mesmo dia), mantém o estado atual.
+    },
+
     setProfile: (mode) => {
         store.profile = mode;
+        // Ao mudar perfil, rodamos a verificação inteligente se for pendular
+        if (mode === 'pendular') {
+            app.checkSmartCycle();
+        }
         store.save();
         app.updateProfileUI(mode);
-        ui.updateModeUI(); // Atualiza visibilidade do HUD
+        ui.updateModeUI();
         
         const msg = mode === 'pendular' 
-            ? 'Modo Pendular Ativado: Teto de 90min e Ciclo Ataque/Defesa.' 
+            ? 'Modo Pendular Ativado: Teto de 90min e Ciclo Inteligente.' 
             : 'Modo Integrado Ativado: Sem limites rígidos.';
         
         toast.show(msg, 'success');
     },
 
-    // --- NOVA LÓGICA v1.5: Alternância de Ciclo ---
     toggleMode: () => {
-        // Só permite troca se estiver no perfil Pendular
         if (store.profile !== 'pendular') {
             toast.show('Alterne para o perfil Pendular nas configurações para usar este modo.', 'info');
             return;
@@ -210,14 +269,12 @@ const app = {
         ui.updateModeUI();
         
         const msg = store.cycleState === 'ATTACK' 
-            ? '⚔️ Modo ATAQUE: Matéria nova liberada!' 
-            : '🛡️ Modo DEFESA: Apenas revisões hoje.';
+            ? '⚔️ Modo ATAQUE Manual: Matéria nova liberada!' 
+            : '🛡️ Modo DEFESA Manual: Apenas revisões hoje.';
         
-        // 'error' usa cor vermelha (agressiva/ataque), 'info' azul (defesa)
         toast.show(msg, store.cycleState === 'ATTACK' ? 'error' : 'info'); 
     },
 
-    // --- NOVA LÓGICA v1.5: Gatekeeper (Bloqueio) ---
     handleNewStudyClick: () => {
         if (store.profile === 'pendular' && store.cycleState === 'DEFENSE') {
             toast.show(`
@@ -251,7 +308,6 @@ const app = {
     handleNewEntry: (e) => {
         e.preventDefault();
         
-        // Coleta dados
         const select = document.getElementById('input-subject');
         const subjectName = select.options[select.selectedIndex].text;
         const subjectColor = select.options[select.selectedIndex].dataset.color;
@@ -259,7 +315,6 @@ const app = {
         const studyTimeInput = document.getElementById('input-study-time');
         const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
 
-        // VALIDAÇÃO DO MODO PENDULAR (Tempo)
         if (store.profile === 'pendular' && studyTime > 90) {
             return toast.show(`
                 <div>
@@ -269,10 +324,9 @@ const app = {
             `, 'error');
         }
 
-        // --- NOVA CAPTURA DA DATA ---
         const dateInput = document.getElementById('input-study-date');
-        const selectedDateStr = dateInput.value; // Formato YYYY-MM-DD
-        const baseDate = new Date(selectedDateStr + 'T12:00:00');
+        const selectedDateStr = dateInput.value; // YYYY-MM-DD
+        const baseDate = new Date(selectedDateStr + 'T12:00:00'); // Fixar meio-dia para evitar shifts
 
         // CONSTANTES DE REGRA DE NEGÓCIO
         const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
@@ -297,9 +351,8 @@ const app = {
 
         // 2. SIMULAÇÃO E GERAÇÃO DAS REVISÕES FUTURAS
         for (let interval of CONFIG.intervals) {
-            // LÓGICA DO MODO PENDULAR: AJUSTE DE DATAS
-            // Se intervalo for 7 ou 30 dias, somamos +1 para cair no dia de "Defesa" (alternado)
             let effectiveInterval = interval;
+            // Ajuste de datas para cair em dias de 'Defesa' no modo Pendular
             if (store.profile === 'pendular') {
                 if (interval === 7) effectiveInterval = 8;
                 if (interval === 30) effectiveInterval = 31;
@@ -307,18 +360,16 @@ const app = {
 
             const targetDate = new Date(baseDate);
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
-            const isoDate = targetDate.toISOString().split('T')[0];
+            const isoDate = getLocalISODate(targetDate); // Usa o novo helper
             
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
-            // Carga já existente nesse dia futuro
             const existingLoad = store.reviews
                 .filter(r => r.date === isoDate && r.status !== 'DONE')
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const projectedLoad = existingLoad + estimatedTime;
 
-            // Bloqueio de segurança
             if (projectedLoad > reviewLimitMinutes) {
                 blocker = {
                     date: formatDateDisplay(isoDate),
@@ -329,13 +380,11 @@ const app = {
                 break; 
             }
 
-            // Define o rótulo do tipo de revisão
             let typeLabel = interval === 1 ? '24h' : interval + 'd';
             if (store.profile === 'pendular') {
                 typeLabel = interval === 1 ? 'Defesa' : effectiveInterval + 'd+'; 
             }
 
-            // Prepara o objeto se passou no teste
             newReviews.push({
                 id: Date.now() + Math.random() + effectiveInterval,
                 subject: subjectName,
@@ -348,7 +397,6 @@ const app = {
             });
         }
 
-        // AÇÃO: Bloquear ou Salvar
         if (blocker) {
             toast.show(`
                 <div>
@@ -367,11 +415,15 @@ const app = {
             return; 
         }
 
+        // Lógica v1.0.5: Registrar data do ataque para automação futura
+        if (store.profile === 'pendular') {
+            store.lastAttackDate = selectedDateStr;
+        }
+
         store.addReviews(newReviews);
         ui.toggleModal('modal-new', false);
         
-        // Feedback diferenciado para registro retroativo
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalISODate();
         const msg = selectedDateStr < todayStr 
             ? 'Estudo retroativo registrado. Verifique a lista de "Atrasados".'
             : 'Estudo registrado e revisões agendadas com sucesso.';
@@ -384,7 +436,6 @@ const app = {
         `, 'success');
         
         e.target.reset();
-        // Reset manual para garantir visual do profile
         app.updateProfileUI(store.profile);
     },
 
@@ -397,7 +448,8 @@ const app = {
                 subjects: store.subjects,
                 capacity: store.capacity,
                 profile: store.profile,
-                cycleState: store.cycleState
+                cycleState: store.cycleState,
+                lastAttackDate: store.lastAttackDate // Backup inclui novo campo
             }
         };
         
@@ -405,7 +457,7 @@ const app = {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `ciclosmart-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `ciclosmart-backup-${getLocalISODate()}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -438,11 +490,12 @@ const app = {
                     store.capacity = json.store.capacity || 240;
                     store.profile = json.store.profile || 'standard';
                     store.cycleState = json.store.cycleState || 'ATTACK';
+                    store.lastAttackDate = json.store.lastAttackDate || null;
                     store.save(); 
                     
                     ui.initSubjects();
                     ui.render();
-                    app.init(); // Re-init para pegar UI do profile e HUD
+                    app.init(); 
                     
                     if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                         ui.renderHeatmap();
@@ -533,7 +586,7 @@ const app = {
 };
 
 // ==========================================
-// 3. UI RENDERER (VIEW)
+// 4. UI RENDERER (VIEW)
 // ==========================================
 
 const ui = {
@@ -555,7 +608,6 @@ const ui = {
         }
     },
 
-    // --- NOVA LÓGICA UI v1.5: Atualiza HUD e Botões ---
     updateModeUI: () => {
         const btnMode = document.getElementById('mode-toggle');
         const iconMode = document.getElementById('mode-icon');
@@ -565,7 +617,6 @@ const ui = {
 
         if (!btnMode || !btnNew) return;
 
-        // 1. Visibilidade do Toggle (Apenas Pendular)
         if (store.profile !== 'pendular') {
             btnMode.classList.add('hidden');
             btnNew.disabled = false;
@@ -577,22 +628,16 @@ const ui = {
 
         btnMode.classList.remove('hidden');
 
-        // 2. Atualiza Estilo do HUD e Botão Principal
         if (store.cycleState === 'ATTACK') {
             btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-attack';
             textMode.innerText = 'Dia de Ataque';
             iconMode.setAttribute('data-lucide', 'sword');
-            
-            // Libera botão
             btnNew.disabled = false;
             iconNew.setAttribute('data-lucide', 'plus');
         } else {
             btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-defense';
             textMode.innerText = 'Dia de Defesa';
             iconMode.setAttribute('data-lucide', 'shield');
-            
-            // Bloqueia visualmente botão
-            // Nota: O bloqueio lógico está no handleNewStudyClick, mas aqui mudamos o ícone
             iconNew.setAttribute('data-lucide', 'lock');
         }
         
@@ -615,14 +660,8 @@ const ui = {
     openNewStudyModal: () => {
         const dateInput = document.getElementById('input-study-date');
         if(dateInput) {
-            // Garante o formato YYYY-MM-DD com base no fuso local
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            dateInput.value = `${year}-${month}-${day}`;
+            dateInput.value = getLocalISODate(); // Usa helper local
         }
-        // Garante que o input de tempo respeite o perfil atual
         app.updateProfileUI(store.profile);
         ui.toggleModal('modal-new', true);
     },
@@ -631,7 +670,6 @@ const ui = {
         const input = document.getElementById('setting-capacity');
         if(input) input.value = store.capacity;
         
-        // Sincroniza radio button
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
 
@@ -640,49 +678,49 @@ const ui = {
     },
 
     renderHeatmap: () => {
-            const container = document.getElementById('heatmap-grid');
-            if(!container) return;
+        const container = document.getElementById('heatmap-grid');
+        if(!container) return;
+        
+        container.innerHTML = '';
+        
+        for (let i = 0; i < 30; i++) {
+            const isoDate = getRelativeDate(i);
+            const displayDate = formatDateDisplay(isoDate);
             
-            container.innerHTML = '';
+            const dayLoad = store.reviews
+                .filter(r => r.date === isoDate && r.status !== 'DONE')
+                .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
-            for (let i = 0; i < 30; i++) {
-                const isoDate = getRelativeDate(i);
-                const displayDate = formatDateDisplay(isoDate);
-                
-                const dayLoad = store.reviews
-                    .filter(r => r.date === isoDate && r.status !== 'DONE')
-                    .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
-                
-                const capacity = store.capacity > 0 ? store.capacity : 240;
-                const percentage = (dayLoad / capacity) * 100;
-                
-                let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700';
-                if (dayLoad === 0) {
-                    colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60';
-                } else if (percentage > 100) {
-                    colorClass = 'bg-slate-800 border-slate-900 text-white'; 
-                } else if (percentage > 80) {
-                    colorClass = 'bg-red-50 border-red-200 text-red-700';
-                } else if (percentage > 50) {
-                    colorClass = 'bg-amber-50 border-amber-200 text-amber-700';
-                }
-
-                container.innerHTML += `
-                    <div class="p-3 rounded-lg border ${colorClass} flex flex-col justify-between h-24 relative transition-all hover:scale-105">
-                        <span class="text-xs font-bold opacity-70">${displayDate}</span>
-                        <div class="text-center">
-                            <span class="text-2xl font-bold block">${dayLoad}m</span>
-                            <span class="text-[10px] uppercase font-semibold tracking-wider opacity-80">
-                                ${dayLoad > 0 ? percentage.toFixed(0) + '%' : 'Livre'}
-                            </span>
-                        </div>
-                    </div>
-                `;
+            const capacity = store.capacity > 0 ? store.capacity : 240;
+            const percentage = (dayLoad / capacity) * 100;
+            
+            let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700';
+            if (dayLoad === 0) {
+                colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60';
+            } else if (percentage > 100) {
+                colorClass = 'bg-slate-800 border-slate-900 text-white'; 
+            } else if (percentage > 80) {
+                colorClass = 'bg-red-50 border-red-200 text-red-700';
+            } else if (percentage > 50) {
+                colorClass = 'bg-amber-50 border-amber-200 text-amber-700';
             }
-        },
+
+            container.innerHTML += `
+                <div class="p-3 rounded-lg border ${colorClass} flex flex-col justify-between h-24 relative transition-all hover:scale-105">
+                    <span class="text-xs font-bold opacity-70">${displayDate}</span>
+                    <div class="text-center">
+                        <span class="text-2xl font-bold block">${dayLoad}m</span>
+                        <span class="text-[10px] uppercase font-semibold tracking-wider opacity-80">
+                            ${dayLoad > 0 ? percentage.toFixed(0) + '%' : 'Livre'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+    },
 
     toggleChangelog: (show) => {
-        if(show) {
+        if(show && typeof changelogData !== 'undefined') {
             const container = document.getElementById('changelog-content');
             container.innerHTML = changelogData.map(log => `
                 <div class="mb-4 border-l-2 border-indigo-500 pl-3">
@@ -725,7 +763,7 @@ const ui = {
     },
 
     render: () => {
-        const todayStr = getRelativeDate(0);
+        const todayStr = getLocalISODate();
         const containers = {
             late: document.getElementById('list-late'),
             today: document.getElementById('list-today'),

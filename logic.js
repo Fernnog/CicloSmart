@@ -1,53 +1,28 @@
-
---- START OF FILE logic.js ---
 /* --- START OF FILE logic.js --- */
+
 /**
+
 CICLOSMART CORE
+
 Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile
-Update v1.0.6: Cycle Tracker (1-30) & Auto-Versioning
-*/
-// ==========================================
-// 1. CONFIGURAÇÃO & UTILITÁRIOS
-// ==========================================
-const CONFIG = {
-defaultCapacity: 240, // 4 horas (fallback)
-intervals: [1, 7, 30], // Ebbinghaus
-storageKey: 'ciclosmart_db_v1',
-profiles: {
-STANDARD: 'standard', // Modo Integrado
-PENDULAR: 'pendular' // Modo Ataque/Defesa
-}
-};
-const defaultSubjects = [
-{ id: 's1', name: 'Direito Constitucional', color: '#3b82f6' }, // Blue
-{ id: 's2', name: 'Português', color: '#ef4444' }, // Red
-{ id: 's3', name: 'Raciocínio Lógico', color: '#10b981' }, // Green
-{ id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet
-];
-// Utilitário de Data Robusto
-const getLocalISODate = (dateObj = new Date()) => {
-const year = dateObj.getFullYear();
-const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-const day = String(dateObj.getDate()).padStart(2, '0');
-return ${year}-${month}-${day};
-};
-const getRelativeDate = (daysOffset) => {
-const date = new Date();
-date.setDate(date.getDate() + daysOffset);
-return getLocalISODate(date);
-};
-const formatDateDisplay = (isoDate) => {
-const [y, m, d] = isoDate.split('-');
-return ${d}/${m};
-};
-// Utilitário de Notificação (Toast)
-const toast = {
-show: (msg, type = 'info') => {
-const container = document.getElementById('toast-container');
-if(!container) return;
-code
-Code
-const el = document.createElement('div');
+
+Update v1.0.6: Cycle Indexing (#1-#30) & Centralized Version Control */
+
+// ========================================== // 1. CONFIGURAÇÃO & UTILITÁRIOS // ==========================================
+
+const CONFIG = { defaultCapacity: 240, // 4 horas (fallback) intervals: [1, 7, 30], // Ebbinghaus storageKey: 'ciclosmart_db_v1', profiles: { STANDARD: 'standard', // Modo Integrado PENDULAR: 'pendular' // Modo Ataque/Defesa } };
+
+const defaultSubjects = [ { id: 's1', name: 'Direito Constitucional', color: '#3b82f6' }, // Blue { id: 's2', name: 'Português', color: '#ef4444' }, // Red { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' }, // Green { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet ];
+
+// Utilitário de Data Robusto const getLocalISODate = (dateObj = new Date()) => { const year = dateObj.getFullYear(); const month = String(dateObj.getMonth() + 1).padStart(2, '0'); const day = String(dateObj.getDate()).padStart(2, '0'); return ${year}-${month}-${day}; };
+
+const getRelativeDate = (daysOffset) => { const date = new Date(); date.setDate(date.getDate() + daysOffset); return getLocalISODate(date); };
+
+const formatDateDisplay = (isoDate) => { const [y, m, d] = isoDate.split('-'); return ${d}/${m}; };
+
+// Utilitário de Notificação (Toast) const toast = { show: (msg, type = 'info') => { const container = document.getElementById('toast-container'); if(!container) return;
+
+    const el = document.createElement('div');
     const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 
                    type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' :
                    'bg-slate-800 text-white';
@@ -63,18 +38,11 @@ const el = document.createElement('div');
     }, 5000);
 }
 };
-// ==========================================
-// 2. STORE (ESTADO & PERSISTÊNCIA)
-// ==========================================
-const store = {
-reviews: [],
-subjects: [],
-capacity: 240,
-profile: 'standard',
-cycleState: 'ATTACK',
-lastAttackDate: null,
-code
-Code
+
+// ========================================== // 2. STORE (ESTADO & PERSISTÊNCIA) // ==========================================
+
+const store = { reviews: [], subjects: [], capacity: 240, profile: 'standard', cycleState: 'ATTACK', lastAttackDate: null, cycleStartDate: null, // Novo v1.0.6: Data de início do ciclo de 30 dias
+
 load: () => {
     const raw = localStorage.getItem(CONFIG.storageKey);
     if (raw) {
@@ -85,7 +53,8 @@ load: () => {
             store.capacity = data.capacity || CONFIG.defaultCapacity;
             store.profile = data.profile || CONFIG.profiles.STANDARD;
             store.cycleState = data.cycleState || 'ATTACK';
-            store.lastAttackDate = data.lastAttackDate || null; 
+            store.lastAttackDate = data.lastAttackDate || null;
+            store.cycleStartDate = data.cycleStartDate || getLocalISODate(); // Default: hoje
         } catch (e) {
             console.error("Erro ao ler dados", e);
             store.resetDefaults();
@@ -102,6 +71,7 @@ resetDefaults: () => {
     store.profile = CONFIG.profiles.STANDARD;
     store.cycleState = 'ATTACK';
     store.lastAttackDate = null;
+    store.cycleStartDate = getLocalISODate();
 },
 
 save: () => {
@@ -111,7 +81,8 @@ save: () => {
         capacity: store.capacity,
         profile: store.profile,
         cycleState: store.cycleState,
-        lastAttackDate: store.lastAttackDate
+        lastAttackDate: store.lastAttackDate,
+        cycleStartDate: store.cycleStartDate
     }));
 },
 
@@ -167,21 +138,14 @@ deleteReview: (id) => {
     }
 }
 };
-// ==========================================
-// 3. LÓGICA DO APP (CONTROLLER)
-// ==========================================
-const app = {
-init: () => {
-store.load();
-code
-Code
-// Novo v1.0.6: Auto-Versioning
-    if (typeof changelogData !== 'undefined' && changelogData.length > 0) {
-        const latest = changelogData[0];
-        const vBtn = document.getElementById('app-version');
-        if(vBtn) vBtn.innerText = `v${latest.version}`;
-    }
 
+// ========================================== // 3. LÓGICA DO APP (CONTROLLER) // ==========================================
+
+const app = { init: () => { store.load();
+
+    // Novo v1.0.6: Versionamento Automático
+    app.initVersionControl();
+    
     // Verifica estado do ciclo baseado no histórico
     app.checkSmartCycle();
 
@@ -204,6 +168,46 @@ Code
     ui.switchTab('today');
 },
 
+/**
+ * Novo v1.0.6: Controle de Versão Centralizado
+ * Atualiza o DOM baseado no arquivo changelog.js
+ */
+initVersionControl: () => {
+    if (typeof changelogData !== 'undefined' && changelogData.length > 0) {
+        const latest = changelogData[0].version;
+        
+        // Atualiza Título da Página
+        document.title = `CicloSmart v${latest} | Plataforma de Estudos`;
+        
+        // Atualiza Botão do Header (se existir o ID novo, senão tenta fallback por classe)
+        const btn = document.getElementById('app-version-btn');
+        if (btn) {
+            btn.innerText = `v${latest}`;
+        } else {
+            // Fallback caso o HTML ainda não tenha o ID
+            const oldBtns = document.querySelectorAll('button');
+            oldBtns.forEach(b => {
+                if(b.innerText.includes('v1.0')) b.innerText = `v${latest}`;
+            });
+        }
+    }
+},
+
+/**
+ * Novo v1.0.6: Atualiza data de início do ciclo
+ */
+updateCycleStart: (dateStr) => {
+    if(dateStr) {
+        store.cycleStartDate = dateStr;
+        store.save();
+        toast.show('Data de início do ciclo (Dia 1) atualizada!', 'success');
+    }
+},
+
+/**
+ * Lógica v1.0.5: Smart Switch
+ * Verifica a data do último "Ataque" e define automaticamente o modo de hoje.
+ */
 checkSmartCycle: () => {
     if (store.profile !== 'pendular' || !store.lastAttackDate) return;
     
@@ -293,29 +297,6 @@ updateProfileUI: (mode) => {
     }
 },
 
-// Novo v1.0.6: Calcula o dia do ciclo (1-30)
-getCycleNumber: (studyDateStr) => {
-    let startDateStr = studyDateStr;
-    
-    // Tenta encontrar o "Marco Zero" (primeiro estudo registrado na história)
-    if (store.reviews.length > 0) {
-        const dates = store.reviews.map(r => r.date).sort();
-        startDateStr = dates[0];
-        // Se a data do estudo atual for anterior ao histórico (retroativo), usamos ela como start
-        if (studyDateStr < startDateStr) startDateStr = studyDateStr;
-    }
-
-    const start = new Date(startDateStr);
-    const current = new Date(studyDateStr);
-    
-    // Diferença em dias
-    const diffTime = Math.abs(current - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
-    // Fórmula do Ciclo 1-30: (Dias % 30) + 1
-    return (diffDays % 30) + 1;
-},
-
 handleNewEntry: (e) => {
     e.preventDefault();
     
@@ -337,11 +318,16 @@ handleNewEntry: (e) => {
 
     const dateInput = document.getElementById('input-study-date');
     const selectedDateStr = dateInput.value; // YYYY-MM-DD
-    const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
+    const baseDate = new Date(selectedDateStr + 'T12:00:00'); // Fixar meio-dia para evitar shifts
 
-    // Novo v1.0.6: Identificação do Ciclo
-    const cycleNum = app.getCycleNumber(selectedDateStr);
+    // Novo v1.0.6: Cálculo do Dia do Ciclo (#Index)
+    const cycleStart = new Date((store.cycleStartDate || getLocalISODate()) + 'T00:00:00');
+    const studyDateObj = new Date(selectedDateStr + 'T00:00:00');
+    const diffTimeCycle = studyDateObj - cycleStart;
+    let cycleIndex = Math.floor(diffTimeCycle / (1000 * 60 * 60 * 24)) + 1;
+    if (cycleIndex < 1) cycleIndex = 1; // Fallback para datas anteriores ao ciclo
 
+    // CONSTANTES DE REGRA DE NEGÓCIO
     const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
     const REVIEW_CEILING_RATIO = 0.40; 
     const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
@@ -359,13 +345,14 @@ handleNewEntry: (e) => {
         date: selectedDateStr, 
         type: 'NOVO', 
         status: 'PENDING',
-        cycleDay: cycleNum // Salva o dia do ciclo
+        cycleIndex: cycleIndex // Salva o dia do ciclo
     };
     newReviews.push(acquisitionEntry);
 
     // 2. SIMULAÇÃO E GERAÇÃO DAS REVISÕES FUTURAS
     for (let interval of CONFIG.intervals) {
         let effectiveInterval = interval;
+        // Ajuste de datas para cair em dias de 'Defesa' no modo Pendular
         if (store.profile === 'pendular') {
             if (interval === 7) effectiveInterval = 8;
             if (interval === 30) effectiveInterval = 31;
@@ -373,7 +360,7 @@ handleNewEntry: (e) => {
 
         const targetDate = new Date(baseDate);
         targetDate.setDate(baseDate.getDate() + effectiveInterval);
-        const isoDate = getLocalISODate(targetDate); 
+        const isoDate = getLocalISODate(targetDate); // Usa o novo helper
         
         const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
@@ -407,7 +394,7 @@ handleNewEntry: (e) => {
             date: isoDate,
             type: typeLabel,
             status: 'PENDING',
-            cycleDay: cycleNum // Herda o ciclo do pai
+            cycleIndex: cycleIndex // Herda o índice do ciclo original
         });
     }
 
@@ -439,7 +426,7 @@ handleNewEntry: (e) => {
     const todayStr = getLocalISODate();
     const msg = selectedDateStr < todayStr 
         ? 'Estudo retroativo registrado. Verifique a lista de "Atrasados".'
-        : 'Estudo registrado e revisões agendadas com sucesso.';
+        : `Estudo registrado com sucesso. (Ciclo Dia #${cycleIndex})`;
 
     toast.show(`
         <div>
@@ -453,8 +440,13 @@ handleNewEntry: (e) => {
 },
 
 downloadBackup: () => {
+    // Obter versão dinamicamente
+    const version = (typeof changelogData !== 'undefined' && changelogData.length > 0) 
+        ? changelogData[0].version 
+        : '1.x';
+
     const data = {
-        version: '1.6',
+        version: version,
         timestamp: new Date().toISOString(),
         store: {
             reviews: store.reviews,
@@ -462,7 +454,8 @@ downloadBackup: () => {
             capacity: store.capacity,
             profile: store.profile,
             cycleState: store.cycleState,
-            lastAttackDate: store.lastAttackDate 
+            lastAttackDate: store.lastAttackDate,
+            cycleStartDate: store.cycleStartDate // Backup inclui novo campo
         }
     };
     
@@ -470,7 +463,7 @@ downloadBackup: () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ciclosmart-backup-${getLocalISODate()}.json`;
+    a.download = `ciclosmart-backup-v${version}-${getLocalISODate()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -504,6 +497,8 @@ restoreData: (input) => {
                 store.profile = json.store.profile || 'standard';
                 store.cycleState = json.store.cycleState || 'ATTACK';
                 store.lastAttackDate = json.store.lastAttackDate || null;
+                store.cycleStartDate = json.store.cycleStartDate || getLocalISODate();
+
                 store.save(); 
                 
                 ui.initSubjects();
@@ -574,14 +569,17 @@ exportICS: () => {
         const startTime = `${dateStr}T090000`;
         const endTime = `${dateStr}T09${r.time < 10 ? '0' + r.time : r.time}00`; 
 
+        // Include Cycle Index in description
+        const cycleInfo = r.cycleIndex ? `[Ciclo #${r.cycleIndex}] ` : '';
+
         icsLines.push(
             "BEGIN:VEVENT",
             `UID:${r.id}@ciclosmart.app`,
             `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
             `DTSTART:${startTime}`,
             `DTEND:${endTime}`,
-            `SUMMARY:${r.subject} - ${r.topic}`,
-            `DESCRIPTION:Revisão ${r.type} (${r.time}min) - Ciclo #${r.cycleDay || '?'}`,
+            `SUMMARY:${cycleInfo}${r.subject} - ${r.topic}`,
+            `DESCRIPTION:Revisão ${r.type} (${r.time}min).`,
             "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", "DESCRIPTION:Estudar", "END:VALARM",
             "END:VEVENT"
         );
@@ -597,17 +595,12 @@ exportICS: () => {
     document.body.removeChild(link);
 }
 };
-// ==========================================
-// 4. UI RENDERER (VIEW)
-// ==========================================
-const ui = {
-switchTab: (tabName) => {
-document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-const btn = document.getElementById(tab-${tabName});
-if(btn) btn.classList.add('active');
-code
-Code
-const cols = document.querySelectorAll('.kanban-column');
+
+// ========================================== // 4. UI RENDERER (VIEW) // ==========================================
+
+const ui = { switchTab: (tabName) => { document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); const btn = document.getElementById(tab-${tabName}); if(btn) btn.classList.add('active');
+
+    const cols = document.querySelectorAll('.kanban-column');
     cols.forEach(c => {
         c.classList.remove('flex');
         c.classList.add('hidden');
@@ -684,6 +677,10 @@ openHeatmapModal: () => {
     
     const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
     if(activeRadio) activeRadio.checked = true;
+
+    // Novo v1.0.6: Preencher input de Ciclo
+    const cycleInput = document.getElementById('setting-cycle-start');
+    if(cycleInput) cycleInput.value = store.cycleStartDate || getLocalISODate();
 
     ui.renderHeatmap();
     ui.toggleModal('modal-heatmap', true);
@@ -834,9 +831,9 @@ createCardHTML: (review) => {
         ? 'line-through text-slate-400' 
         : 'text-slate-800';
 
-    // Novo v1.0.6: Badge do Ciclo
-    const cycleBadge = review.cycleDay 
-        ? `<span class="cycle-badge" title="Dia do Ciclo #${review.cycleDay}">#${String(review.cycleDay).padStart(2, '0')}</span>` 
+    // Novo v1.0.6: Renderização do Badge de Ciclo
+    const cycleBadge = review.cycleIndex 
+        ? `<span class="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Dia do Ciclo">#${review.cycleIndex}</span>`
         : '';
 
     return `
@@ -845,12 +842,9 @@ createCardHTML: (review) => {
             
             <div class="flex justify-between items-start mb-1.5">
                 <div class="flex-1 pr-2">
-                    <div class="flex items-center mb-1 gap-1">
-                        ${cycleBadge}
-                        <span class="text-[11px] font-black uppercase tracking-wider" style="color: ${review.color}">
-                            ${review.subject}
-                        </span>
-                    </div>
+                    <span class="text-[11px] font-black uppercase tracking-wider block mb-1" style="color: ${review.color}">
+                        ${review.subject}
+                    </span>
                     
                     <div class="flex flex-col gap-1">
                         <h4 class="text-sm font-bold leading-snug cursor-pointer hover:text-indigo-600 transition-colors ${textDecoration}" 
@@ -863,6 +857,7 @@ createCardHTML: (review) => {
                             <span class="text-[10px] font-bold text-white bg-slate-700 px-1.5 py-0.5 rounded">
                                 ${review.type}
                             </span>
+                            ${cycleBadge}
                         </div>
                     </div>
                 </div>
@@ -907,4 +902,7 @@ updateCapacityStats: (todayMinutes) => {
     }
 }
 };
+
 app.init();
+
+}

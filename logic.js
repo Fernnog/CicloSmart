@@ -1,11 +1,5 @@
 /* --- START OF FILE logic.js --- */
 
-/**
- * CICLOSMART CORE
- * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile
- * Update v1.0.7: Cycle Index Fix (Auto-Anchor) & Version Control
- */
-
 // ==========================================
 // 1. CONFIGURAÇÃO & UTILITÁRIOS
 // ==========================================
@@ -26,6 +20,9 @@ const defaultSubjects = [
     { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' }, // Green
     { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet
 ];
+
+// Variável de Estado para o Modal de Decisão de Ciclo
+let pendingStudyData = null;
 
 // Utilitário de Data Robusto
 const getLocalISODate = (dateObj = new Date()) => {
@@ -93,7 +90,7 @@ const store = {
                 store.profile = data.profile || CONFIG.profiles.STANDARD;
                 store.cycleState = data.cycleState || 'ATTACK';
                 store.lastAttackDate = data.lastAttackDate || null;
-                store.cycleStartDate = data.cycleStartDate || null; // Importante: Se for null, permanece null até o primeiro cadastro
+                store.cycleStartDate = data.cycleStartDate || null; 
             } catch (e) {
                 console.error("Erro ao ler dados", e);
                 store.resetDefaults();
@@ -110,7 +107,7 @@ const store = {
         store.profile = CONFIG.profiles.STANDARD;
         store.cycleState = 'ATTACK';
         store.lastAttackDate = null;
-        store.cycleStartDate = null; // Reinicia nulo para esperar o primeiro input
+        store.cycleStartDate = null; 
     },
 
     save: () => {
@@ -313,6 +310,7 @@ const app = {
         }
     },
 
+    // --- NOVA LÓGICA DE ENTRADA COM VERIFICAÇÃO DE CICLO ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -322,6 +320,8 @@ const app = {
         const topic = document.getElementById('input-topic').value;
         const studyTimeInput = document.getElementById('input-study-time');
         const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
+        const dateInput = document.getElementById('input-study-date');
+        const selectedDateStr = dateInput.value; // YYYY-MM-DD
 
         if (store.profile === 'pendular' && studyTime > 90) {
             return toast.show(`
@@ -332,14 +332,55 @@ const app = {
             `, 'error');
         }
 
-        const dateInput = document.getElementById('input-study-date');
-        const selectedDateStr = dateInput.value; // YYYY-MM-DD
+        // Armazena dados temporariamente para decisão
+        pendingStudyData = {
+            subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target
+        };
+
+        // Simulação do Dia do Ciclo caso o usuário escolha "MANTER"
+        let projectedDay = '?';
+        if (store.cycleStartDate) {
+            const cycleStart = new Date(store.cycleStartDate + 'T00:00:00');
+            const studyDate = new Date(selectedDateStr + 'T00:00:00');
+            const diffTime = studyDate - cycleStart;
+            // +1 pois diff 0 é dia 1
+            projectedDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        // Atualiza UI do Modal
+        const descEl = document.getElementById('cycle-option-keep-desc');
+        if(descEl) descEl.innerText = `Será registrado como Dia #${projectedDay}`;
+        
+        // Abre Modal de Decisão
+        ui.toggleModal('modal-cycle-confirm', true);
+    },
+
+    resolveCycle: (startNew) => {
+        if (!pendingStudyData) return;
+
+        // Se usuário definiu que é um NOVO ciclo, atualizamos a âncora
+        if (startNew) {
+            store.cycleStartDate = pendingStudyData.selectedDateStr;
+            store.save();
+            toast.show('Ciclo reiniciado! Este estudo foi definido como o Dia #1.', 'success');
+        }
+
+        // Processa o estudo com a lógica de SRS
+        app.processStudyEntry(pendingStudyData);
+
+        // Limpeza
+        ui.toggleModal('modal-cycle-confirm', false);
+        ui.toggleModal('modal-new', false);
+        pendingStudyData.eTarget.reset(); 
+        pendingStudyData = null;
+        app.updateProfileUI(store.profile);
+    },
+
+    processStudyEntry: (data) => {
+        const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
 
-        // === CORREÇÃO v1.0.7: Auto-Ancoragem do Ciclo ===
-        // Se a Data de Início do Ciclo ainda for nula (primeiro uso),
-        // definimos ela EXATAMENTE como a data deste estudo (selectedDateStr).
-        // Isso impede que estudos retroativos fiquem com índice errado.
+        // Auto-Ancoragem (Fallback): Se for o primeiro estudo da vida, define ciclo
         if (!store.cycleStartDate) {
             store.cycleStartDate = selectedDateStr;
             store.save();
@@ -354,14 +395,8 @@ const app = {
         const cycleStart = new Date(store.cycleStartDate + 'T00:00:00');
         const studyDateObj = new Date(selectedDateStr + 'T00:00:00');
         
-        // Diferença em milissegundos
         const diffTimeCycle = studyDateObj - cycleStart;
-        // Diferença em dias (arredondado) + 1 (pois o dia 0 é dia 1)
         const rawCycleIndex = Math.floor(diffTimeCycle / (1000 * 60 * 60 * 24)) + 1;
-        
-        // Se o índice for menor que 1 (estudo anterior ao início do ciclo), 
-        // indicamos com "?" ou mantemos o negativo para debug, mas aqui vamos travar em 1+ ou avisar.
-        // Para consistência, se for negativo, é tecnicamente "pré-ciclo", mas vamos exibir.
         const finalCycleIndex = rawCycleIndex; 
 
         const newReviews = [];
@@ -377,7 +412,7 @@ const app = {
             date: selectedDateStr, 
             type: 'NOVO', 
             status: 'PENDING',
-            cycleIndex: finalCycleIndex // Salva o índice calculado
+            cycleIndex: finalCycleIndex 
         };
         newReviews.push(acquisitionEntry);
 
@@ -425,7 +460,7 @@ const app = {
                 date: isoDate,
                 type: typeLabel,
                 status: 'PENDING',
-                cycleIndex: finalCycleIndex // Herda o índice do dia original
+                cycleIndex: finalCycleIndex 
             });
         }
 
@@ -452,14 +487,12 @@ const app = {
         }
 
         store.addReviews(newReviews);
-        ui.toggleModal('modal-new', false);
         
         const todayStr = getLocalISODate();
         const msg = selectedDateStr < todayStr 
             ? 'Estudo retroativo registrado. Verifique a lista de "Atrasados".'
             : 'Estudo registrado e revisões agendadas com sucesso.';
         
-        // Feedback visual do índice
         const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
 
         toast.show(`
@@ -468,9 +501,6 @@ const app = {
                 ${msg}
             </div>
         `, 'success');
-        
-        e.target.reset();
-        app.updateProfileUI(store.profile);
     },
 
     downloadBackup: () => {
@@ -526,7 +556,7 @@ const app = {
                     store.profile = json.store.profile || 'standard';
                     store.cycleState = json.store.cycleState || 'ATTACK';
                     store.lastAttackDate = json.store.lastAttackDate || null;
-                    store.cycleStartDate = json.store.cycleStartDate || null; // Respeita o backup
+                    store.cycleStartDate = json.store.cycleStartDate || null; 
                     store.save(); 
                     
                     ui.initSubjects();

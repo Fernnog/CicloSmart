@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.0.5', 
+        version: '1.0.6', 
         date: 'Hoje', 
+        changes: [
+            '🔢 <strong>Indexação de Ciclo (1-30):</strong> Cada novo estudo agora recebe um número (#1, #2...) baseado no dia do seu ciclo de 30 dias. Ideal para organizar anotações físicas.',
+            '⚙️ <strong>Controle de Versão Dinâmico:** O número da versão no topo e no título da página agora é atualizado automaticamente por este arquivo.',
+            '📅 <strong>Configuração de Ciclo:** Novo campo nas configurações (Radar) para definir ou resetar a data de início do seu ciclo pessoal.'
+        ] 
+    },
+    { 
+        version: '1.0.5', 
+        date: 'Anterior', 
         changes: [
             '🧠 <strong>Smart Cycle (IA):</strong> O sistema agora tem memória! Se você estudou matéria nova ontem, o app inicia automaticamente em 🛡️ <strong>Modo Defesa</strong> hoje.',
             '🔄 <strong>Auto-Recuperação:</strong> Se você ficar 2 dias ou mais sem estudar, o sistema entende o descanso e libera o ⚔️ <strong>Modo Ataque</strong> automaticamente.',
@@ -12,7 +21,7 @@ const changelogData = [
     },
     { 
         version: '1.0.4', 
-        date: 'Anterior', 
+        date: 'Legacy', 
         changes: [
             '⚔️ <strong>Modo Pendular (HUD):</strong> Novo indicador visual no topo (Espada/Escudo) para alternar entre dias de Ataque e Defesa.',
             '🛡️ <strong>Trava de Disciplina:</strong> O botão "Novo Estudo" agora é bloqueado fisicamente em dias de Defesa para forçar a consolidação da memória.',

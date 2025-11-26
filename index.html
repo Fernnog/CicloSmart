@@ -22,9 +22,14 @@
             <div>
                 <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
                 <button onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
-                    v1.4.0 • Perfil Pendular
+                    v1.5.0 • Perfil Pendular
                 </button>
             </div>
+            
+            <button id="mode-toggle" onclick="app.toggleMode()" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
+                <i id="mode-icon" data-lucide="sword" class="w-4 h-4"></i>
+                <span id="mode-text">Modo Ataque</span>
+            </button>
         </div>
 
         <div class="flex-1 max-w-lg mx-8 hidden md:block">
@@ -54,8 +59,8 @@
                 <span class="hidden md:inline">Radar</span>
             </button>
             
-            <button onclick="ui.openNewStudyModal()" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <i data-lucide="plus" class="w-4 h-4"></i>
+            <button id="btn-new-study" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                <i id="icon-new-study" data-lucide="plus" class="w-4 h-4"></i>
                 <span class="hidden md:inline">Novo Estudo</span>
             </button>
         </div>
@@ -264,5 +269,4 @@
     <script src="changelog.js"></script>
     <script src="logic.js"></script>
 </body>
-                    </html>
-    
+</html>

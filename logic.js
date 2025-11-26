@@ -1,5 +1,11 @@
 /* --- START OF FILE logic.js --- */
 
+/**
+ * CICLOSMART CORE
+ * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
+ * Update v1.1.1: Sequential Indexing (Useful Days)
+ */
+
 // ==========================================
 // 1. CONFIGURAÇÃO & UTILITÁRIOS
 // ==========================================
@@ -337,14 +343,20 @@ const app = {
             subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target
         };
 
-        // Simulação do Dia do Ciclo caso o usuário escolha "MANTER"
-        let projectedDay = '?';
+        // Simulação do Dia do Ciclo: Quantos dias ÚTEIS existem antes deste?
+        let projectedDay = 1;
         if (store.cycleStartDate) {
-            const cycleStart = new Date(store.cycleStartDate + 'T00:00:00');
-            const studyDate = new Date(selectedDateStr + 'T00:00:00');
-            const diffTime = studyDate - cycleStart;
-            // +1 pois diff 0 é dia 1
-            projectedDay = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+             const previousUniqueDays = new Set(store.reviews
+                .filter(r => 
+                    r.type === 'NOVO' && 
+                    r.date >= store.cycleStartDate && 
+                    r.date < selectedDateStr
+                )
+                .map(r => r.date)
+            );
+            // Se hoje já tem estudo, mantém o índice do dia, senão é o próximo
+            const hasStudyToday = store.reviews.some(r => r.type === 'NOVO' && r.date === selectedDateStr);
+            projectedDay = previousUniqueDays.size + 1;
         }
 
         // Atualiza UI do Modal
@@ -380,7 +392,7 @@ const app = {
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
 
-        // Auto-Ancoragem (Fallback): Se for o primeiro estudo da vida, define ciclo
+        // Auto-Ancoragem (Fallback)
         if (!store.cycleStartDate) {
             store.cycleStartDate = selectedDateStr;
             store.save();
@@ -391,13 +403,22 @@ const app = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // Lógica de Cálculo do Índice
-        const cycleStart = new Date(store.cycleStartDate + 'T00:00:00');
-        const studyDateObj = new Date(selectedDateStr + 'T00:00:00');
+        // --- CÁLCULO SEQUENCIAL DO ÍNDICE (CORREÇÃO DE PULO DE NÚMEROS) ---
+        // 1. Encontra dias únicos anteriores que tiveram estudo NOVO dentro do ciclo atual
+        const previousDays = store.reviews
+            .filter(r => 
+                r.type === 'NOVO' &&         // Apenas dias de ataque
+                r.date >= store.cycleStartDate && // Dentro do ciclo
+                r.date < selectedDateStr     // Anteriores ao dia atual
+            )
+            .map(r => r.date);
+
+        // 2. Conta quantos dias únicos existem
+        const uniquePreviousDays = new Set(previousDays).size;
         
-        const diffTimeCycle = studyDateObj - cycleStart;
-        const rawCycleIndex = Math.floor(diffTimeCycle / (1000 * 60 * 60 * 24)) + 1;
-        const finalCycleIndex = rawCycleIndex; 
+        // 3. O índice atual é (Dias Anteriores + 1)
+        // Ex: Se estudei dia 01 (#1) e pulo dia 02, ao estudar dia 03, ele vê 1 dia anterior e vira #2.
+        const finalCycleIndex = uniquePreviousDays + 1;
 
         const newReviews = [];
         let blocker = null;

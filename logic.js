@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile
- * Update v1.0.6: Cycle Indexing (#1-#30) & Centralized Version Control
+ * Update v1.0.7: Cycle Index Fix (Auto-Anchor) & Version Control
  */
 
 // ==========================================
@@ -80,7 +80,7 @@ const store = {
     profile: 'standard', 
     cycleState: 'ATTACK', 
     lastAttackDate: null, 
-    cycleStartDate: null, // Novo v1.0.6: Data de início do ciclo (Dia 1)
+    cycleStartDate: null, // Data de início do ciclo (Dia 1)
 
     load: () => {
         const raw = localStorage.getItem(CONFIG.storageKey);
@@ -93,7 +93,7 @@ const store = {
                 store.profile = data.profile || CONFIG.profiles.STANDARD;
                 store.cycleState = data.cycleState || 'ATTACK';
                 store.lastAttackDate = data.lastAttackDate || null;
-                store.cycleStartDate = data.cycleStartDate || getLocalISODate(); // Default para hoje se vazio
+                store.cycleStartDate = data.cycleStartDate || null; // Importante: Se for null, permanece null até o primeiro cadastro
             } catch (e) {
                 console.error("Erro ao ler dados", e);
                 store.resetDefaults();
@@ -110,7 +110,7 @@ const store = {
         store.profile = CONFIG.profiles.STANDARD;
         store.cycleState = 'ATTACK';
         store.lastAttackDate = null;
-        store.cycleStartDate = getLocalISODate();
+        store.cycleStartDate = null; // Reinicia nulo para esperar o primeiro input
     },
 
     save: () => {
@@ -186,9 +186,7 @@ const app = {
     init: () => {
         store.load();
         
-        // Inicializa controle de versão automático (v1.0.6)
         app.initVersionControl();
-
         app.checkSmartCycle();
 
         ui.initSubjects(); 
@@ -209,7 +207,6 @@ const app = {
         ui.switchTab('today');
     },
 
-    // Novo v1.0.6: Centralização de Versão
     initVersionControl: () => {
         if (typeof changelogData !== 'undefined' && changelogData.length > 0) {
             const latest = changelogData[0].version;
@@ -278,7 +275,6 @@ const app = {
         toast.show(msg, store.cycleState === 'ATTACK' ? 'error' : 'info'); 
     },
 
-    // Novo v1.0.6: Atualização da data de início do ciclo
     updateCycleStart: (dateStr) => {
         if(dateStr) {
             store.cycleStartDate = dateStr;
@@ -340,18 +336,33 @@ const app = {
         const selectedDateStr = dateInput.value; // YYYY-MM-DD
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
 
+        // === CORREÇÃO v1.0.7: Auto-Ancoragem do Ciclo ===
+        // Se a Data de Início do Ciclo ainda for nula (primeiro uso),
+        // definimos ela EXATAMENTE como a data deste estudo (selectedDateStr).
+        // Isso impede que estudos retroativos fiquem com índice errado.
+        if (!store.cycleStartDate) {
+            store.cycleStartDate = selectedDateStr;
+            store.save();
+        }
+
         // CONSTANTES DE REGRA DE NEGÓCIO
         const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // Lógica v1.0.6: Cálculo do Índice do Ciclo
-        const cycleStart = new Date((store.cycleStartDate || getLocalISODate()) + 'T00:00:00');
+        // Lógica de Cálculo do Índice
+        const cycleStart = new Date(store.cycleStartDate + 'T00:00:00');
         const studyDateObj = new Date(selectedDateStr + 'T00:00:00');
-        // Diferença em dias + 1
+        
+        // Diferença em milissegundos
         const diffTimeCycle = studyDateObj - cycleStart;
+        // Diferença em dias (arredondado) + 1 (pois o dia 0 é dia 1)
         const rawCycleIndex = Math.floor(diffTimeCycle / (1000 * 60 * 60 * 24)) + 1;
-        const finalCycleIndex = rawCycleIndex > 0 ? rawCycleIndex : 1; // Proteção mínima
+        
+        // Se o índice for menor que 1 (estudo anterior ao início do ciclo), 
+        // indicamos com "?" ou mantemos o negativo para debug, mas aqui vamos travar em 1+ ou avisar.
+        // Para consistência, se for negativo, é tecnicamente "pré-ciclo", mas vamos exibir.
+        const finalCycleIndex = rawCycleIndex; 
 
         const newReviews = [];
         let blocker = null;
@@ -366,7 +377,7 @@ const app = {
             date: selectedDateStr, 
             type: 'NOVO', 
             status: 'PENDING',
-            cycleIndex: finalCycleIndex // Salva o índice no objeto
+            cycleIndex: finalCycleIndex // Salva o índice calculado
         };
         newReviews.push(acquisitionEntry);
 
@@ -414,7 +425,7 @@ const app = {
                 date: isoDate,
                 type: typeLabel,
                 status: 'PENDING',
-                cycleIndex: finalCycleIndex // Revisões herdam o índice do pai
+                cycleIndex: finalCycleIndex // Herda o índice do dia original
             });
         }
 
@@ -447,10 +458,13 @@ const app = {
         const msg = selectedDateStr < todayStr 
             ? 'Estudo retroativo registrado. Verifique a lista de "Atrasados".'
             : 'Estudo registrado e revisões agendadas com sucesso.';
+        
+        // Feedback visual do índice
+        const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
 
         toast.show(`
             <div>
-                <strong class="block text-emerald-400 mb-1">Sucesso! (Dia #${finalCycleIndex})</strong>
+                <strong class="block text-emerald-400 mb-1">Sucesso! (Dia ${indexMsg})</strong>
                 ${msg}
             </div>
         `, 'success');
@@ -461,7 +475,7 @@ const app = {
 
     downloadBackup: () => {
         const data = {
-            version: '1.6', // Incrementado para refletir nova estrutura
+            version: '1.7', 
             timestamp: new Date().toISOString(),
             store: {
                 reviews: store.reviews,
@@ -512,7 +526,7 @@ const app = {
                     store.profile = json.store.profile || 'standard';
                     store.cycleState = json.store.cycleState || 'ATTACK';
                     store.lastAttackDate = json.store.lastAttackDate || null;
-                    store.cycleStartDate = json.store.cycleStartDate || getLocalISODate();
+                    store.cycleStartDate = json.store.cycleStartDate || null; // Respeita o backup
                     store.save(); 
                     
                     ui.initSubjects();
@@ -693,8 +707,8 @@ const ui = {
         const input = document.getElementById('setting-capacity');
         if(input) input.value = store.capacity;
 
-        // Novo v1.0.6: Preencher input de ciclo
         const cycleInput = document.getElementById('setting-cycle-start');
+        // Fallback visual: Se for null, mostra "Hoje", mas não salva até confirmar
         if(cycleInput) cycleInput.value = store.cycleStartDate || getLocalISODate();
         
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
@@ -849,7 +863,6 @@ const ui = {
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
-        // Novo v1.0.6: Exibição do Índice do Ciclo
         const cycleBadge = review.cycleIndex 
             ? `<span class="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Dia do Ciclo">#${review.cycleIndex}</span>` 
             : '';

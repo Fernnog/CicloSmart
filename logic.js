@@ -1,7 +1,7 @@
 /* --- START OF FILE logic.js --- */
 
 /**
- * CICLOSMART CORE v1.5.0
+ * CICLOSMART CORE v1.0.5
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile (Attack/Defense Modes)
  */
 

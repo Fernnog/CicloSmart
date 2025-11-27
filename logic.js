@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
- * Update v1.1.5: Smart Export ICS (Sequential Stacking & Range Filters)
+ * Update v1.2.0: Task Manager (Side-Quests) & Smart Export
  */
 
 // ==========================================
@@ -49,6 +49,20 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
+// Utilitário de Contraste (YIQ) para Legibilidade
+const getContrastYIQ = (hexcolor) => {
+    hexcolor = hexcolor.replace("#", "");
+    // Tratamento para hex curto (#fff)
+    if (hexcolor.length === 3) {
+        hexcolor = hexcolor.split('').map(c => c + c).join('');
+    }
+    var r = parseInt(hexcolor.substr(0,2),16);
+    var g = parseInt(hexcolor.substr(2,2),16);
+    var b = parseInt(hexcolor.substr(4,2),16);
+    var yiq = ((r*299)+(g*587)+(b*114))/1000;
+    return (yiq >= 128) ? 'black' : 'white';
+};
+
 // Utilitário de Notificação (Toast)
 const toast = {
     show: (msg, type = 'info') => {
@@ -79,6 +93,7 @@ const toast = {
 const store = {
     reviews: [],
     subjects: [],
+    tasks: [], // Array de Tarefas Complementares
     capacity: 240, 
     profile: 'standard', 
     cycleState: 'ATTACK', 
@@ -92,6 +107,7 @@ const store = {
                 const data = JSON.parse(raw);
                 store.reviews = data.reviews || [];
                 store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
+                store.tasks = data.tasks || []; // Carrega tarefas ou inicia vazio
                 store.capacity = data.capacity || CONFIG.defaultCapacity;
                 store.profile = data.profile || CONFIG.profiles.STANDARD;
                 store.cycleState = data.cycleState || 'ATTACK';
@@ -109,6 +125,7 @@ const store = {
     resetDefaults: () => {
         store.subjects = [...defaultSubjects];
         store.reviews = []; 
+        store.tasks = [];
         store.capacity = CONFIG.defaultCapacity;
         store.profile = CONFIG.profiles.STANDARD;
         store.cycleState = 'ATTACK';
@@ -120,6 +137,7 @@ const store = {
         localStorage.setItem(CONFIG.storageKey, JSON.stringify({
             reviews: store.reviews,
             subjects: store.subjects,
+            tasks: store.tasks, // Salva tarefas
             capacity: store.capacity,
             profile: store.profile,
             cycleState: store.cycleState,
@@ -178,11 +196,142 @@ const store = {
             store.save();
             ui.render();
         }
+    },
+
+    // --- Métodos de Tarefas (Tasks) ---
+    removeTask: (id) => {
+        store.tasks = store.tasks.filter(t => t.id !== id);
+        store.save();
+        taskManager.render();
+        taskManager.checkOverdue();
     }
 };
 
 // ==========================================
-// 3. LÓGICA DO APP (CONTROLLER)
+// 3. TASK MANAGER (NOVO MÓDULO)
+// ==========================================
+
+const taskManager = {
+    openModal: () => {
+        // Popula o select de matérias
+        const select = document.getElementById('task-subject');
+        if(select) {
+            select.innerHTML = store.subjects.map(s => 
+                `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
+            ).join('');
+        }
+        // Define data padrão como hoje se vazio
+        const dateInput = document.getElementById('task-date');
+        if(dateInput && !dateInput.value) dateInput.value = getLocalISODate();
+        
+        taskManager.render();
+        ui.toggleModal('modal-tasks', true);
+    },
+
+    addTask: (e) => {
+        e.preventDefault();
+        const select = document.getElementById('task-subject');
+        const subjectId = select.value;
+        const subCategory = document.getElementById('task-subcategory').value;
+        const date = document.getElementById('task-date').value;
+        const obs = document.getElementById('task-obs').value;
+
+        if(!subjectId || !subCategory || !date) return;
+
+        store.tasks.push({
+            id: Date.now(),
+            subjectId,
+            subCategory,
+            date,
+            obs
+        });
+        store.save();
+        
+        // Limpa campos de texto (mas mantém a data e select para facilitar inserção em lote)
+        document.getElementById('task-subcategory').value = '';
+        document.getElementById('task-obs').value = '';
+        
+        taskManager.render();
+        taskManager.checkOverdue();
+        toast.show('Tarefa adicionada!', 'success');
+    },
+
+    checkOverdue: () => {
+        const today = getLocalISODate();
+        // Verifica se existe alguma tarefa pendente com data anterior a hoje
+        const hasOverdue = store.tasks.some(t => t.date < today);
+        const badge = document.getElementById('task-alert-badge');
+        const icon = document.getElementById('task-icon-main');
+        
+        if (badge && icon) {
+            if (hasOverdue) {
+                badge.classList.remove('hidden');
+                icon.classList.add('text-red-500');
+            } else {
+                badge.classList.add('hidden');
+                icon.classList.remove('text-red-500');
+            }
+        }
+    },
+
+    render: () => {
+        const container = document.getElementById('task-list-container');
+        if (!container) return;
+
+        if (store.tasks.length === 0) {
+            container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Nenhuma tarefa pendente.</div>`;
+            return;
+        }
+
+        // Ordena por data (mais antigas/atrasadas primeiro)
+        const sortedTasks = [...store.tasks].sort((a, b) => a.date.localeCompare(b.date));
+        const today = getLocalISODate();
+
+        container.innerHTML = sortedTasks.map(t => {
+            const subject = store.subjects.find(s => s.id === t.subjectId) || { name: 'Geral', color: '#cbd5e1' };
+            const textColor = getContrastYIQ(subject.color);
+            const isLate = t.date < today;
+            
+            // Ícone de alerta se atrasado
+            const alertIcon = isLate 
+                ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm animate-pulse z-10" title="Atrasado!"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></div>` 
+                : '';
+
+            return `
+            <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2" 
+                 style="background-color: ${subject.color}; color: ${textColor}">
+                ${alertIcon}
+                
+                <div class="mt-1">
+                    <input type="checkbox" onclick="store.removeTask(${t.id})" 
+                           class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current mix-blend-hard-light">
+                </div>
+                
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded truncate max-w-[60%]">
+                            ${subject.name}
+                        </span>
+                        <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 shrink-0 ${isLate ? 'underline decoration-wavy' : ''}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                            ${formatDateDisplay(t.date)}
+                        </span>
+                    </div>
+                    
+                    <h4 class="font-bold text-sm leading-tight mt-1 truncate pr-2" title="${t.subCategory}">${t.subCategory}</h4>
+                    
+                    ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words pr-2">${t.obs}</p>` : ''}
+                </div>
+            </div>
+            `;
+        }).join('');
+        
+        if(window.lucide) lucide.createIcons();
+    }
+};
+
+// ==========================================
+// 4. LÓGICA DO APP (CONTROLLER)
 // ==========================================
 
 const app = {
@@ -206,6 +355,9 @@ const app = {
 
         app.updateProfileUI(store.profile); 
         ui.updateModeUI(); 
+        
+        // Inicializa estado das tarefas
+        taskManager.checkOverdue();
 
         ui.switchTab('today');
     },
@@ -532,6 +684,7 @@ const app = {
             store: {
                 reviews: store.reviews,
                 subjects: store.subjects,
+                tasks: store.tasks, // Inclui tasks no backup
                 capacity: store.capacity,
                 profile: store.profile,
                 cycleState: store.cycleState,
@@ -575,6 +728,7 @@ const app = {
                     // Substituição completa dos dados (seguro: não acumula)
                     store.reviews = json.store.reviews;
                     store.subjects = json.store.subjects || defaultSubjects;
+                    store.tasks = json.store.tasks || []; // Restaura tasks
                     store.capacity = json.store.capacity || 240;
                     store.profile = json.store.profile || 'standard';
                     store.cycleState = json.store.cycleState || 'ATTACK';
@@ -770,7 +924,7 @@ const app = {
 };
 
 // ==========================================
-// 4. UI RENDERER (VIEW)
+// 5. UI RENDERER (VIEW)
 // ==========================================
 
 const ui = {

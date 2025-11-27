@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.0.9', 
+        version: '1.1.0', 
         date: 'Hoje', 
+        changes: [
+            '🔓 <strong>Planejamento no Modo Defesa:</strong> A "trava" evoluiu. Agora você pode abrir o menu de Novo Estudo em dias de Defesa para <strong>agendar datas futuras</strong>. A proteção continua ativa: o sistema bloqueia apenas registros para "Hoje", garantindo o foco na revisão.',
+            '⚡ <strong>Refatoração de Arquitetura:</strong> O código principal (`logic.js`) foi desacoplado em camadas de Dados (`core.js`) e Aplicação (`app.js`). Isso aumenta a robustez do sistema e facilita a manutenção futura.',
+            '📅 <strong>UX Inteligente:</strong> Ao abrir um novo estudo em dia de Defesa, o sistema sugere automaticamente a data de amanhã para agilizar seu fluxo de exportação de calendário.'
+        ] 
+    },
+    { 
+        version: '1.0.9', 
+        date: 'Anterior', 
         changes: [
             '📋 <strong>Side-Quests (Tarefas Extras):</strong> Novo gerenciador para atividades de apoio (ex: ler edital, fazer inscrição). Organize pendências que não exigem cronômetro direto no app.',
             '🎨 <strong>Contraste Adaptativo:</strong> Inteligência visual que calcula matematicamente se o texto do card deve ser Preto ou Branco, garantindo leitura perfeita em qualquer cor de matéria.',

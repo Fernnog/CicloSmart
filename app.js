@@ -61,14 +61,24 @@ const app = {
             if (store.cycleState !== 'DEFENSE') {
                 store.cycleState = 'DEFENSE';
                 store.save();
-                setTimeout(() => toast.show('🔄 <b>Smart Cycle:</b> Como você estudou matéria nova ontem, hoje ativamos o <b>Modo Defesa</b> para consolidação.', 'info'), 800);
+                // SMART TOAST: Neuro/Metodologia
+                setTimeout(() => toast.show(
+                    'Como você estudou matéria nova ontem, hoje ativamos o Modo Defesa para consolidação.', 
+                    'neuro', 
+                    '🔄 Smart Cycle: Defesa Ativa'
+                ), 800);
             }
         } 
         else if (diffDays >= 2) {
             if (store.cycleState !== 'ATTACK') {
                 store.cycleState = 'ATTACK';
                 store.save();
-                setTimeout(() => toast.show('⚔️ <b>Smart Cycle:</b> Após o descanso, seu ciclo reiniciou. <b>Modo Ataque</b> liberado!', 'error'), 800);
+                // SMART TOAST: Neuro/Metodologia
+                setTimeout(() => toast.show(
+                    'Após o descanso, seu ciclo reiniciou. Modo Ataque liberado!', 
+                    'neuro', 
+                    '⚔️ Bateria Recarregada'
+                ), 800);
             }
         }
     },
@@ -83,15 +93,16 @@ const app = {
         ui.updateModeUI();
         
         const msg = mode === 'pendular' 
-            ? 'Modo Pendular Ativado: Teto de 90min e Ciclo Inteligente.' 
-            : 'Modo Integrado Ativado: Sem limites rígidos.';
+            ? 'Teto de 90min e Ciclo Inteligente ativados.' 
+            : 'Modo Integrado sem limites rígidos.';
         
-        toast.show(msg, 'success');
+        // SMART TOAST: Info
+        toast.show(msg, 'info', 'Perfil Atualizado');
     },
 
     toggleMode: () => {
         if (store.profile !== 'pendular') {
-            toast.show('Alterne para o perfil Pendular nas configurações para usar este modo.', 'info');
+            toast.show('Alterne para o perfil Pendular nas configurações para usar este modo.', 'warning', 'Ação Inválida');
             return;
         }
 
@@ -100,17 +111,21 @@ const app = {
         ui.updateModeUI();
         
         const msg = store.cycleState === 'ATTACK' 
-            ? '⚔️ Modo ATAQUE Manual: Matéria nova liberada!' 
-            : '🛡️ Modo DEFESA Manual: Planejamento futuro habilitado.';
+            ? 'Matéria nova liberada manualmente!' 
+            : 'Planejamento futuro habilitado manualmente.';
         
-        toast.show(msg, store.cycleState === 'ATTACK' ? 'error' : 'info'); 
+        const title = store.cycleState === 'ATTACK' ? '⚔️ Modo ATAQUE' : '🛡️ Modo DEFESA';
+        
+        // SMART TOAST: Warning (pois é uma alteração manual do fluxo natural)
+        toast.show(msg, 'warning', title); 
     },
 
     updateCycleStart: (dateStr) => {
         if(dateStr) {
             store.cycleStartDate = dateStr;
             store.save();
-            toast.show('Data de início do ciclo atualizada! Seus novos cards seguirão esta referência.', 'success');
+            // SMART TOAST: Success
+            toast.show('Seus novos cards seguirão esta referência.', 'success', '📅 Ciclo Ancorado');
         }
     },
 
@@ -153,23 +168,22 @@ const app = {
 
         // VALIDAÇÃO 1: Tempo Limite no Modo Pendular
         if (store.profile === 'pendular' && studyTime > 90) {
-            return toast.show(`
-                <div>
-                    <strong class="block text-red-700 mb-1">Atenção: Modo Pendular</strong>
-                    O tempo limite para estudo de qualidade neste modo é <b>90 minutos</b>.
-                </div>
-            `, 'error');
+            // SMART TOAST: Warning/Alerta
+            return toast.show(
+                'O tempo limite para estudo de qualidade neste modo é 90 minutos.', 
+                'warning', 
+                '⚠️ Atenção: Teto Cognitivo'
+            );
         }
 
         // VALIDAÇÃO 2: Bloqueio de Data "Hoje" no Modo Defesa
         if (store.profile === 'pendular' && store.cycleState === 'DEFENSE' && selectedDateStr === todayStr) {
-            return toast.show(`
-                <div>
-                    <strong class="block text-red-700 mb-1">🚫 Ação Bloqueada</strong>
-                    Hoje é dia de <b>Defesa</b>. Você deve focar nas revisões. <br>
-                    Para planejar estudos novos, altere a data para <b>Amanhã</b> ou dias futuros.
-                </div>
-            `, 'error');
+            // SMART TOAST: Error/Blocker (Educativo)
+            return toast.show(
+                'Hoje é dia exclusivo de consolidação. Para manter a qualidade, agende novos conteúdos a partir de amanhã.', 
+                'error', 
+                '🛡️ Protocolo de Escudo Ativo'
+            );
         }
 
         // Armazena dados temporariamente para decisão
@@ -207,7 +221,12 @@ const app = {
         if (startNew) {
             store.cycleStartDate = pendingStudyData.selectedDateStr;
             store.save();
-            toast.show('Ciclo reiniciado! Este estudo foi definido como o Dia #1.', 'success');
+            // SMART TOAST: Success/Neuro
+            toast.show(
+                'Ciclo reiniciado! Este estudo foi definido como o Dia #1.', 
+                'neuro', 
+                '🚩 Novo Ciclo Iniciado'
+            );
         }
 
         // Processa o estudo com a lógica de SRS
@@ -315,25 +334,18 @@ const app = {
         }
 
         if (blocker) {
-            toast.show(`
-                <div>
-                    <strong class="block text-red-700 mb-1"><i data-lucide="shield-alert" class="inline w-4 h-4"></i> Bloqueio de Segurança</strong>
-                    <span class="block mb-2">Adicionar este estudo faria o dia <b>${blocker.date}</b> exceder o limite de revisões (40%).</span>
-                    <span class="text-xs bg-white/50 px-2 py-1 rounded border border-red-200 block mb-1">
-                        Carga Projetada: <b>${blocker.load}m</b> / Limite: <b>${blocker.limit}m</b>
-                    </span>
-                    <div class="mt-2 text-xs font-bold text-red-800">
-                        💡 Sugestão: Tente reduzir o tempo de estudo inicial ou agendar para outra data.
-                    </div>
-                </div>
-            `, 'error');
+            // SMART TOAST: Error/Blocker
+            toast.show(
+                `Adicionar este estudo faria o dia ${blocker.date} exceder o limite de revisões (40%). Tente reduzir a carga inicial.`, 
+                'error', 
+                '🚫 Bloqueio de Segurança'
+            );
             
             if(window.lucide) lucide.createIcons();
             return; 
         }
 
         // Atualiza lastAttackDate apenas se o estudo for HOJE ou PASSADO.
-        // Estudos futuros (agendamentos) não devem contar como "Ataque Realizado" para a lógica do ciclo atual.
         const todayStr = getLocalISODate();
         if (store.profile === 'pendular' && selectedDateStr <= todayStr) {
             store.lastAttackDate = selectedDateStr;
@@ -344,17 +356,17 @@ const app = {
         const msg = selectedDateStr < todayStr 
             ? 'Estudo retroativo registrado.'
             : selectedDateStr > todayStr
-                ? 'Estudo futuro agendado com sucesso para exportação.'
-                : 'Estudo registrado e revisões agendadas com sucesso.';
+                ? 'Agendamento futuro realizado com sucesso.'
+                : 'Estudo registrado e primeiras revisões calculadas.';
         
         const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
 
-        toast.show(`
-            <div>
-                <strong class="block text-emerald-400 mb-1">Sucesso! (Dia ${indexMsg})</strong>
-                ${msg}
-            </div>
-        `, 'success');
+        // SMART TOAST: Neuro/Sucesso (Mensagem Principal)
+        toast.show(
+            `${msg} O algoritmo cuidará do resto.`, 
+            'neuro', 
+            `🧠 Trilha de Memória Criada (Dia ${indexMsg})`
+        );
     },
 
     downloadBackup: () => {
@@ -369,7 +381,7 @@ const app = {
                 cycleState: store.cycleState,
                 lastAttackDate: store.lastAttackDate,
                 cycleStartDate: store.cycleStartDate,
-                tasks: store.tasks // Backup das Tarefas
+                tasks: store.tasks 
             }
         };
         
@@ -383,12 +395,12 @@ const app = {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        toast.show(`
-            <div>
-                <strong class="block text-emerald-500 mb-1">Backup Gerado!</strong>
-                Salve o arquivo .json em local seguro.
-            </div>
-        `, 'success');
+        // SMART TOAST: Sucesso
+        toast.show(
+            'Arquivo .JSON criado. Guarde-o em uma nuvem segura (Google Drive/Dropbox).', 
+            'success', 
+            '💾 Backup Seguro Gerado'
+        );
     },
 
     restoreData: (input) => {
@@ -413,7 +425,7 @@ const app = {
                     store.lastAttackDate = json.store.lastAttackDate || null;
                     store.cycleStartDate = json.store.cycleStartDate || null;
                     
-                    store.tasks = json.store.tasks || []; // Restaura Tarefas
+                    store.tasks = json.store.tasks || []; 
                     
                     store.save(); 
                     
@@ -425,12 +437,14 @@ const app = {
                         ui.renderHeatmap();
                     }
                     
-                    toast.show('Dados restaurados com sucesso!', 'success');
+                    // SMART TOAST: Info/Sucesso
+                    toast.show('Seus dados foram recuperados com sucesso.', 'info', '♻️ Sistema Restaurado');
                     ui.toggleSubjectModal(false);
                 }
             } catch (err) {
                 console.error(err);
-                toast.show('Erro ao ler arquivo de backup: ' + err.message, 'error');
+                // SMART TOAST: Error
+                toast.show('Erro ao ler arquivo: ' + err.message, 'error', 'Falha na Restauração');
             }
             input.value = '';
         };
@@ -593,7 +607,8 @@ const app = {
         document.body.removeChild(link);
         
         ui.toggleModal('modal-export', false);
-        toast.show('Agenda exportada com sucesso!', 'success');
+        // SMART TOAST: Info
+        toast.show('Arquivo gerado com horários empilhados.', 'info', '📅 Agenda Sincronizada');
     }
 };
 
@@ -685,7 +700,12 @@ const ui = {
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 dateInput.value = getLocalISODate(tomorrow);
                 
-                toast.show('📅 <b>Modo Defesa:</b> Data sugerida para amanhã. Planeje seus próximos passos!', 'info');
+                // SMART TOAST: Neuro/Defesa
+                toast.show(
+                    'Data sugerida para amanhã. Planeje seus próximos passos!', 
+                    'neuro', 
+                    '🛡️ Modo Defesa: Planejamento'
+                );
             } else {
                 dateInput.value = today; 
             }

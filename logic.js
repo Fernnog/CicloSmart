@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
- * Update v1.1.2: Persistent Capacity Bar (Total Load Logic)
+ * Update v1.1.3: Total Load Consistency (Bar, Heatmap & Safety Lock)
  */
 
 // ==========================================
@@ -451,8 +451,9 @@ const app = {
             
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
+            // ATUALIZAÇÃO v1.1.3: Blocker agora considera carga TOTAL (incluindo feitos)
             const existingLoad = store.reviews
-                .filter(r => r.date === isoDate && r.status !== 'DONE')
+                .filter(r => r.date === isoDate) // REMOVIDO: && r.status !== 'DONE'
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const projectedLoad = existingLoad + estimatedTime;
@@ -779,8 +780,9 @@ const ui = {
             const isoDate = getRelativeDate(i);
             const displayDate = formatDateDisplay(isoDate);
             
+            // ATUALIZAÇÃO v1.1.3: Soma tempo total, ignorando status
             const dayLoad = store.reviews
-                .filter(r => r.date === isoDate && r.status !== 'DONE')
+                .filter(r => r.date === isoDate) // REMOVIDO: && r.status !== 'DONE'
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const capacity = store.capacity > 0 ? store.capacity : 240;

@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.0.7', 
+        version: '1.0.8', 
         date: 'Hoje', 
+        changes: [
+            '📅 <strong>Smart Export (Exportação 2.0):</strong> Nova central de agendamento. Defina datas (Hoje/Amanhã) e horário de início antes de exportar.',
+            '⏱️ <strong>Empilhamento Sequencial:</strong> O algoritmo agora organiza seus estudos um após o outro automaticamente, baseando-se na duração real de cada card. Adeus sobreposições!',
+            '☕ <strong>Modo Humano (Pausas):</strong> Nova opção para inserir automaticamente 10min de intervalo entre sessões de estudo no seu calendário.'
+        ] 
+    },
+    { 
+        version: '1.0.7', 
+        date: 'Anterior', 
         changes: [
             '✨ <strong>Smart Grid (Modo Zen):</strong> O painel de "Atrasados" agora se recolhe automaticamente quando você zera as pendências, liberando 50% da tela para suas metas do dia.',
             '🎨 <strong>Contexto Visual Sutil:</strong> Aplicação de cores de fundo ultra-leves (Pastel) para diferenciar instintivamente os contextos: Alerta (Atrasos), Foco (Branco) e Planejamento (Azul).'

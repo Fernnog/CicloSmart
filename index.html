@@ -48,7 +48,7 @@
                 <i data-lucide="settings-2" class="w-5 h-5"></i>
             </button>
             
-            <button onclick="app.exportICS()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Exportar Calendário">
+            <button onclick="app.openExportUI()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Exportar Calendário">
                 <i data-lucide="calendar-arrow-down" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
                 <span class="hidden md:inline">Exportar</span>
             </button>
@@ -305,6 +305,58 @@
             </div>
             
             <button onclick="ui.toggleModal('modal-cycle-confirm', false)" class="mt-6 text-xs text-slate-400 hover:text-slate-600 underline">Cancelar operação</button>
+        </div>
+    </div>
+
+    <div id="modal-export" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="calendar-plus" class="text-indigo-600 w-5 h-5"></i> Exportar Agenda
+                </h3>
+                <button onclick="ui.toggleModal('modal-export', false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wide">Filtros Rápidos</label>
+                    <div class="flex gap-2">
+                        <button onclick="app.setExportFilter('today')" class="flex-1 py-2 px-3 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-lg hover:bg-indigo-100 border border-indigo-200 transition-colors">Hoje</button>
+                        <button onclick="app.setExportFilter('tomorrow')" class="flex-1 py-2 px-3 bg-indigo-50 text-indigo-700 text-sm font-bold rounded-lg hover:bg-indigo-100 border border-indigo-200 transition-colors">Amanhã</button>
+                        <button onclick="app.setExportFilter('all')" class="flex-1 py-2 px-3 bg-slate-50 text-slate-600 text-sm font-bold rounded-lg hover:bg-slate-100 border border-slate-200 transition-colors">Tudo</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Data Início</label>
+                        <input type="date" id="export-start" class="w-full border border-slate-300 rounded-lg p-2.5 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Data Fim</label>
+                        <input type="date" id="export-end" class="w-full border border-slate-300 rounded-lg p-2.5 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Horário de Início da Rotina</label>
+                    <div class="relative">
+                        <input type="time" id="export-time" value="09:00" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none font-bold">
+                        <p class="text-[10px] text-slate-400 mt-1">*Os estudos serão agendados em sequência a partir deste horário.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-1">
+                    <input type="checkbox" id="export-break" class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer">
+                    <label for="export-break" class="text-xs font-medium text-slate-600 cursor-pointer select-none">Incluir intervalo de 10min (Pausa)</label>
+                </div>
+
+                <div class="pt-2">
+                    <button onclick="app.generateICS()" class="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold shadow-md flex items-center justify-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4"></i> Baixar Arquivo .ICS
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

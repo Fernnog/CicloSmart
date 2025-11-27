@@ -43,22 +43,37 @@ input[type="color"]::-webkit-color-swatch {
 
 [x-cloak] { display: none !important; }
 
-/* --- Toast Notifications --- */
+/* --- Toast Notifications (Smart Feedback System) --- */
 .toast {
     pointer-events: auto;
-    transform: translateX(120%); /* Começa fora da tela (direita) */
-    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito elástico */
+    transform: translateX(120%); /* Começa fora da tela */
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito elástico */
+    will-change: transform, opacity;
 }
 
 .toast.show {
     transform: translateX(0);
+    opacity: 1;
+}
+
+/* Tipografia interna do Toast */
+.toast h4 {
+    margin-bottom: 2px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+.toast p {
+    line-height: 1.4;
+    opacity: 0.95;
+}
+
+/* Ajuste específico para links ou negritos dentro da mensagem */
+.toast b, .toast strong {
+    font-weight: 700;
 }
 
 /* 5. Lógica de Navegação: Mobile (Abas) vs Desktop (Grid) */
-
-/* NOTA: A regra anterior que forçava 'display: flex !important' no desktop foi removida 
-   para permitir que o 'logic.js' oculte colunas vazias (Layout Dinâmico/Smart Grid).
-*/
 
 /* Estilo do Botão de Aba Ativo (Mobile) */
 .tab-btn.active {

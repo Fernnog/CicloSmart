@@ -2,17 +2,25 @@
 
 const changelogData = [
     { 
-        version: '1.0.6', 
+        version: '1.0.7', 
         date: 'Hoje', 
         changes: [
+            '✨ <strong>Smart Grid (Modo Zen):</strong> O painel de "Atrasados" agora se recolhe automaticamente quando você zera as pendências, liberando 50% da tela para suas metas do dia.',
+            '🎨 <strong>Contexto Visual Sutil:</strong> Aplicação de cores de fundo ultra-leves (Pastel) para diferenciar instintivamente os contextos: Alerta (Atrasos), Foco (Branco) e Planejamento (Azul).'
+        ] 
+    },
+    { 
+        version: '1.0.6', 
+        date: 'Anterior', 
+        changes: [
             '🔢 <strong>Indexação de Ciclo (1-30):</strong> Cada novo estudo agora recebe um número (#1, #2...) baseado no dia do seu ciclo de 30 dias. Ideal para organizar anotações físicas.',
-            '⚙️ <strong>Controle de Versão Dinâmico:** O número da versão no topo e no título da página agora é atualizado automaticamente por este arquivo.',
-            '📅 <strong>Configuração de Ciclo:** Novo campo nas configurações (Radar) para definir ou resetar a data de início do seu ciclo pessoal.'
+            '⚙️ <strong>Controle de Versão Dinâmico:</strong> O número da versão no topo e no título da página agora é atualizado automaticamente por este arquivo.',
+            '📅 <strong>Configuração de Ciclo:</strong> Novo campo nas configurações (Radar) para definir ou resetar a data de início do seu ciclo pessoal.'
         ] 
     },
     { 
         version: '1.0.5', 
-        date: 'Anterior', 
+        date: 'Legacy', 
         changes: [
             '🧠 <strong>Smart Cycle (IA):</strong> O sistema agora tem memória! Se você estudou matéria nova ontem, o app inicia automaticamente em 🛡️ <strong>Modo Defesa</strong> hoje.',
             '🔄 <strong>Auto-Recuperação:</strong> Se você ficar 2 dias ou mais sem estudar, o sistema entende o descanso e libera o ⚔️ <strong>Modo Ataque</strong> automaticamente.',

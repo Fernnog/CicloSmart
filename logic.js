@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
- * Update v1.1.4: Smart Grid Layout (Dynamic Column Collapse)
+ * Update v1.1.5: Smart Export ICS (Sequential Stacking & Range Filters)
  */
 
 // ==========================================
@@ -453,7 +453,7 @@ const app = {
 
             // ATUALIZAÇÃO v1.1.3: Blocker agora considera carga TOTAL (incluindo feitos)
             const existingLoad = store.reviews
-                .filter(r => r.date === isoDate) // REMOVIDO: && r.status !== 'DONE'
+                .filter(r => r.date === isoDate) 
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const projectedLoad = existingLoad + estimatedTime;
@@ -637,41 +637,135 @@ const app = {
         }
     },
 
-    exportICS: () => {
-        const pendings = store.reviews.filter(r => r.status === 'PENDING');
-        if (pendings.length === 0) return alert("Nada para exportar.");
+    // --- NOVA LÓGICA DE EXPORTAÇÃO ICS (PRIORIDADE 1) ---
+
+    // 1. Abre o Modal e Define Padrões
+    openExportUI: () => {
+        const today = getLocalISODate();
+        const startInput = document.getElementById('export-start');
+        const endInput = document.getElementById('export-end');
+
+        if(startInput) startInput.value = today;
+        
+        if(endInput) {
+            const nextMonth = new Date();
+            nextMonth.setDate(nextMonth.getDate() + 30);
+            endInput.value = getLocalISODate(nextMonth);
+        }
+        
+        ui.toggleModal('modal-export', true);
+    },
+
+    // 2. Filtros Rápidos (Botões)
+    setExportFilter: (type) => {
+        const today = new Date();
+        const startInput = document.getElementById('export-start');
+        const endInput = document.getElementById('export-end');
+        
+        if(!startInput || !endInput) return;
+
+        if (type === 'today') {
+            const str = getLocalISODate(today);
+            startInput.value = str;
+            endInput.value = str;
+        } else if (type === 'tomorrow') {
+            today.setDate(today.getDate() + 1);
+            const str = getLocalISODate(today);
+            startInput.value = str;
+            endInput.value = str;
+        } else if (type === 'all') {
+            startInput.value = getLocalISODate(new Date()); 
+            // Pega a data da última review existente ou +30 dias
+            const lastReview = store.reviews.reduce((max, r) => r.date > max ? r.date : max, getLocalISODate());
+            endInput.value = lastReview;
+        }
+    },
+
+    // 3. Geração ICS com Empilhamento de Horários
+    generateICS: () => {
+        const startStr = document.getElementById('export-start').value;
+        const endStr = document.getElementById('export-end').value;
+        const startTimeStr = document.getElementById('export-time').value;
+        const breakCheckbox = document.getElementById('export-break'); // Prioridade 2 (UX)
+
+        if (!startStr || !endStr || !startTimeStr) return alert("Preencha todos os campos.");
+
+        // Filtra Reviews no intervalo e apenas PENDENTES
+        const validReviews = store.reviews.filter(r => 
+            r.status === 'PENDING' && 
+            r.date >= startStr && 
+            r.date <= endStr
+        ).sort((a, b) => a.date.localeCompare(b.date));
+
+        if (validReviews.length === 0) return alert("Nenhuma revisão encontrada neste período.");
 
         let icsLines = [
-            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v1//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
+            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v2//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
         ];
 
-        pendings.forEach(r => {
-            const dateStr = r.date.replace(/-/g, '');
-            const startTime = `${dateStr}T090000`;
-            const endTime = `${dateStr}T09${r.time < 10 ? '0' + r.time : r.time}00`; 
+        // Lógica de Empilhamento
+        let currentProcessDate = null;
+        let accumulatedMinutes = 0;
+        const [baseHour, baseMinute] = startTimeStr.split(':').map(Number);
+        
+        // Verifica se usuário quer intervalos (Prioridade 2)
+        const breakTime = (breakCheckbox && breakCheckbox.checked) ? 10 : 0; 
+
+        validReviews.forEach(r => {
+            // Se mudou o dia, reseta o acumulador para o horário base
+            if (r.date !== currentProcessDate) {
+                currentProcessDate = r.date;
+                accumulatedMinutes = 0;
+            }
+
+            // Calcula Início Real (Base + Acumulado)
+            // Nota: Usa-se string manipulation simples para garantir fuso local no construtor Date
+            const [y, m, d] = r.date.split('-').map(Number);
+            const eventStartObj = new Date(y, m - 1, d, baseHour, baseMinute + accumulatedMinutes);
+
+            // Calcula Fim Real (Início + Duração)
+            const eventEndObj = new Date(eventStartObj.getTime() + (r.time * 60000));
+
+            // Atualiza acumulador para o próximo card (Duração + Intervalo opcional)
+            accumulatedMinutes += r.time + breakTime;
+
+            // Formatação Floating Time (sem Z) para ICS
+            const formatICSDate = (d) => {
+                return d.getFullYear() +
+                       String(d.getMonth() + 1).padStart(2, '0') +
+                       String(d.getDate()).padStart(2, '0') + 'T' +
+                       String(d.getHours()).padStart(2, '0') +
+                       String(d.getMinutes()).padStart(2, '0') + '00';
+            };
+
             const cycleInfo = r.cycleIndex ? `[Ciclo #${r.cycleIndex}] ` : '';
 
             icsLines.push(
                 "BEGIN:VEVENT",
-                `UID:${r.id}@ciclosmart.app`,
-                `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-                `DTSTART:${startTime}`,
-                `DTEND:${endTime}`,
-                `SUMMARY:${cycleInfo}${r.subject} - ${r.topic}`,
-                `DESCRIPTION:Revisão ${r.type} (${r.time}min).`,
-                "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", "DESCRIPTION:Estudar", "END:VALARM",
+                `UID:${r.id}-${Date.now()}@ciclosmart.app`,
+                `DTSTAMP:${formatICSDate(new Date())}`,
+                `DTSTART:${formatICSDate(eventStartObj)}`,
+                `DTEND:${formatICSDate(eventEndObj)}`,
+                `SUMMARY:${cycleInfo}${r.subject}`,
+                `DESCRIPTION:Tópico: ${r.topic}\\nTipo: ${r.type}\\nDuração: ${r.time}min.`,
+                "BEGIN:VALARM", "TRIGGER:-PT10M", "ACTION:DISPLAY", "DESCRIPTION:Estudar", "END:VALARM",
                 "END:VEVENT"
             );
         });
 
         icsLines.push("END:VCALENDAR");
+        
+        // Download
         const blob = new Blob([icsLines.join("\r\n")], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
-        link.setAttribute('download', 'cronograma.ics');
+        link.setAttribute('download', `cronograma-${startStr}.ics`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
+        ui.toggleModal('modal-export', false);
+        toast.show('Agenda exportada com sucesso!', 'success');
     }
 };
 

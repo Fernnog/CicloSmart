@@ -56,25 +56,56 @@ const getContrastYIQ = (hexcolor) => {
     return (yiq >= 128) ? 'black' : 'white';
 };
 
-// Utilitário de Notificação (Toast)
+// --- SYSTEM: SMART FEEDBACK (TOASTS) ---
 const toast = {
-    show: (msg, type = 'info') => {
+    // Configuração Semântica de Cores e Ícones
+    config: {
+        success: { icon: 'check-circle-2', classes: 'bg-emerald-50 border-emerald-500 text-emerald-900' },
+        info:    { icon: 'info',           classes: 'bg-slate-800 border-slate-700 text-white shadow-slate-900/20' },
+        neuro:   { icon: 'brain-circuit',  classes: 'bg-purple-50 border-purple-500 text-purple-900' },
+        warning: { icon: 'alert-triangle', classes: 'bg-amber-50 border-amber-500 text-amber-900' },
+        error:   { icon: 'shield-alert',   classes: 'bg-red-50 border-red-500 text-red-900' }
+    },
+
+    show: (message, type = 'info', title = null) => {
         const container = document.getElementById('toast-container');
         if(!container) return; 
+
+        // Limite de Empilhamento (UX): Remove o mais antigo se houver mais de 3
+        if (container.childElementCount >= 3) {
+            const oldest = container.firstChild;
+            if (oldest) oldest.remove();
+        }
+        
+        // Fallback para tipos desconhecidos
+        const theme = toast.config[type] || toast.config.info;
         
         const el = document.createElement('div');
-        const colors = type === 'error' ? 'bg-red-50 border-red-500 text-red-900' : 
-                       type === 'success' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' :
-                       'bg-slate-800 text-white';
+        // Layout Flex para alinhar ícone e texto
+        el.className = `toast mb-3 p-4 rounded-lg shadow-xl border-l-4 text-sm flex items-start gap-3 min-w-[300px] max-w-md transition-all ${theme.classes}`;
         
-        el.className = `toast show mb-2 p-4 rounded-lg shadow-xl border-l-4 text-sm font-medium flex items-center gap-3 min-w-[320px] max-w-md ${colors}`;
-        el.innerHTML = msg; 
+        // Renderização do HTML com suporte a Título Opcional
+        el.innerHTML = `
+            <i data-lucide="${theme.icon}" class="w-5 h-5 shrink-0 mt-0.5"></i>
+            <div class="flex-1 min-w-0">
+                ${title ? `<h4 class="font-bold text-sm leading-tight">${title}</h4>` : ''}
+                <p class="text-xs font-medium leading-snug break-words">${message}</p>
+            </div>
+        `;
         
         container.appendChild(el);
         
+        // Ativa ícones do Lucide
+        if(window.lucide) lucide.createIcons({ root: el });
+        
+        // Trigger da Animação (Entrada)
+        requestAnimationFrame(() => el.classList.add('show'));
+        
+        // Timer de Auto-Destruição
         setTimeout(() => {
             el.classList.remove('show');
-            setTimeout(() => el.remove(), 300);
+            el.classList.add('opacity-0', 'translate-x-full'); // Saída suave para a direita
+            setTimeout(() => el.remove(), 400); // Aguarda a transição CSS
         }, 5000);
     }
 };
@@ -143,7 +174,6 @@ const store = {
     addSubject: (name, color) => {
         store.subjects.push({ id: 'sub-' + Date.now(), name, color });
         store.save();
-        // Nota: ui.initSubjects() será chamado pelo app.js, pois ui está lá
         if (typeof ui !== 'undefined' && ui.initSubjects) ui.initSubjects(); 
     },
 
@@ -221,7 +251,6 @@ const taskManager = {
         if(dateInput && !dateInput.value) dateInput.value = getLocalISODate();
         
         taskManager.render();
-        // Nota: ui.toggleModal está no app.js
         if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
     },
 
@@ -248,7 +277,7 @@ const taskManager = {
         
         taskManager.render();
         taskManager.checkOverdue();
-        toast.show('Tarefa adicionada!', 'success');
+        toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
 
     checkOverdue: () => {

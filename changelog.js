@@ -2,11 +2,20 @@
 
 const changelogData = [
     { 
-        version: '1.0.8', 
+        version: '1.0.9', 
         date: 'Hoje', 
         changes: [
+            '📋 <strong>Side-Quests (Tarefas Extras):</strong> Novo gerenciador para atividades de apoio (ex: ler edital, fazer inscrição). Organize pendências que não exigem cronômetro direto no app.',
+            '🎨 <strong>Contraste Adaptativo:</strong> Inteligência visual que calcula matematicamente se o texto do card deve ser Preto ou Branco, garantindo leitura perfeita em qualquer cor de matéria.',
+            '💾 <strong>Backup Expandido:</strong> A arquitetura de dados foi atualizada. Ao baixar seu backup .JSON, suas tarefas complementares agora são salvas junto com seus estudos.'
+        ] 
+    },
+    { 
+        version: '1.0.8', 
+        date: 'Anterior', 
+        changes: [
             '📅 <strong>Smart Export (Exportação 2.0):</strong> Nova central de agendamento. Defina datas (Hoje/Amanhã) e horário de início antes de exportar.',
-            '⏱️ <strong>Empilhamento Sequencial:</strong> O algoritmo agora organiza seus estudos um após o outro automaticamente, baseando-se na duração real de cada card. Adeus sobreposições!',
+            '⏱️ <strong>Empilhamento Sequencial:</strong> O algoritmo agora organiza seus estudos um após o outro automaticamente, baseando-se na duração real de cada card.',
             '☕ <strong>Modo Humano (Pausas):</strong> Nova opção para inserir automaticamente 10min de intervalo entre sessões de estudo no seu calendário.'
         ] 
     },

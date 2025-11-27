@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
- * Update v1.1.3: Total Load Consistency (Bar, Heatmap & Safety Lock)
+ * Update v1.1.4: Smart Grid Layout (Dynamic Column Collapse)
  */
 
 // ==========================================
@@ -572,6 +572,7 @@ const app = {
                 }
 
                 if (confirm(`Restaurar backup de ${formatDateDisplay(json.timestamp.split('T')[0])}? \nISSO SUBSTITUIRÁ OS DADOS ATUAIS.`)) {
+                    // Substituição completa dos dados (seguro: não acumula)
                     store.reviews = json.store.reviews;
                     store.subjects = json.store.subjects || defaultSubjects;
                     store.capacity = json.store.capacity || 240;
@@ -892,6 +893,28 @@ const ui = {
                 counts.future++;
             }
         });
+
+        // --- NOVA LÓGICA DE LAYOUT DINÂMICO (PRIORIDADE 1) ---
+        // Verifica se há atrasos para recolher/expandir a coluna
+        const mainEl = document.getElementById('main-kanban');
+        const colLate = document.getElementById('col-late');
+
+        if (mainEl && colLate) {
+            // Limpa definições anteriores de grid
+            mainEl.classList.remove('md:grid-cols-3', 'md:grid-cols-2');
+
+            if (counts.late === 0) {
+                // Modo Zen (Sem Atrasos): Oculta coluna Late, Expande Grid para 2 colunas
+                colLate.classList.remove('md:flex');
+                colLate.classList.add('md:hidden');
+                mainEl.classList.add('md:grid-cols-2');
+            } else {
+                // Modo Alerta (Com Atrasos): Mostra coluna Late, Grid padrão 3 colunas
+                colLate.classList.remove('md:hidden');
+                colLate.classList.add('md:flex');
+                mainEl.classList.add('md:grid-cols-3');
+            }
+        }
 
         ['late', 'today', 'future'].forEach(key => {
             const countEl = document.getElementById(`count-${key}`);

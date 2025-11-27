@@ -55,11 +55,10 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 /* 5. Lógica de Navegação: Mobile (Abas) vs Desktop (Grid) */
-@media (min-width: 768px) {
-    .kanban-column {
-        display: flex !important;
-    }
-}
+
+/* NOTA: A regra anterior que forçava 'display: flex !important' no desktop foi removida 
+   para permitir que o 'logic.js' oculte colunas vazias (Layout Dinâmico/Smart Grid).
+*/
 
 /* Estilo do Botão de Aba Ativo (Mobile) */
 .tab-btn.active {

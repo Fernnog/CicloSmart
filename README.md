@@ -1,17 +1,3 @@
-Plano de Evolução: Documentação Técnica Atualizada (README.md)
-
-### Explicação da Proposta (Para Leigos)
-A documentação (README) é o cartão de visitas do seu projeto. Ela precisa refletir que o sistema deixou de ser apenas um "cronômetro de estudos" para se tornar uma plataforma completa de gestão de aprendizado.
-
-Nesta atualização **exaustiva**, adicionei uma nova seção sobre "Descarrego Cognitivo" (a ciência por trás do novo gerenciador de tarefas), detalhei o funcionamento técnico das **Side-Quests**, do novo **Algoritmo de Contraste Visual** e do sistema de **Smart Export** que implementamos na versão anterior.
-
----
-
-### 1. Arquivo Atualizado (`README.md`)
-
-Substitua todo o conteúdo do seu arquivo atual por este:
-
-```markdown
 # CicloSmart | Plataforma de Estratégia de Estudos (Neuro-SRS)
 
 ![Status](https://img.shields.io/badge/Status-Estável%20(v1.0.9)-success)

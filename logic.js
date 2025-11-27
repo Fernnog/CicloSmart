@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE
  * Features: Neuro-SRS Engine, Capacity Lock, Backup System, Pendular Profile, Sequential Indexing
- * Update v1.2.0: Task Manager (Side-Quests) & Smart Export
+ * Update v1.8: Task Manager (Side-Quests) & Enhanced Backup
  */
 
 // ==========================================
@@ -49,13 +49,10 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
-// Utilitário de Contraste (YIQ) para Legibilidade
+// Utilitário de Contraste (YIQ) para Legibilidade dos Cards de Tarefa
 const getContrastYIQ = (hexcolor) => {
+    if (!hexcolor) return 'black';
     hexcolor = hexcolor.replace("#", "");
-    // Tratamento para hex curto (#fff)
-    if (hexcolor.length === 3) {
-        hexcolor = hexcolor.split('').map(c => c + c).join('');
-    }
     var r = parseInt(hexcolor.substr(0,2),16);
     var g = parseInt(hexcolor.substr(2,2),16);
     var b = parseInt(hexcolor.substr(4,2),16);
@@ -93,7 +90,7 @@ const toast = {
 const store = {
     reviews: [],
     subjects: [],
-    tasks: [], // Array de Tarefas Complementares
+    tasks: [], // NOVO: Tarefas Complementares
     capacity: 240, 
     profile: 'standard', 
     cycleState: 'ATTACK', 
@@ -198,7 +195,7 @@ const store = {
         }
     },
 
-    // --- Métodos de Tarefas (Tasks) ---
+    // --- Métodos de Tarefas (NOVO) ---
     removeTask: (id) => {
         store.tasks = store.tasks.filter(t => t.id !== id);
         store.save();
@@ -220,7 +217,7 @@ const taskManager = {
                 `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
             ).join('');
         }
-        // Define data padrão como hoje se vazio
+        // Define data padrão como hoje
         const dateInput = document.getElementById('task-date');
         if(dateInput && !dateInput.value) dateInput.value = getLocalISODate();
         
@@ -236,8 +233,6 @@ const taskManager = {
         const date = document.getElementById('task-date').value;
         const obs = document.getElementById('task-obs').value;
 
-        if(!subjectId || !subCategory || !date) return;
-
         store.tasks.push({
             id: Date.now(),
             subjectId,
@@ -247,7 +242,7 @@ const taskManager = {
         });
         store.save();
         
-        // Limpa campos de texto (mas mantém a data e select para facilitar inserção em lote)
+        // Limpa campos de texto (mas mantém a data)
         document.getElementById('task-subcategory').value = '';
         document.getElementById('task-obs').value = '';
         
@@ -258,7 +253,6 @@ const taskManager = {
 
     checkOverdue: () => {
         const today = getLocalISODate();
-        // Verifica se existe alguma tarefa pendente com data anterior a hoje
         const hasOverdue = store.tasks.some(t => t.date < today);
         const badge = document.getElementById('task-alert-badge');
         const icon = document.getElementById('task-icon-main');
@@ -294,33 +288,33 @@ const taskManager = {
             
             // Ícone de alerta se atrasado
             const alertIcon = isLate 
-                ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm animate-pulse z-10" title="Atrasado!"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></div>` 
+                ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm animate-pulse" title="Atrasado!"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></div>` 
                 : '';
 
             return `
-            <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2" 
+            <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3" 
                  style="background-color: ${subject.color}; color: ${textColor}">
                 ${alertIcon}
                 
                 <div class="mt-1">
                     <input type="checkbox" onclick="store.removeTask(${t.id})" 
-                           class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current mix-blend-hard-light">
+                           class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current">
                 </div>
                 
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-start">
-                        <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded truncate max-w-[60%]">
+                        <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded">
                             ${subject.name}
                         </span>
-                        <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 shrink-0 ${isLate ? 'underline decoration-wavy' : ''}">
+                        <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate ? 'underline decoration-wavy' : ''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                             ${formatDateDisplay(t.date)}
                         </span>
                     </div>
                     
-                    <h4 class="font-bold text-sm leading-tight mt-1 truncate pr-2" title="${t.subCategory}">${t.subCategory}</h4>
+                    <h4 class="font-bold text-sm leading-tight mt-1 truncate">${t.subCategory}</h4>
                     
-                    ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words pr-2">${t.obs}</p>` : ''}
+                    ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words">${t.obs}</p>` : ''}
                 </div>
             </div>
             `;
@@ -343,6 +337,7 @@ const app = {
 
         ui.initSubjects(); 
         ui.render();
+        taskManager.checkOverdue(); // Checa tarefas atrasadas ao iniciar
         
         const form = document.getElementById('form-study');
         if(form) form.addEventListener('submit', app.handleNewEntry);
@@ -355,9 +350,6 @@ const app = {
 
         app.updateProfileUI(store.profile); 
         ui.updateModeUI(); 
-        
-        // Inicializa estado das tarefas
-        taskManager.checkOverdue();
 
         ui.switchTab('today');
     },
@@ -468,7 +460,7 @@ const app = {
         }
     },
 
-    // --- NOVA LÓGICA DE ENTRADA COM VERIFICAÇÃO DE CICLO ---
+    // --- LÓGICA DE ENTRADA COM VERIFICAÇÃO DE CICLO ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -555,8 +547,7 @@ const app = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // --- CÁLCULO SEQUENCIAL DO ÍNDICE (CORREÇÃO DE PULO DE NÚMEROS) ---
-        // 1. Encontra dias únicos anteriores que tiveram estudo NOVO dentro do ciclo atual
+        // --- CÁLCULO SEQUENCIAL DO ÍNDICE ---
         const previousDays = store.reviews
             .filter(r => 
                 r.type === 'NOVO' &&         // Apenas dias de ataque
@@ -565,11 +556,7 @@ const app = {
             )
             .map(r => r.date);
 
-        // 2. Conta quantos dias únicos existem
         const uniquePreviousDays = new Set(previousDays).size;
-        
-        // 3. O índice atual é (Dias Anteriores + 1)
-        // Ex: Se estudei dia 01 (#1) e pulo dia 02, ao estudar dia 03, ele vê 1 dia anterior e vira #2.
         const finalCycleIndex = uniquePreviousDays + 1;
 
         const newReviews = [];
@@ -603,7 +590,7 @@ const app = {
             
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
-            // ATUALIZAÇÃO v1.1.3: Blocker agora considera carga TOTAL (incluindo feitos)
+            // Blocker: Carga Total
             const existingLoad = store.reviews
                 .filter(r => r.date === isoDate) 
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
@@ -679,17 +666,17 @@ const app = {
 
     downloadBackup: () => {
         const data = {
-            version: '1.7', 
+            version: '1.8', 
             timestamp: new Date().toISOString(),
             store: {
                 reviews: store.reviews,
                 subjects: store.subjects,
-                tasks: store.tasks, // Inclui tasks no backup
                 capacity: store.capacity,
                 profile: store.profile,
                 cycleState: store.cycleState,
                 lastAttackDate: store.lastAttackDate,
-                cycleStartDate: store.cycleStartDate
+                cycleStartDate: store.cycleStartDate,
+                tasks: store.tasks // Backup das Tarefas
             }
         };
         
@@ -725,15 +712,16 @@ const app = {
                 }
 
                 if (confirm(`Restaurar backup de ${formatDateDisplay(json.timestamp.split('T')[0])}? \nISSO SUBSTITUIRÁ OS DADOS ATUAIS.`)) {
-                    // Substituição completa dos dados (seguro: não acumula)
                     store.reviews = json.store.reviews;
                     store.subjects = json.store.subjects || defaultSubjects;
-                    store.tasks = json.store.tasks || []; // Restaura tasks
                     store.capacity = json.store.capacity || 240;
                     store.profile = json.store.profile || 'standard';
                     store.cycleState = json.store.cycleState || 'ATTACK';
                     store.lastAttackDate = json.store.lastAttackDate || null;
-                    store.cycleStartDate = json.store.cycleStartDate || null; 
+                    store.cycleStartDate = json.store.cycleStartDate || null;
+                    
+                    store.tasks = json.store.tasks || []; // Restaura Tarefas
+                    
                     store.save(); 
                     
                     ui.initSubjects();
@@ -791,9 +779,8 @@ const app = {
         }
     },
 
-    // --- NOVA LÓGICA DE EXPORTAÇÃO ICS (PRIORIDADE 1) ---
+    // --- LÓGICA DE EXPORTAÇÃO ICS ---
 
-    // 1. Abre o Modal e Define Padrões
     openExportUI: () => {
         const today = getLocalISODate();
         const startInput = document.getElementById('export-start');
@@ -810,7 +797,6 @@ const app = {
         ui.toggleModal('modal-export', true);
     },
 
-    // 2. Filtros Rápidos (Botões)
     setExportFilter: (type) => {
         const today = new Date();
         const startInput = document.getElementById('export-start');
@@ -835,12 +821,11 @@ const app = {
         }
     },
 
-    // 3. Geração ICS com Empilhamento de Horários
     generateICS: () => {
         const startStr = document.getElementById('export-start').value;
         const endStr = document.getElementById('export-end').value;
         const startTimeStr = document.getElementById('export-time').value;
-        const breakCheckbox = document.getElementById('export-break'); // Prioridade 2 (UX)
+        const breakCheckbox = document.getElementById('export-break'); 
 
         if (!startStr || !endStr || !startTimeStr) return alert("Preencha todos os campos.");
 
@@ -862,7 +847,6 @@ const app = {
         let accumulatedMinutes = 0;
         const [baseHour, baseMinute] = startTimeStr.split(':').map(Number);
         
-        // Verifica se usuário quer intervalos (Prioridade 2)
         const breakTime = (breakCheckbox && breakCheckbox.checked) ? 10 : 0; 
 
         validReviews.forEach(r => {
@@ -873,17 +857,14 @@ const app = {
             }
 
             // Calcula Início Real (Base + Acumulado)
-            // Nota: Usa-se string manipulation simples para garantir fuso local no construtor Date
             const [y, m, d] = r.date.split('-').map(Number);
             const eventStartObj = new Date(y, m - 1, d, baseHour, baseMinute + accumulatedMinutes);
 
             // Calcula Fim Real (Início + Duração)
             const eventEndObj = new Date(eventStartObj.getTime() + (r.time * 60000));
 
-            // Atualiza acumulador para o próximo card (Duração + Intervalo opcional)
             accumulatedMinutes += r.time + breakTime;
 
-            // Formatação Floating Time (sem Z) para ICS
             const formatICSDate = (d) => {
                 return d.getFullYear() +
                        String(d.getMonth() + 1).padStart(2, '0') +
@@ -998,7 +979,7 @@ const ui = {
     openNewStudyModal: () => {
         const dateInput = document.getElementById('input-study-date');
         if(dateInput) {
-            dateInput.value = getLocalISODate(); // Usa helper local
+            dateInput.value = getLocalISODate(); 
         }
         app.updateProfileUI(store.profile);
         ui.toggleModal('modal-new', true);
@@ -1009,7 +990,6 @@ const ui = {
         if(input) input.value = store.capacity;
 
         const cycleInput = document.getElementById('setting-cycle-start');
-        // Fallback visual: Se for null, mostra "Hoje", mas não salva até confirmar
         if(cycleInput) cycleInput.value = store.cycleStartDate || getLocalISODate();
         
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
@@ -1029,9 +1009,8 @@ const ui = {
             const isoDate = getRelativeDate(i);
             const displayDate = formatDateDisplay(isoDate);
             
-            // ATUALIZAÇÃO v1.1.3: Soma tempo total, ignorando status
             const dayLoad = store.reviews
-                .filter(r => r.date === isoDate) // REMOVIDO: && r.status !== 'DONE'
+                .filter(r => r.date === isoDate) 
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const capacity = store.capacity > 0 ? store.capacity : 240;
@@ -1132,8 +1111,6 @@ const ui = {
                 containers.today.innerHTML += cardHTML;
                 counts.today++;
                 
-                // ATUALIZAÇÃO v1.1.2: Soma tempo total, ignorando status
-                // Anteriormente: if (r.status !== 'DONE') todayLoad += r.time;
                 todayLoad += r.time;
 
             } else if (r.date > todayStr) {
@@ -1142,22 +1119,17 @@ const ui = {
             }
         });
 
-        // --- NOVA LÓGICA DE LAYOUT DINÂMICO (PRIORIDADE 1) ---
-        // Verifica se há atrasos para recolher/expandir a coluna
         const mainEl = document.getElementById('main-kanban');
         const colLate = document.getElementById('col-late');
 
         if (mainEl && colLate) {
-            // Limpa definições anteriores de grid
             mainEl.classList.remove('md:grid-cols-3', 'md:grid-cols-2');
 
             if (counts.late === 0) {
-                // Modo Zen (Sem Atrasos): Oculta coluna Late, Expande Grid para 2 colunas
                 colLate.classList.remove('md:flex');
                 colLate.classList.add('md:hidden');
                 mainEl.classList.add('md:grid-cols-2');
             } else {
-                // Modo Alerta (Com Atrasos): Mostra coluna Late, Grid padrão 3 colunas
                 colLate.classList.remove('md:hidden');
                 colLate.classList.add('md:flex');
                 mainEl.classList.add('md:grid-cols-3');
@@ -1252,9 +1224,7 @@ const ui = {
         
         if(bar && text) {
             bar.style.width = `${percentage}%`;
-            const remaining = Math.max(0, limit - todayMinutes);
-            // ATUALIZAÇÃO DE UX SUGERIDA NA ANÁLISE:
-            // Troca de "Resta: X" para "Planejado / Total" para fazer sentido com a nova lógica
+            
             text.innerHTML = `Planejado: <b>${todayMinutes}m</b> <span class="text-slate-300 mx-1">|</span> Meta: ${limit}m`;
 
             bar.className = `h-full rounded-full transition-all duration-700 ease-out relative ${

@@ -1,8 +1,9 @@
 {
   "name": "CicloSmart - Plataforma de Estudos",
   "short_name": "CicloSmart",
-  "start_url": "./index.html",
+  "id": "/CicloSmart/",
   "scope": "/CicloSmart/",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#ffffff",

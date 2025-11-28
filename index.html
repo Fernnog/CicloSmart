@@ -7,9 +7,17 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <meta name="description" content="MVP de Gestão de Estudos com Algoritmo SRS e Exportação ICS">
     
+    <!-- PWA Setup (Adicionado para Instalação Mobile) -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CicloSmart">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    
+    <!-- Estilos e Dependências -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
@@ -403,6 +411,18 @@
     </div>
 
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Importante: O scope './' garante o funcionamento correto em subpastas do GitHub Pages
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(reg => console.log('[PWA] Service Worker registrado no escopo:', reg.scope))
+                    .catch(err => console.error('[PWA] Falha ao registrar Service Worker:', err));
+            });
+        }
+    </script>
 
     <script src="changelog.js"></script>
     <script src="core.js"></script> <!-- Dados e Utilitários -->

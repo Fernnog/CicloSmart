@@ -1,7 +1,7 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.8 Split)
+ * CICLOSMART APP CONTROLLER (v1.8 Split + Connected Studies)
  * Contém: Lógica de Aplicação, UI Renderer, validações de Modo Pendular e Exportação.
  */
 
@@ -16,6 +16,24 @@ const app = {
     init: () => {
         store.load();
         
+        // --- AUTO-REPARO DE DADOS LEGADOS ---
+        // Adiciona batchId para estudos antigos que não têm, permitindo que o clique funcione.
+        let migrationCount = 0;
+        if (store.reviews && store.reviews.length > 0) {
+            store.reviews.forEach(r => {
+                if (!r.batchId) {
+                    // Gera um ID único retroativo
+                    r.batchId = 'legacy-' + r.id + '-' + Date.now(); 
+                    migrationCount++;
+                }
+            });
+            if (migrationCount > 0) {
+                console.log(`Migrado: ${migrationCount} estudos antigos para o novo formato Connected Studies.`);
+                store.save();
+            }
+        }
+        // ------------------------------------
+
         app.initVersionControl();
         app.checkSmartCycle();
 
@@ -61,7 +79,6 @@ const app = {
             if (store.cycleState !== 'DEFENSE') {
                 store.cycleState = 'DEFENSE';
                 store.save();
-                // SMART TOAST: Neuro/Metodologia
                 setTimeout(() => toast.show(
                     'Como você estudou matéria nova ontem, hoje ativamos o Modo Defesa para consolidação.', 
                     'neuro', 
@@ -73,7 +90,6 @@ const app = {
             if (store.cycleState !== 'ATTACK') {
                 store.cycleState = 'ATTACK';
                 store.save();
-                // SMART TOAST: Neuro/Metodologia
                 setTimeout(() => toast.show(
                     'Após o descanso, seu ciclo reiniciou. Modo Ataque liberado!', 
                     'neuro', 
@@ -96,7 +112,6 @@ const app = {
             ? 'Teto de 90min e Ciclo Inteligente ativados.' 
             : 'Modo Integrado sem limites rígidos.';
         
-        // SMART TOAST: Info
         toast.show(msg, 'info', 'Perfil Atualizado');
     },
 
@@ -116,7 +131,6 @@ const app = {
         
         const title = store.cycleState === 'ATTACK' ? '⚔️ Modo ATAQUE' : '🛡️ Modo DEFESA';
         
-        // SMART TOAST: Warning (pois é uma alteração manual do fluxo natural)
         toast.show(msg, 'warning', title); 
     },
 
@@ -124,15 +138,11 @@ const app = {
         if(dateStr) {
             store.cycleStartDate = dateStr;
             store.save();
-            // SMART TOAST: Success
             toast.show('Seus novos cards seguirão esta referência.', 'success', '📅 Ciclo Ancorado');
         }
     },
 
-    // --- NOVA LÓGICA: Desbloqueio de Clique ---
     handleNewStudyClick: () => {
-        // Removemos o bloqueio físico. Agora sempre abre o modal.
-        // A validação de data ocorre dentro do Modal (sugestão) e no Submit (bloqueio).
         ui.openNewStudyModal();
     },
 
@@ -152,7 +162,6 @@ const app = {
         }
     },
 
-    // --- LÓGICA DE ENTRADA COM VERIFICAÇÃO DE CICLO E DATA ---
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -163,12 +172,10 @@ const app = {
         const studyTimeInput = document.getElementById('input-study-time');
         const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
         const dateInput = document.getElementById('input-study-date');
-        const selectedDateStr = dateInput.value; // YYYY-MM-DD
+        const selectedDateStr = dateInput.value; 
         const todayStr = getLocalISODate();
 
-        // VALIDAÇÃO 1: Tempo Limite no Modo Pendular
         if (store.profile === 'pendular' && studyTime > 90) {
-            // SMART TOAST: Warning/Alerta
             return toast.show(
                 'O tempo limite para estudo de qualidade neste modo é 90 minutos.', 
                 'warning', 
@@ -176,9 +183,7 @@ const app = {
             );
         }
 
-        // VALIDAÇÃO 2: Bloqueio de Data "Hoje" no Modo Defesa
         if (store.profile === 'pendular' && store.cycleState === 'DEFENSE' && selectedDateStr === todayStr) {
-            // SMART TOAST: Error/Blocker (Educativo)
             return toast.show(
                 'Hoje é dia exclusivo de consolidação. Para manter a qualidade, agende novos conteúdos a partir de amanhã.', 
                 'error', 
@@ -186,12 +191,10 @@ const app = {
             );
         }
 
-        // Armazena dados temporariamente para decisão
         pendingStudyData = {
             subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target
         };
 
-        // Simulação do Dia do Ciclo: Quantos dias ÚTEIS existem antes deste?
         let projectedDay = 1;
         if (store.cycleStartDate) {
              const previousUniqueDays = new Set(store.reviews
@@ -202,26 +205,21 @@ const app = {
                 )
                 .map(r => r.date)
             );
-            // Se o dia escolhido já tem estudo, mantém o índice do dia, senão é o próximo
             projectedDay = previousUniqueDays.size + 1;
         }
 
-        // Atualiza UI do Modal
         const descEl = document.getElementById('cycle-option-keep-desc');
         if(descEl) descEl.innerText = `Será registrado como Dia #${projectedDay}`;
         
-        // Abre Modal de Decisão
         ui.toggleModal('modal-cycle-confirm', true);
     },
 
     resolveCycle: (startNew) => {
         if (!pendingStudyData) return;
 
-        // Se usuário definiu que é um NOVO ciclo, atualizamos a âncora
         if (startNew) {
             store.cycleStartDate = pendingStudyData.selectedDateStr;
             store.save();
-            // SMART TOAST: Success/Neuro
             toast.show(
                 'Ciclo reiniciado! Este estudo foi definido como o Dia #1.', 
                 'neuro', 
@@ -229,10 +227,8 @@ const app = {
             );
         }
 
-        // Processa o estudo com a lógica de SRS
         app.processStudyEntry(pendingStudyData);
 
-        // Limpeza
         ui.toggleModal('modal-cycle-confirm', false);
         ui.toggleModal('modal-new', false);
         pendingStudyData.eTarget.reset(); 
@@ -244,23 +240,23 @@ const app = {
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
 
-        // Auto-Ancoragem (Fallback)
+        // GERAÇÃO DE ID DE LOTE (NOVO)
+        const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+
         if (!store.cycleStartDate) {
             store.cycleStartDate = selectedDateStr;
             store.save();
         }
 
-        // CONSTANTES DE REGRA DE NEGÓCIO
         const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // --- CÁLCULO SEQUENCIAL DO ÍNDICE ---
         const previousDays = store.reviews
             .filter(r => 
-                r.type === 'NOVO' &&         // Apenas dias de ataque
-                r.date >= store.cycleStartDate && // Dentro do ciclo
-                r.date < selectedDateStr     // Anteriores ao dia atual
+                r.type === 'NOVO' && 
+                r.date >= store.cycleStartDate && 
+                r.date < selectedDateStr
             )
             .map(r => r.date);
 
@@ -270,13 +266,9 @@ const app = {
         const newReviews = [];
         let blocker = null;
 
-        // 0. GERAÇÃO DE ID DO LOTE (Conexão entre cards)
-        const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-
-        // 1. REGISTRO DO ESTUDO ORIGINAL (AQUISIÇÃO)
+        // CARD ORIGINAL (Com batchId)
         const acquisitionEntry = {
             id: Date.now() + Math.random(), 
-            batchId: batchId, // NOVO: Vínculo
             subject: subjectName,
             color: subjectColor,
             topic: topic,
@@ -284,11 +276,11 @@ const app = {
             date: selectedDateStr, 
             type: 'NOVO', 
             status: 'PENDING',
-            cycleIndex: finalCycleIndex 
+            cycleIndex: finalCycleIndex,
+            batchId: batchId // Vínculo
         };
         newReviews.push(acquisitionEntry);
 
-        // 2. SIMULAÇÃO E GERAÇÃO DAS REVISÕES FUTURAS
         for (let interval of CONFIG.intervals) {
             let effectiveInterval = interval;
             if (store.profile === 'pendular') {
@@ -302,7 +294,6 @@ const app = {
             
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
-            // Blocker: Carga Total
             const existingLoad = store.reviews
                 .filter(r => r.date === isoDate) 
                 .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
@@ -326,7 +317,6 @@ const app = {
 
             newReviews.push({
                 id: Date.now() + Math.random() + effectiveInterval,
-                batchId: batchId, // NOVO: Vínculo
                 subject: subjectName,
                 color: subjectColor,
                 topic: topic,
@@ -334,12 +324,12 @@ const app = {
                 date: isoDate,
                 type: typeLabel,
                 status: 'PENDING',
-                cycleIndex: finalCycleIndex 
+                cycleIndex: finalCycleIndex,
+                batchId: batchId // Vínculo
             });
         }
 
         if (blocker) {
-            // SMART TOAST: Error/Blocker
             toast.show(
                 `Adicionar este estudo faria o dia ${blocker.date} exceder o limite de revisões (40%). Tente reduzir a carga inicial.`, 
                 'error', 
@@ -350,7 +340,6 @@ const app = {
             return; 
         }
 
-        // Atualiza lastAttackDate apenas se o estudo for HOJE ou PASSADO.
         const todayStr = getLocalISODate();
         if (store.profile === 'pendular' && selectedDateStr <= todayStr) {
             store.lastAttackDate = selectedDateStr;
@@ -366,7 +355,6 @@ const app = {
         
         const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
 
-        // SMART TOAST: Neuro/Sucesso (Mensagem Principal)
         toast.show(
             `${msg} O algoritmo cuidará do resto.`, 
             'neuro', 
@@ -400,7 +388,6 @@ const app = {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        // SMART TOAST: Sucesso
         toast.show(
             'Arquivo .JSON criado. Guarde-o em uma nuvem segura (Google Drive/Dropbox).', 
             'success', 
@@ -442,13 +429,11 @@ const app = {
                         ui.renderHeatmap();
                     }
                     
-                    // SMART TOAST: Info/Sucesso
                     toast.show('Seus dados foram recuperados com sucesso.', 'info', '♻️ Sistema Restaurado');
                     ui.toggleSubjectModal(false);
                 }
             } catch (err) {
                 console.error(err);
-                // SMART TOAST: Error
                 toast.show('Erro ao ler arquivo: ' + err.message, 'error', 'Falha na Restauração');
             }
             input.value = '';
@@ -478,41 +463,40 @@ const app = {
         }
     },
 
-    // --- NOVA LÓGICA DE EDIÇÃO (BATCH EDIT) ---
+    // --- NOVA LÓGICA DE EDIÇÃO EM LOTE ---
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
 
-        // 1. Pergunta novo tópico
-        const newTopic = prompt("Editar Tópico:", r.topic);
-        if (newTopic === null || newTopic.trim() === "") return;
+        // Tenta edição de Tópico primeiro
+        const newTopic = prompt("Editar Tópico (Nome):", r.topic);
+        
+        if (newTopic !== null && newTopic !== r.topic) {
+            // Verifica se é lote
+            const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
+            const isBatch = siblings.length > 1;
+            let updateAll = false;
 
-        // 2. Detecta se faz parte de um lote
-        const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
-        const isBatch = siblings.length > 1;
+            if (isBatch) {
+                updateAll = confirm(`Este estudo tem ${siblings.length} revisões conectadas.\nDeseja renomear TODAS para "${newTopic}"?\n\n[OK] Sim, corrigir tudo.\n[Cancelar] Não, apenas este card.`);
+            }
 
-        let updateAll = false;
-        if (isBatch) {
-            updateAll = confirm(`Este estudo tem ${siblings.length} revisões conectadas.\nDeseja renomear TODAS para "${newTopic}"?\n\n[OK] Sim, corrigir todo o ciclo.\n[Cancelar] Não, apenas este card.`);
-        }
-
-        if (updateAll) {
-            // Atualiza todos os cards com o mesmo batchId
-            let count = 0;
-            store.reviews.forEach(item => {
-                if (item.batchId === r.batchId) {
-                    item.topic = newTopic;
-                    count++;
-                }
-            });
-            store.save();
-            ui.render();
-            toast.show(`Tópico atualizado em ${count} cards do ciclo!`, 'success', 'Edição em Lote');
-        } else {
-            // Comportamento original (Single)
+            if (updateAll) {
+                // Atualiza em lote
+                siblings.forEach(s => s.topic = newTopic);
+                store.save();
+                ui.render();
+                toast.show(`Tópico corrigido em ${siblings.length} cards.`, 'success', 'Correção em Lote');
+            } else {
+                // Atualiza individual
+                store.updateReview(id, newTopic, r.time);
+            }
+        } 
+        else if (newTopic === r.topic) {
+            // Se usuário não mudou o nome (ou cancelou), oferece mudar o tempo
             const newTime = prompt("Editar Tempo (min):", r.time);
-            if (newTime !== null && !isNaN(newTime)) {
-                store.updateReview(id, newTopic, newTime);
+            if (newTime !== null && !isNaN(newTime) && newTime !== r.time) {
+                store.updateReview(id, r.topic, newTime);
             }
         }
     },
@@ -553,7 +537,6 @@ const app = {
             endInput.value = str;
         } else if (type === 'all') {
             startInput.value = getLocalISODate(new Date()); 
-            // Pega a data da última review existente ou +30 dias
             const lastReview = store.reviews.reduce((max, r) => r.date > max ? r.date : max, getLocalISODate());
             endInput.value = lastReview;
         }
@@ -567,7 +550,6 @@ const app = {
 
         if (!startStr || !endStr || !startTimeStr) return alert("Preencha todos os campos.");
 
-        // Filtra Reviews no intervalo e apenas PENDENTES
         const validReviews = store.reviews.filter(r => 
             r.status === 'PENDING' && 
             r.date >= startStr && 
@@ -580,7 +562,6 @@ const app = {
             "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v2//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
         ];
 
-        // Lógica de Empilhamento
         let currentProcessDate = null;
         let accumulatedMinutes = 0;
         const [baseHour, baseMinute] = startTimeStr.split(':').map(Number);
@@ -588,17 +569,13 @@ const app = {
         const breakTime = (breakCheckbox && breakCheckbox.checked) ? 10 : 0; 
 
         validReviews.forEach(r => {
-            // Se mudou o dia, reseta o acumulador para o horário base
             if (r.date !== currentProcessDate) {
                 currentProcessDate = r.date;
                 accumulatedMinutes = 0;
             }
 
-            // Calcula Início Real (Base + Acumulado)
             const [y, m, d] = r.date.split('-').map(Number);
             const eventStartObj = new Date(y, m - 1, d, baseHour, baseMinute + accumulatedMinutes);
-
-            // Calcula Fim Real (Início + Duração)
             const eventEndObj = new Date(eventStartObj.getTime() + (r.time * 60000));
 
             accumulatedMinutes += r.time + breakTime;
@@ -628,7 +605,6 @@ const app = {
 
         icsLines.push("END:VCALENDAR");
         
-        // Download
         const blob = new Blob([icsLines.join("\r\n")], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
@@ -638,7 +614,6 @@ const app = {
         document.body.removeChild(link);
         
         ui.toggleModal('modal-export', false);
-        // SMART TOAST: Info
         toast.show('Arquivo gerado com horários empilhados.', 'info', '📅 Agenda Sincronizada');
     }
 };
@@ -693,14 +668,12 @@ const ui = {
             btnNew.disabled = false;
             iconNew.setAttribute('data-lucide', 'plus');
         } else {
-            // MODO DEFESA: Alteramos para permitir clique, mas visualmente distinto
             btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-defense';
             textMode.innerText = 'Dia de Defesa';
             iconMode.setAttribute('data-lucide', 'shield');
             
-            // Habilita botão para agendamento futuro
             btnNew.disabled = false; 
-            iconNew.setAttribute('data-lucide', 'calendar-plus'); // Ícone sugerindo agendamento
+            iconNew.setAttribute('data-lucide', 'calendar-plus'); 
             btnNew.classList.remove('opacity-50', 'cursor-not-allowed'); 
         }
         
@@ -725,13 +698,11 @@ const ui = {
         const today = getLocalISODate();
 
         if(dateInput) {
-            // NOVA LÓGICA: Se for modo pendular E defesa, sugere amanhã automaticamente
             if (store.profile === 'pendular' && store.cycleState === 'DEFENSE') {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 dateInput.value = getLocalISODate(tomorrow);
                 
-                // SMART TOAST: Neuro/Defesa
                 toast.show(
                     'Data sugerida para amanhã. Planeje seus próximos passos!', 
                     'neuro', 
@@ -844,55 +815,6 @@ const ui = {
         }
     },
 
-    // --- NOVA FUNCIONALIDADE: Tooltip de Ciclo ---
-    showCycleInfo: (batchId, event) => {
-        event.stopPropagation(); // Evita clicar no card e abrir edição
-        const popover = document.getElementById('cycle-popover');
-        
-        if (!popover) return;
-
-        // Filtra todos os itens do lote
-        const family = store.reviews
-            .filter(r => r.batchId === batchId)
-            .sort((a, b) => a.date.localeCompare(b.date));
-
-        if(family.length === 0) return;
-
-        // Gera HTML
-        const listHtml = family.map(f => {
-            const isDone = f.status === 'DONE';
-            const statusIcon = isDone ? '✅' : '📅';
-            const colorClass = isDone ? 'text-emerald-600 line-through opacity-70' : 'text-slate-700 font-bold';
-            
-            return `
-                <div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0 ${colorClass}">
-                    <span class="text-xs">${statusIcon} ${f.type}</span>
-                    <span class="text-xs ml-3">${formatDateDisplay(f.date)}</span>
-                </div>
-            `;
-        }).join('');
-
-        popover.innerHTML = `
-            <div class="font-bold text-indigo-700 mb-2 text-xs uppercase tracking-wide border-b border-indigo-100 pb-1">
-                Cronograma #${family[0].cycleIndex}
-            </div>
-            ${listHtml}
-            <div class="mt-2 text-[10px] text-slate-400 text-center italic">Clique fora para fechar</div>
-        `;
-
-        // Posicionamento simples
-        popover.style.top = `${event.clientY + 10}px`;
-        popover.style.left = `${event.clientX - 100}px`;
-        popover.classList.add('visible');
-
-        // Fecha ao clicar fora
-        const closeFn = () => {
-            popover.classList.remove('visible');
-            document.removeEventListener('click', closeFn);
-        };
-        setTimeout(() => document.addEventListener('click', closeFn), 100);
-    },
-
     render: () => {
         const todayStr = getLocalISODate();
         const containers = {
@@ -972,10 +894,10 @@ const ui = {
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
-        // Badge interativo se houver batchId
-        const cycleBadge = (review.cycleIndex && review.batchId)
-            ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cursor-pointer hover:scale-110 transition-transform text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Ver cronograma do Ciclo">#${review.cycleIndex}</span>` 
-            : (review.cycleIndex ? `<span class="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2">#${review.cycleIndex}</span>` : '');
+        // --- ATUALIZADO: BADGE INTERATIVO ---
+        const cycleHtml = review.batchId && review.cycleIndex 
+           ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
+           : '';
 
         return `
             <div class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative" 
@@ -998,7 +920,7 @@ const ui = {
                                 <span class="text-[10px] font-bold text-white bg-slate-700 px-1.5 py-0.5 rounded">
                                     ${review.type}
                                 </span>
-                                ${cycleBadge}
+                                ${cycleHtml}
                             </div>
                         </div>
                     </div>
@@ -1023,6 +945,77 @@ const ui = {
                 </div>
             </div>
         `;
+    },
+
+    // --- NOVA FUNÇÃO: EXIBIR INFORMAÇÕES DO CICLO (MODAL CENTRAL) ---
+    showCycleInfo: (batchId, event) => {
+        if(event) event.stopPropagation();
+        
+        const popover = document.getElementById('cycle-popover');
+        
+        // Busca família
+        const family = store.reviews
+            .filter(r => r.batchId === batchId)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        if(family.length === 0) return;
+
+        // Título da matéria para contexto
+        const subjectName = family[0].subject;
+
+        const listHtml = family.map(f => {
+            const isDone = f.status === 'DONE';
+            // Ícones e estilo para mobile
+            const icon = isDone ? '<span class="text-emerald-500">✓ Feito</span>' : '⭕ Pendente'; 
+            const style = isDone ? 'opacity-50 line-through' : 'font-bold text-slate-800';
+            
+            return `
+                <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 ${style}">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] text-slate-500 uppercase">${f.type}</span>
+                        <span class="text-sm">${formatDateDisplay(f.date)}</span>
+                    </div>
+                    <div class="text-xs">${icon}</div>
+                </div>
+            `;
+        }).join('');
+
+        popover.innerHTML = `
+            <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
+                <div>
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Ciclo #${family[0].cycleIndex}</span>
+                    <h4 class="font-bold text-indigo-700 leading-tight">${subjectName}</h4>
+                </div>
+                <button onclick="document.getElementById('cycle-popover').classList.remove('visible')" class="p-1 bg-slate-100 rounded-full text-slate-500 w-6 h-6 flex items-center justify-center">
+                    ✕
+                </button>
+            </div>
+            <div class="max-h-[60vh] overflow-y-auto custom-scroll">
+                ${listHtml}
+            </div>
+        `;
+
+        // Fecha ao clicar fora (backdrop)
+        const closeFn = (e) => {
+            if (e.target.id === 'cycle-popover' && e.target.classList.contains('visible')) {
+                // Se clicar no backdrop (pseudo-element ou área container se não preenchida)
+                // O pseudo-element ::before captura o clique se pointer-events estiver correto.
+                // Simplificação: apenas clicar fora.
+            }
+        };
+
+        // Adiciona listener para fechar com clique fora (simulado pelo backdrop CSS)
+        // No CSS mobile, usamos um backdrop que cobre a tela.
+        popover.classList.add('visible');
+        
+        // Listener temporário para fechar com Esc
+        const escListener = (e) => {
+            if(e.key === 'Escape') {
+                popover.classList.remove('visible');
+                document.removeEventListener('keydown', escListener);
+            }
+        };
+        document.addEventListener('keydown', escListener);
     },
 
     updateCapacityStats: (todayMinutes) => {

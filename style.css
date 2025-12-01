@@ -82,7 +82,7 @@ input[type="color"]::-webkit-color-swatch {
     background-color: #eef2ff; /* indigo-50 */
 }
 
-/* --- v1.5: Estados do Modo Pendular (Ataque/Defesa) --- */
+/* --- Estados do Modo Pendular (Ataque/Defesa) --- */
 
 /* Modo Ataque: Tema Vermelho (Alerta/Ação) */
 .mode-attack {
@@ -96,7 +96,6 @@ input[type="color"]::-webkit-color-swatch {
     background-color: #eff6ff; /* blue-50 */
     border-color: #bfdbfe;     /* blue-200 */
     color: #1d4ed8;            /* blue-700 */
-    
 }
 
 /* Animação suave para troca de ícone no HUD */
@@ -108,41 +107,54 @@ input[type="color"]::-webkit-color-swatch {
     transform: scale(0.8);
 }
 
-/* --- Tooltip de Ciclo (Estudos Conectados) --- */
+/* --- NOVA FUNCIONALIDADE: Badge de Ciclo e Modal (Mobile First) --- */
 
-/* Badge interativo (#1, #2...) */
+/* Badge clicável - Feedback visual de toque */
 .cycle-badge {
     cursor: pointer;
-    position: relative;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
     transition: all 0.2s ease;
-    user-select: none;
 }
-.cycle-badge:hover {
-    transform: scale(1.1);
-    background-color: #e0e7ff; /* indigo-100 */
-    border-color: #818cf8;     /* indigo-400 */
-    color: #3730a3;            /* indigo-900 */
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+.cycle-badge:active, .cycle-badge:hover {
+    background-color: #c7d2fe; /* indigo-200 */
+    transform: scale(1.05);
 }
 
-/* Container flutuante com a lista de datas */
+/* Modal Centralizado (Overlay) */
 #cycle-popover {
     position: fixed;
-    z-index: 100;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Centraliza exato */
+    z-index: 1000; /* Garante que fique acima de tudo */
+    
     background: white;
-    border: 1px solid #cbd5e1; /* slate-300 */
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
-    padding: 12px;
-    min-width: 220px;
-    font-size: 0.75rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* Sombra forte */
+    border-radius: 12px;
+    padding: 16px;
+    
+    width: 90%; /* Ocupa largura boa no celular */
+    max-width: 320px; /* Não fica gigante no PC */
+    
     display: none; /* Oculto por padrão */
-    pointer-events: none; /* Para evitar conflito inicial, mas alterado via JS se necessário */
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
 }
 
-/* Estado visível do popover */
+/* Fundo escuro atrás do modal (Backdrop) */
+#cycle-popover::before {
+    content: '';
+    position: fixed;
+    top: -200vh; left: -200vw; right: -200vw; bottom: -200vh; /* Cobre tudo */
+    background: rgba(0,0,0,0.5);
+    z-index: -1;
+    pointer-events: auto; /* Captura cliques fora */
+}
+
 #cycle-popover.visible {
     display: block;
-    animation: fadeIn 0.2s ease-out;
-    pointer-events: auto;
+    opacity: 1;
 }

@@ -1,8 +1,8 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.8 Split + Connected Studies)
- * Contém: Lógica de Aplicação, UI Renderer, validações de Modo Pendular e Exportação.
+ * CICLOSMART APP CONTROLLER (v1.8 Split + Connected Studies + Robust Mobile UI)
+ * Contém: Lógica de Aplicação, UI Renderer, Batch Logic e DOM Injection.
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -22,14 +22,15 @@ const app = {
         if (store.reviews && store.reviews.length > 0) {
             store.reviews.forEach(r => {
                 if (!r.batchId) {
-                    // Gera um ID único retroativo
-                    r.batchId = 'legacy-' + r.id + '-' + Date.now(); 
+                    // Gera um ID único retroativo para permitir o funcionamento do modal
+                    r.batchId = 'legacy-' + r.id + '-' + Math.floor(Math.random() * 1000); 
                     migrationCount++;
                 }
             });
             if (migrationCount > 0) {
                 console.log(`Migrado: ${migrationCount} estudos antigos para o novo formato Connected Studies.`);
                 store.save();
+                setTimeout(() => toast.show('Sistema atualizado para suportar Conexão de Estudos.', 'info', 'Upgrade Realizado'), 2000);
             }
         }
         // ------------------------------------
@@ -240,7 +241,7 @@ const app = {
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
 
-        // GERAÇÃO DE ID DE LOTE (NOVO)
+        // GERAÇÃO DE ID DE LOTE (NOVO) - Conecta todas as revisões deste estudo
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
 
         if (!store.cycleStartDate) {
@@ -419,6 +420,11 @@ const app = {
                     
                     store.tasks = json.store.tasks || []; 
                     
+                    // Garante migração imediata ao restaurar
+                    store.reviews.forEach(r => { 
+                        if(!r.batchId) r.batchId = 'legacy-'+r.id+'-'+Math.floor(Math.random()*1000); 
+                    });
+
                     store.save(); 
                     
                     ui.initSubjects();
@@ -895,8 +901,9 @@ const ui = {
             : 'text-slate-800';
 
         // --- ATUALIZADO: BADGE INTERATIVO ---
+        // Agora usa a classe .cycle-badge e chama ui.showCycleInfo
         const cycleHtml = review.batchId && review.cycleIndex 
-           ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
+           ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
            : '';
 
         return `
@@ -947,75 +954,88 @@ const ui = {
         `;
     },
 
-    // --- NOVA FUNÇÃO: EXIBIR INFORMAÇÕES DO CICLO (MODAL CENTRAL) ---
+    // --- FUNÇÃO BLINDADA: GERA DOM SE NÃO EXISTIR ---
     showCycleInfo: (batchId, event) => {
-        if(event) event.stopPropagation();
-        
-        const popover = document.getElementById('cycle-popover');
-        
-        // Busca família
+        if(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        // 1. Verifica ou cria o Backdrop (Fundo escuro)
+        let backdrop = document.getElementById('cycle-popover-backdrop');
+        if (!backdrop) {
+            backdrop = document.createElement('div');
+            backdrop.id = 'cycle-popover-backdrop';
+            // Ao clicar no backdrop, fecha tudo
+            backdrop.onclick = () => {
+                document.getElementById('cycle-popover')?.classList.remove('visible');
+                backdrop.classList.remove('visible');
+            };
+            document.body.appendChild(backdrop);
+        }
+
+        // 2. Verifica ou cria o Popover (Janela)
+        let popover = document.getElementById('cycle-popover');
+        if (!popover) {
+            popover = document.createElement('div');
+            popover.id = 'cycle-popover';
+            document.body.appendChild(popover);
+        }
+
+        // 3. Busca Dados (Família)
         const family = store.reviews
             .filter(r => r.batchId === batchId)
             .sort((a, b) => a.date.localeCompare(b.date));
 
-        if(family.length === 0) return;
+        if (family.length === 0) return toast.show('Erro: Nenhum dado vinculado.', 'error');
 
-        // Título da matéria para contexto
+        // Título e Matéria
         const subjectName = family[0].subject;
 
+        // 4. Monta HTML da Lista
         const listHtml = family.map(f => {
             const isDone = f.status === 'DONE';
-            // Ícones e estilo para mobile
-            const icon = isDone ? '<span class="text-emerald-500">✓ Feito</span>' : '⭕ Pendente'; 
-            const style = isDone ? 'opacity-50 line-through' : 'font-bold text-slate-800';
+            const icon = isDone ? '✅' : '⭕';
+            const rowClass = isDone ? 'opacity-50' : 'font-bold text-slate-800';
             
             return `
-                <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 ${style}">
+                <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0 ${rowClass}">
                     <div class="flex flex-col">
                         <span class="text-[10px] text-slate-500 uppercase">${f.type}</span>
-                        <span class="text-sm">${formatDateDisplay(f.date)}</span>
+                        <span class="text-xs">${formatDateDisplay(f.date)}</span>
                     </div>
-                    <div class="text-xs">${icon}</div>
+                    <div class="text-sm">${icon}</div>
                 </div>
             `;
         }).join('');
 
+        // Preenche o conteúdo do Modal
         popover.innerHTML = `
-            <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-2">
-                <div>
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase">Ciclo #${family[0].cycleIndex}</span>
-                    <h4 class="font-bold text-indigo-700 leading-tight">${subjectName}</h4>
+            <div class="mb-3 border-b border-slate-100 pb-2">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-[10px] uppercase font-bold text-slate-400">Ciclo #${family[0].cycleIndex}</div>
+                        <div class="text-sm font-bold text-indigo-700 leading-tight">${subjectName}</div>
+                    </div>
+                    <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
+                        class="text-slate-400 hover:text-slate-600 font-bold p-1">✕</button>
                 </div>
-                <button onclick="document.getElementById('cycle-popover').classList.remove('visible')" class="p-1 bg-slate-100 rounded-full text-slate-500 w-6 h-6 flex items-center justify-center">
-                    ✕
-                </button>
+                <div class="text-xs text-slate-500 truncate mt-1 italic">"${family[0].topic}"</div>
             </div>
-            <div class="max-h-[60vh] overflow-y-auto custom-scroll">
+            
+            <div class="max-h-60 overflow-y-auto custom-scroll pr-1">
                 ${listHtml}
             </div>
+            
+            <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
+                class="mt-4 w-full py-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 active:scale-95 transition-all">
+                FECHAR
+            </button>
         `;
 
-        // Fecha ao clicar fora (backdrop)
-        const closeFn = (e) => {
-            if (e.target.id === 'cycle-popover' && e.target.classList.contains('visible')) {
-                // Se clicar no backdrop (pseudo-element ou área container se não preenchida)
-                // O pseudo-element ::before captura o clique se pointer-events estiver correto.
-                // Simplificação: apenas clicar fora.
-            }
-        };
-
-        // Adiciona listener para fechar com clique fora (simulado pelo backdrop CSS)
-        // No CSS mobile, usamos um backdrop que cobre a tela.
+        // 5. Exibe (Adiciona classes visible)
+        backdrop.classList.add('visible');
         popover.classList.add('visible');
-        
-        // Listener temporário para fechar com Esc
-        const escListener = (e) => {
-            if(e.key === 'Escape') {
-                popover.classList.remove('visible');
-                document.removeEventListener('keydown', escListener);
-            }
-        };
-        document.addEventListener('keydown', escListener);
     },
 
     updateCapacityStats: (todayMinutes) => {

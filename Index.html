@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CicloSmart | Plataforma de Repetição Espaçada</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="description" content="MVP de Gestão de Estudos com Algoritmo SRS e Exportação ICS">
+    
+    <!-- PWA Setup (Caminhos Relativos para Isolamento no GitHub) -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CicloSmart">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    
+    <!-- Estilos e Dependências -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
+
+    <!-- Header Principal -->
+    <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm z-20 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-white p-1 rounded-full border-2 border-indigo-50 shadow-sm hidden md:flex items-center justify-center w-11 h-11 shrink-0 overflow-hidden">
+                <img src="logo.webp" alt="Logo CicloSmart" class="w-full h-full object-contain">
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
+                <button id="app-version-btn" onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
+                    </button>
+            </div>
+            
+            <button id="mode-toggle" onclick="app.toggleMode()" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
+                <i id="mode-icon" data-lucide="sword" class="w-4 h-4"></i>
+                <span id="mode-text">Modo Ataque</span>
+            </button>
+        </div>
+
+        <!-- Barra de Capacidade (Desktop) -->
+        <div class="flex-1 max-w-lg mx-8 hidden md:block">
+            <div class="flex justify-between text-xs mb-1.5 font-medium">
+                <span class="text-slate-500">Carga Horária Estimada (Hoje)</span>
+                <span id="capacity-text" class="text-slate-700">Calculando...</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+                <div id="capacity-bar" class="bg-indigo-600 h-full w-0 relative">
+                    <div class="absolute inset-0 bg-white/20 w-full h-full animate-pulse"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="flex gap-2">
+            <button onclick="taskManager.openModal()" class="relative group flex items-center justify-center p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Atividades Complementares">
+                <div id="task-alert-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden"></div>
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600" id="task-icon-main"></i>
+                <span class="hidden md:inline ml-2">Tarefas</span>
+            </button>
+
+            <button onclick="ui.toggleSubjectModal(true)" class="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-transparent hover:border-slate-200 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Gerenciar Matérias">
+                <i data-lucide="settings-2" class="w-5 h-5"></i>
+            </button>
+            
+            <button onclick="app.openExportUI()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Exportar Calendário">
+                <i data-lucide="calendar-arrow-down" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
+                <span class="hidden md:inline">Exportar</span>
+            </button>
+            
+            <button onclick="ui.openHeatmapModal()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Analisar Carga">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
+                <span class="hidden md:inline">Radar</span>
+            </button>
+            
+            <button id="btn-new-study" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                <i id="icon-new-study" data-lucide="plus" class="w-4 h-4"></i>
+                <span class="hidden md:inline">Novo Estudo</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Navegação Mobile (Tabs) -->
+    <nav class="md:hidden flex bg-white border-b border-slate-200 overflow-x-auto shrink-0 z-10">
+        <button onclick="ui.switchTab('late')" id="tab-late" class="tab-btn flex-1 py-3 text-sm font-medium text-slate-500 text-center border-b-2 border-transparent transition-colors focus:outline-none">
+            Atrasados (<span id="badge-late-mobile">0</span>)
+        </button>
+        <button onclick="ui.switchTab('today')" id="tab-today" class="tab-btn active flex-1 py-3 text-sm font-medium text-slate-500 text-center border-b-2 border-transparent transition-colors focus:outline-none">
+            Hoje (<span id="badge-today-mobile">0</span>)
+        </button>
+        <button onclick="ui.switchTab('future')" id="tab-future" class="tab-btn flex-1 py-3 text-sm font-medium text-slate-500 text-center border-b-2 border-transparent transition-colors focus:outline-none">
+            Futuro
+        </button>
+    </nav>
+
+    <!-- Área Principal (Kanban) -->
+    <main id="main-kanban" class="flex-1 grid grid-cols-1 gap-px bg-slate-200 overflow-hidden relative transition-all duration-500 ease-in-out">
+        
+        <!-- Coluna Atrasados -->
+        <section id="col-late" class="kanban-column hidden md:flex flex-col bg-red-50/50 h-full min-w-0 transition-all duration-500 ease-in-out">
+            <div class="px-4 py-3 border-b border-slate-200 bg-red-50/50 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <h2 class="font-semibold text-red-600 flex items-center gap-2 text-sm uppercase tracking-wide">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i> Atrasados
+                </h2>
+                <span id="count-late" class="bg-red-100 text-red-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-red-200">0</span>
+            </div>
+            <div id="list-late" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 bg-gradient-to-b from-transparent to-red-50/20">
+            </div>
+        </section>
+
+        <!-- Coluna Hoje -->
+        <section id="col-today" class="kanban-column flex flex-col bg-white h-full min-w-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] z-10 transition-all duration-500 ease-in-out">
+            <div class="px-4 py-3 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <h2 class="font-semibold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
+                    <i data-lucide="target" class="w-4 h-4 text-indigo-600"></i> Meta de Hoje
+                </h2>
+                <span id="count-today" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">0</span>
+            </div>
+            <div id="list-today" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1">
+            </div>
+        </section>
+
+        <!-- Coluna Futuro -->
+        <section id="col-future" class="kanban-column hidden md:flex flex-col bg-slate-50/80 h-full min-w-0 transition-all duration-500 ease-in-out">
+            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+                <h2 class="font-semibold text-slate-500 flex items-center gap-2 text-sm uppercase tracking-wide">
+                    <i data-lucide="calendar-clock" class="w-4 h-4"></i> Próximos
+                </h2>
+                <span id="count-future" class="bg-slate-200 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-bold border border-slate-300">0</span>
+            </div>
+            <div id="list-future" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1">
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Novo Estudo -->
+    <div id="modal-new" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-all" aria-hidden="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-800">Registrar Estudo</h3>
+                <button onclick="ui.toggleModal('modal-new', false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="form-study" class="p-6 space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Matéria / Disciplina</label>
+                    <div class="relative">
+                        <select id="input-subject" class="w-full appearance-none bg-white border border-slate-300 text-slate-700 rounded-lg p-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
+                        <i data-lucide="chevron-down" class="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Data do Estudo</label>
+                    <input type="date" id="input-study-date" required class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Tópico Estudado</label>
+                    <input type="text" id="input-topic" required placeholder="Ex: Controle de Constitucionalidade" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <div id="time-input-container">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Tempo de Estudo (Matéria Nova)</label>
+                    <div class="relative">
+                        <input type="number" id="input-study-time" value="60" min="15" max="300" step="5" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <span class="absolute right-4 top-3 text-slate-400 text-sm font-medium">min</span>
+                    </div>
+                    <p id="time-warning" class="text-[10px] text-purple-600 mt-1 hidden font-bold">
+                        *Modo Pendular: Teto máximo de 90min aplicado para garantir qualidade.
+                    </p>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                        *O tempo das revisões será calculado proporcionalmente (20% → 10% → 5%).
+                    </p>
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="ui.toggleModal('modal-new', false)" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-md">Gerar Revisões</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Gerenciar Matérias -->
+    <div id="modal-subjects" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-800">Minhas Matérias</h3>
+                <button onclick="ui.toggleSubjectModal(false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <ul id="subject-list" class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-2"></ul>
+                
+                <div class="border-t border-slate-100 pt-4">
+                    <h4 class="text-xs font-semibold text-slate-500 uppercase mb-3 tracking-wide">Segurança de Dados</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="app.downloadBackup()" class="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            Backup
+                        </button>
+                        <button onclick="document.getElementById('input-restore').click()" class="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-emerald-600 transition-all">
+                            <i data-lucide="upload" class="w-4 h-4"></i>
+                            Restaurar
+                        </button>
+                        <input type="file" id="input-restore" accept=".json" class="hidden" onchange="app.restoreData(this)">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-2">Criar Nova Matéria</label>
+                    <div class="flex gap-2">
+                        <input type="color" id="new-subj-color" value="#6366f1" class="h-10 w-12 rounded cursor-pointer bg-transparent" title="Escolher Cor">
+                        <input type="text" id="new-subj-name" placeholder="Nome da disciplina" class="flex-1 border border-sl

@@ -270,9 +270,13 @@ const app = {
         const newReviews = [];
         let blocker = null;
 
+        // 0. GERAÇÃO DE ID DO LOTE (Conexão entre cards)
+        const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+
         // 1. REGISTRO DO ESTUDO ORIGINAL (AQUISIÇÃO)
         const acquisitionEntry = {
             id: Date.now() + Math.random(), 
+            batchId: batchId, // NOVO: Vínculo
             subject: subjectName,
             color: subjectColor,
             topic: topic,
@@ -322,6 +326,7 @@ const app = {
 
             newReviews.push({
                 id: Date.now() + Math.random() + effectiveInterval,
+                batchId: batchId, // NOVO: Vínculo
                 subject: subjectName,
                 color: subjectColor,
                 topic: topic,
@@ -473,12 +478,38 @@ const app = {
         }
     },
 
+    // --- NOVA LÓGICA DE EDIÇÃO (BATCH EDIT) ---
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
 
+        // 1. Pergunta novo tópico
         const newTopic = prompt("Editar Tópico:", r.topic);
-        if (newTopic !== null) {
+        if (newTopic === null || newTopic.trim() === "") return;
+
+        // 2. Detecta se faz parte de um lote
+        const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
+        const isBatch = siblings.length > 1;
+
+        let updateAll = false;
+        if (isBatch) {
+            updateAll = confirm(`Este estudo tem ${siblings.length} revisões conectadas.\nDeseja renomear TODAS para "${newTopic}"?\n\n[OK] Sim, corrigir todo o ciclo.\n[Cancelar] Não, apenas este card.`);
+        }
+
+        if (updateAll) {
+            // Atualiza todos os cards com o mesmo batchId
+            let count = 0;
+            store.reviews.forEach(item => {
+                if (item.batchId === r.batchId) {
+                    item.topic = newTopic;
+                    count++;
+                }
+            });
+            store.save();
+            ui.render();
+            toast.show(`Tópico atualizado em ${count} cards do ciclo!`, 'success', 'Edição em Lote');
+        } else {
+            // Comportamento original (Single)
             const newTime = prompt("Editar Tempo (min):", r.time);
             if (newTime !== null && !isNaN(newTime)) {
                 store.updateReview(id, newTopic, newTime);
@@ -813,6 +844,55 @@ const ui = {
         }
     },
 
+    // --- NOVA FUNCIONALIDADE: Tooltip de Ciclo ---
+    showCycleInfo: (batchId, event) => {
+        event.stopPropagation(); // Evita clicar no card e abrir edição
+        const popover = document.getElementById('cycle-popover');
+        
+        if (!popover) return;
+
+        // Filtra todos os itens do lote
+        const family = store.reviews
+            .filter(r => r.batchId === batchId)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        if(family.length === 0) return;
+
+        // Gera HTML
+        const listHtml = family.map(f => {
+            const isDone = f.status === 'DONE';
+            const statusIcon = isDone ? '✅' : '📅';
+            const colorClass = isDone ? 'text-emerald-600 line-through opacity-70' : 'text-slate-700 font-bold';
+            
+            return `
+                <div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0 ${colorClass}">
+                    <span class="text-xs">${statusIcon} ${f.type}</span>
+                    <span class="text-xs ml-3">${formatDateDisplay(f.date)}</span>
+                </div>
+            `;
+        }).join('');
+
+        popover.innerHTML = `
+            <div class="font-bold text-indigo-700 mb-2 text-xs uppercase tracking-wide border-b border-indigo-100 pb-1">
+                Cronograma #${family[0].cycleIndex}
+            </div>
+            ${listHtml}
+            <div class="mt-2 text-[10px] text-slate-400 text-center italic">Clique fora para fechar</div>
+        `;
+
+        // Posicionamento simples
+        popover.style.top = `${event.clientY + 10}px`;
+        popover.style.left = `${event.clientX - 100}px`;
+        popover.classList.add('visible');
+
+        // Fecha ao clicar fora
+        const closeFn = () => {
+            popover.classList.remove('visible');
+            document.removeEventListener('click', closeFn);
+        };
+        setTimeout(() => document.addEventListener('click', closeFn), 100);
+    },
+
     render: () => {
         const todayStr = getLocalISODate();
         const containers = {
@@ -892,9 +972,10 @@ const ui = {
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
-        const cycleBadge = review.cycleIndex 
-            ? `<span class="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Dia do Ciclo">#${review.cycleIndex}</span>` 
-            : '';
+        // Badge interativo se houver batchId
+        const cycleBadge = (review.cycleIndex && review.batchId)
+            ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cursor-pointer hover:scale-110 transition-transform text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2" title="Ver cronograma do Ciclo">#${review.cycleIndex}</span>` 
+            : (review.cycleIndex ? `<span class="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded ml-2">#${review.cycleIndex}</span>` : '');
 
         return `
             <div class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative" 

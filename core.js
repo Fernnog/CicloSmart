@@ -1,7 +1,7 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.8 Split)
+ * CICLOSMART CORE (v1.9 Batch Support)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
  */
 
@@ -211,6 +211,21 @@ const store = {
         if (r) {
             r.topic = newTopic;
             r.time = parseInt(newTime);
+            store.save();
+            if (typeof ui !== 'undefined' && ui.render) ui.render();
+        }
+    },
+
+    // --- NOVO: Atualização em Lote (Batch Update) ---
+    updateBatchTopic: (batchId, newTopic) => {
+        let count = 0;
+        store.reviews.forEach(r => {
+            if (r.batchId === batchId) {
+                r.topic = newTopic;
+                count++;
+            }
+        });
+        if (count > 0) {
             store.save();
             if (typeof ui !== 'undefined' && ui.render) ui.render();
         }

@@ -1,22 +1,32 @@
 /* --- START OF FILE core.js --- */
 
+/**
+ * CICLOSMART CORE (v1.9 Batch Support - Edit & Delete)
+ * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
+ */
+
+// ==========================================
+// 1. CONFIGURAÇÃO & UTILITÁRIOS
+// ==========================================
+
 const CONFIG = {
-    defaultCapacity: 240, 
-    intervals: [1, 7, 30],     
+    defaultCapacity: 240, // 4 horas (fallback)
+    intervals: [1, 7, 30],     // Ebbinghaus
     storageKey: 'ciclosmart_db_v1',
     profiles: {
-        STANDARD: 'standard', 
-        PENDULAR: 'pendular' 
+        STANDARD: 'standard', // Modo Integrado
+        PENDULAR: 'pendular'  // Modo Ataque/Defesa
     }
 };
 
 const defaultSubjects = [
-    { id: 's1', name: 'Direito Constitucional', color: '#3b82f6' },
-    { id: 's2', name: 'Português', color: '#ef4444' },
-    { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' },
-    { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' }
+    { id: 's1', name: 'Direito Constitucional', color: '#3b82f6' }, // Blue
+    { id: 's2', name: 'Português', color: '#ef4444' }, // Red
+    { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' }, // Green
+    { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet
 ];
 
+// Utilitário de Data Robusto
 const getLocalISODate = (dateObj = new Date()) => {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -35,6 +45,7 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
+// Utilitário de Contraste (YIQ) para Legibilidade dos Cards de Tarefa
 const getContrastYIQ = (hexcolor) => {
     if (!hexcolor) return 'black';
     hexcolor = hexcolor.replace("#", "");
@@ -45,6 +56,7 @@ const getContrastYIQ = (hexcolor) => {
     return (yiq >= 128) ? 'black' : 'white';
 };
 
+// --- SYSTEM: SMART FEEDBACK (TOASTS) ---
 const toast = {
     config: {
         success: { icon: 'check-circle-2', classes: 'bg-emerald-50 border-emerald-500 text-emerald-900' },
@@ -64,6 +76,7 @@ const toast = {
         }
         
         const theme = toast.config[type] || toast.config.info;
+        
         const el = document.createElement('div');
         el.className = `toast mb-3 p-4 rounded-lg shadow-xl border-l-4 text-sm flex items-start gap-3 min-w-[300px] max-w-md transition-all ${theme.classes}`;
         
@@ -77,7 +90,9 @@ const toast = {
         
         container.appendChild(el);
         if(window.lucide) lucide.createIcons({ root: el });
+        
         requestAnimationFrame(() => el.classList.add('show'));
+        
         setTimeout(() => {
             el.classList.remove('show');
             el.classList.add('opacity-0', 'translate-x-full'); 
@@ -85,6 +100,10 @@ const toast = {
         }, 5000);
     }
 };
+
+// ==========================================
+// 2. STORE (ESTADO & PERSISTÊNCIA)
+// ==========================================
 
 const store = {
     reviews: [],
@@ -142,6 +161,7 @@ const store = {
         }));
     },
 
+    // --- Métodos de Matérias ---
     addSubject: (name, color) => {
         store.subjects.push({ id: 'sub-' + Date.now(), name, color });
         store.save();
@@ -156,6 +176,7 @@ const store = {
         }
     },
 
+    // --- Métodos de Reviews ---
     addReviews: (newReviews) => {
         store.reviews = [...store.reviews, ...newReviews];
         store.save();
@@ -186,7 +207,7 @@ const store = {
         }
     },
 
-    // --- NOVA FUNÇÃO DE LOTE (Correção Solicitada) ---
+    // --- LÓGICA DE ATUALIZAÇÃO EM LOTE ---
     updateBatchTopic: (batchId, newTopic) => {
         let count = 0;
         store.reviews.forEach(r => {
@@ -200,16 +221,28 @@ const store = {
             if (typeof ui !== 'undefined' && ui.render) ui.render();
         }
     },
-    // -------------------------------------------------
 
-    deleteReview: (id) => {
-        if(confirm("Tem certeza que deseja excluir esta revisão?")) {
-            store.reviews = store.reviews.filter(r => r.id !== id);
+    // --- LÓGICA DE EXCLUSÃO (BATCH & INDIVIDUAL) ---
+    
+    // 1. Deleta todo o lote
+    deleteBatch: (batchId) => {
+        const count = store.reviews.filter(r => r.batchId === batchId).length;
+        if(count > 0) {
+            store.reviews = store.reviews.filter(r => r.batchId !== batchId);
             store.save();
             if (typeof ui !== 'undefined' && ui.render) ui.render();
         }
     },
 
+    // 2. Deleta apenas um (ATENÇÃO: Removemos o "confirm" daqui para controlar no app.js)
+    deleteReview: (id) => {
+        store.reviews = store.reviews.filter(r => r.id !== id);
+        store.save();
+        if (typeof ui !== 'undefined' && ui.render) ui.render();
+    },
+    // -----------------------------------------------
+
+    // --- Métodos de Tarefas ---
     removeTask: (id) => {
         store.tasks = store.tasks.filter(t => t.id !== id);
         store.save();
@@ -217,6 +250,10 @@ const store = {
         taskManager.checkOverdue();
     }
 };
+
+// ==========================================
+// 3. TASK MANAGER
+// ==========================================
 
 const taskManager = {
     openModal: () => {

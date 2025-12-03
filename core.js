@@ -113,27 +113,53 @@ const store = {
     profile: 'standard', 
     cycleState: 'ATTACK', 
     lastAttackDate: null, 
-    cycleStartDate: null, 
+    cycleStartDate: null,
+    
+    // Novo: Armazena o usuário logado no Firebase
+    currentUser: null,
 
-    load: () => {
-        const raw = localStorage.getItem(CONFIG.storageKey);
-        if (raw) {
-            try {
-                const data = JSON.parse(raw);
-                store.reviews = data.reviews || [];
-                store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
-                store.tasks = data.tasks || []; 
-                store.capacity = data.capacity || CONFIG.defaultCapacity;
-                store.profile = data.profile || CONFIG.profiles.STANDARD;
-                store.cycleState = data.cycleState || 'ATTACK';
-                store.lastAttackDate = data.lastAttackDate || null;
-                store.cycleStartDate = data.cycleStartDate || null; 
-            } catch (e) {
-                console.error("Erro ao ler dados", e);
+    // Lógica de Load Atualizada (Suporta Dados da Nuvem)
+    load: (fromCloudData = null) => {
+        if (fromCloudData) {
+            // Se vierem dados da nuvem, usamos eles
+            const data = fromCloudData;
+            store.reviews = data.reviews || [];
+            store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
+            store.tasks = data.tasks || []; 
+            store.capacity = data.capacity || CONFIG.defaultCapacity;
+            store.profile = data.profile || CONFIG.profiles.STANDARD;
+            store.cycleState = data.cycleState || 'ATTACK';
+            store.lastAttackDate = data.lastAttackDate || null;
+            store.cycleStartDate = data.cycleStartDate || null;
+            console.log('[Core] Dados carregados via Firebase Cloud.');
+        } else {
+            // Fallback: Tenta carregar do LocalStorage
+            const raw = localStorage.getItem(CONFIG.storageKey);
+            if (raw) {
+                try {
+                    const data = JSON.parse(raw);
+                    store.reviews = data.reviews || [];
+                    store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
+                    store.tasks = data.tasks || []; 
+                    store.capacity = data.capacity || CONFIG.defaultCapacity;
+                    store.profile = data.profile || CONFIG.profiles.STANDARD;
+                    store.cycleState = data.cycleState || 'ATTACK';
+                    store.lastAttackDate = data.lastAttackDate || null;
+                    store.cycleStartDate = data.cycleStartDate || null; 
+                } catch (e) {
+                    console.error("Erro ao ler dados locais", e);
+                    store.resetDefaults();
+                }
+            } else {
                 store.resetDefaults();
             }
-        } else {
-            store.resetDefaults();
+        }
+        
+        // Atualiza a interface se ela estiver disponível
+        if (typeof ui !== 'undefined' && ui.render) {
+            ui.initSubjects(); 
+            ui.render();
+            if (typeof taskManager !== 'undefined') taskManager.render();
         }
     },
 
@@ -148,8 +174,9 @@ const store = {
         store.cycleStartDate = null; 
     },
 
+    // Lógica de Save Atualizada (Híbrido: Local + Nuvem)
     save: () => {
-        localStorage.setItem(CONFIG.storageKey, JSON.stringify({
+        const dataToSave = {
             reviews: store.reviews,
             subjects: store.subjects,
             tasks: store.tasks,
@@ -157,8 +184,20 @@ const store = {
             profile: store.profile,
             cycleState: store.cycleState,
             lastAttackDate: store.lastAttackDate,
-            cycleStartDate: store.cycleStartDate
-        }));
+            cycleStartDate: store.cycleStartDate,
+            lastUpdate: new Date().toISOString() // Metadata útil para conflitos
+        };
+
+        // 1. Sempre salva localmente (Backup/Offline)
+        localStorage.setItem(CONFIG.storageKey, JSON.stringify(dataToSave));
+
+        // 2. Se logado, salva no Firebase
+        if (store.currentUser && window.fireMethods && window.fireDb) {
+            const { ref, set } = window.fireMethods;
+            set(ref(window.fireDb, 'users/' + store.currentUser.uid), dataToSave)
+                .then(() => console.log('[Core] Sincronizado com nuvem.'))
+                .catch(err => console.error("[Core] Erro na sincronização:", err));
+        }
     },
 
     // --- Métodos de Matérias ---
@@ -234,7 +273,7 @@ const store = {
         }
     },
 
-    // 2. Deleta apenas um (ATENÇÃO: Removemos o "confirm" daqui para controlar no app.js)
+    // 2. Deleta apenas um
     deleteReview: (id) => {
         store.reviews = store.reviews.filter(r => r.id !== id);
         store.save();

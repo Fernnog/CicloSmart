@@ -179,3 +179,19 @@ input[type="color"]::-webkit-color-swatch {
     display: block;
     opacity: 1;
 }
+
+/* --- AUTENTICAÇÃO FIREBASE --- */
+
+/* Estado de Carregamento (previne cliques duplos) */
+.auth-loading {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: wait;
+}
+
+/* Responsividade: Ocultar auth bar em telas muito pequenas se necessário */
+@media (max-width: 768px) {
+    #auth-container {
+        display: none; /* Em mobile, isso garante que o header não quebre */
+    }
+}

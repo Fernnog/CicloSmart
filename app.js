@@ -76,107 +76,132 @@ const app = {
             const auth = window.fireAuth;
             const db = window.fireDb;
 
-            // Elementos UI
-            const containerAuth = document.getElementById('auth-container');
-            const containerForm = document.getElementById('auth-form');
-            const containerUser = document.getElementById('user-info');
-            const txtEmail = document.getElementById('auth-email');
-            const txtPass = document.getElementById('auth-pass');
-            const lblUser = document.getElementById('user-email-display');
+            // Elementos UI NOVOS
+            const btnUser = document.getElementById('user-menu-btn');
+            const popover = document.getElementById('auth-popover');
+            const viewLogin = document.getElementById('auth-view-login');
+            const viewUser = document.getElementById('auth-view-user');
+            
+            // Inputs do Popover
+            const txtEmail = document.getElementById('popover-email');
+            const txtPass = document.getElementById('popover-pass');
+            const lblUserEmail = document.getElementById('popover-user-email');
+
+            // Toggle do Popover (Abrir/Fechar)
+            if(btnUser) {
+                btnUser.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Impede fechar ao clicar no botão
+                    popover.classList.toggle('hidden');
+                });
+            }
+
+            // Fechar Popover ao clicar fora
+            document.addEventListener('click', (e) => {
+                if(popover && !popover.classList.contains('hidden') && !popover.contains(e.target) && e.target !== btnUser) {
+                    popover.classList.add('hidden');
+                }
+            });
 
             // Listener de Estado (Logado/Deslogado)
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     store.currentUser = user;
                     
-                    // UI: Esconde form, Mostra user info
-                    if(containerForm) {
-                        containerForm.classList.add('hidden');
-                        containerForm.classList.remove('flex');
-                    }
-                    if(containerUser) {
-                        containerUser.classList.remove('hidden');
-                        containerUser.classList.add('flex');
-                    }
-                    if(lblUser) lblUser.innerText = user.email;
-
-                    // Lógica Mobile: Fecha a "gaveta" ao logar, mas mantém visível no desktop
-                    if(containerAuth) {
-                        containerAuth.classList.add('hidden'); // Fecha no mobile
-                        containerAuth.classList.remove('flex'); // Remove toggle manual
-                        containerAuth.classList.add('md:flex'); // Garante desktop
+                    // 1. VISUAL DO BOTÃO: LOGADO (Borda Verde + Ícone Ativo)
+                    if(btnUser) {
+                        btnUser.classList.remove('border-slate-300', 'text-slate-400');
+                        btnUser.classList.add('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
+                        // Opcional: Mostrar bolinha de status
+                        const dot = document.getElementById('user-status-dot');
+                        if(dot) {
+                            dot.classList.remove('hidden', 'bg-slate-400');
+                            dot.classList.add('bg-emerald-500');
+                        }
                     }
 
-                    // Sincronizar dados
+                    // 2. CONTEÚDO DO POPOVER
+                    if(viewLogin) viewLogin.classList.add('hidden');
+                    if(viewUser) viewUser.classList.remove('hidden');
+                    if(lblUserEmail) lblUserEmail.innerText = user.email;
+
+                    // Sincronização de dados (Mantém lógica original)
                     const userRef = ref(db, 'users/' + user.uid);
-                    
                     get(userRef).then((snapshot) => {
                         if (snapshot.exists()) {
                             store.load(snapshot.val());
-                            toast.show('Dados da nuvem carregados.', 'success', 'Conectado');
+                            toast.show('Sincronizado.', 'success');
                         } else {
                             store.save(); 
-                            toast.show('Backup local enviado para nuvem.', 'info', 'Primeiro Acesso');
                         }
-                        
                         onValue(userRef, (snap) => {
                             const val = snap.val();
                             if(val) store.load(val); 
                         });
                     });
+
                 } else {
                     store.currentUser = null;
                     
-                    // UI: Mostra form, Esconde user info
-                    if(containerForm) {
-                        containerForm.classList.remove('hidden');
-                        containerForm.classList.add('flex');
+                    // 1. VISUAL DO BOTÃO: DESLOGADO (Cinza Padrão)
+                    if(btnUser) {
+                        btnUser.classList.add('border-slate-300', 'text-slate-400');
+                        btnUser.classList.remove('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
+                         // Opcional
+                        const dot = document.getElementById('user-status-dot');
+                        if(dot) {
+                            dot.classList.add('hidden');
+                        }
                     }
-                    if(containerUser) {
-                        containerUser.classList.add('hidden');
-                        containerUser.classList.remove('flex');
-                    }
-                    
-                    // Garante que o container esteja pronto para ser exibido (Desktop sempre visível)
-                    if(containerAuth) {
-                        containerAuth.classList.add('md:flex');
-                    }
+
+                    // 2. CONTEÚDO DO POPOVER
+                    if(viewLogin) viewLogin.classList.remove('hidden');
+                    if(viewUser) viewUser.classList.add('hidden');
 
                     store.load(null); 
                 }
             });
 
-            // Evento Login
-            const form = document.getElementById('auth-form');
-            if(form) {
-                form.addEventListener('submit', (e) => {
+            // Evento Login (Formulário do Popover)
+            const formPopover = document.getElementById('auth-form-popover');
+            if(formPopover) {
+                formPopover.addEventListener('submit', (e) => {
                     e.preventDefault();
                     signInWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
+                        .then(() => {
+                            popover.classList.add('hidden'); // Fecha popover ao logar
+                        })
                         .catch((error) => toast.show('Erro: ' + error.message, 'error'));
                 });
             }
             
             // Evento Logout
-            const btnLogout = document.getElementById('btn-logout');
+            const btnLogout = document.getElementById('btn-logout-popover');
             if(btnLogout) {
                 btnLogout.addEventListener('click', () => {
-                    signOut(auth).then(() => toast.show('Desconectado.', 'info'));
+                    signOut(auth).then(() => {
+                        popover.classList.add('hidden'); // Fecha popover ao sair
+                        toast.show('Desconectado.', 'info');
+                    });
                 });
             }
-             
-             // Evento Cadastro
-             const btnSignup = document.getElementById('btn-signup');
-             if(btnSignup) {
-                 btnSignup.addEventListener('click', () => {
+                
+            // Evento Cadastro
+            const btnSignup = document.getElementById('btn-signup-popover');
+            if(btnSignup) {
+                btnSignup.addEventListener('click', (e) => {
+                    e.preventDefault(); // Evita refresh
                     if(txtEmail.value && txtPass.value) {
                         createUserWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
-                            .then(() => toast.show('Conta criada!', 'success'))
+                            .then(() => {
+                                popover.classList.add('hidden');
+                                toast.show('Conta criada!', 'success');
+                            })
                             .catch((error) => toast.show('Erro: ' + error.message, 'error'));
                     } else {
-                        toast.show('Preencha e-mail e senha.', 'warning');
+                        toast.show('Preencha e-mail e senha acima para cadastrar.', 'warning');
                     }
-                 });
-             }
+                });
+            }
         };
 
         // LÓGICA DE ESPERA (CORREÇÃO DE RACE CONDITION)

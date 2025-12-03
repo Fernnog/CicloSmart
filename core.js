@@ -1,22 +1,32 @@
 /* --- START OF FILE core.js --- */
 
+/**
+ * CICLOSMART CORE (v1.9 Batch Support)
+ * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
+ */
+
+// ==========================================
+// 1. CONFIGURAÇÃO & UTILITÁRIOS
+// ==========================================
+
 const CONFIG = {
-    defaultCapacity: 240, 
-    intervals: [1, 7, 30],     
+    defaultCapacity: 240, // 4 horas (fallback)
+    intervals: [1, 7, 30],     // Ebbinghaus
     storageKey: 'ciclosmart_db_v1',
     profiles: {
-        STANDARD: 'standard', 
-        PENDULAR: 'pendular' 
+        STANDARD: 'standard', // Modo Integrado
+        PENDULAR: 'pendular'  // Modo Ataque/Defesa
     }
 };
 
 const defaultSubjects = [
-    { id: 's1', name: 'Direito Constitucional', color: '#3b82f6' },
-    { id: 's2', name: 'Português', color: '#ef4444' },
-    { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' },
-    { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' }
+    { id: 's1', name: 'Direito Constitucional', color: '#3b82f6' }, // Blue
+    { id: 's2', name: 'Português', color: '#ef4444' }, // Red
+    { id: 's3', name: 'Raciocínio Lógico', color: '#10b981' }, // Green
+    { id: 's4', name: 'Tecnologia da Informação', color: '#8b5cf6' } // Violet
 ];
 
+// Utilitário de Data Robusto
 const getLocalISODate = (dateObj = new Date()) => {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -35,6 +45,7 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
+// Utilitário de Contraste (YIQ) para Legibilidade dos Cards de Tarefa
 const getContrastYIQ = (hexcolor) => {
     if (!hexcolor) return 'black';
     hexcolor = hexcolor.replace("#", "");
@@ -45,7 +56,9 @@ const getContrastYIQ = (hexcolor) => {
     return (yiq >= 128) ? 'black' : 'white';
 };
 
+// --- SYSTEM: SMART FEEDBACK (TOASTS) ---
 const toast = {
+    // Configuração Semântica de Cores e Ícones
     config: {
         success: { icon: 'check-circle-2', classes: 'bg-emerald-50 border-emerald-500 text-emerald-900' },
         info:    { icon: 'info',           classes: 'bg-slate-800 border-slate-700 text-white shadow-slate-900/20' },
@@ -58,15 +71,20 @@ const toast = {
         const container = document.getElementById('toast-container');
         if(!container) return; 
 
+        // Limite de Empilhamento (UX): Remove o mais antigo se houver mais de 3
         if (container.childElementCount >= 3) {
             const oldest = container.firstChild;
             if (oldest) oldest.remove();
         }
         
+        // Fallback para tipos desconhecidos
         const theme = toast.config[type] || toast.config.info;
+        
         const el = document.createElement('div');
+        // Layout Flex para alinhar ícone e texto
         el.className = `toast mb-3 p-4 rounded-lg shadow-xl border-l-4 text-sm flex items-start gap-3 min-w-[300px] max-w-md transition-all ${theme.classes}`;
         
+        // Renderização do HTML com suporte a Título Opcional
         el.innerHTML = `
             <i data-lucide="${theme.icon}" class="w-5 h-5 shrink-0 mt-0.5"></i>
             <div class="flex-1 min-w-0">
@@ -76,25 +94,35 @@ const toast = {
         `;
         
         container.appendChild(el);
+        
+        // Ativa ícones do Lucide
         if(window.lucide) lucide.createIcons({ root: el });
+        
+        // Trigger da Animação (Entrada)
         requestAnimationFrame(() => el.classList.add('show'));
+        
+        // Timer de Auto-Destruição
         setTimeout(() => {
             el.classList.remove('show');
-            el.classList.add('opacity-0', 'translate-x-full'); 
-            setTimeout(() => el.remove(), 400); 
+            el.classList.add('opacity-0', 'translate-x-full'); // Saída suave para a direita
+            setTimeout(() => el.remove(), 400); // Aguarda a transição CSS
         }, 5000);
     }
 };
 
+// ==========================================
+// 2. STORE (ESTADO & PERSISTÊNCIA)
+// ==========================================
+
 const store = {
     reviews: [],
     subjects: [],
-    tasks: [], 
+    tasks: [], // Tarefas Complementares
     capacity: 240, 
     profile: 'standard', 
     cycleState: 'ATTACK', 
     lastAttackDate: null, 
-    cycleStartDate: null, 
+    cycleStartDate: null, // Data de início do ciclo (Dia 1)
 
     load: () => {
         const raw = localStorage.getItem(CONFIG.storageKey);
@@ -142,6 +170,7 @@ const store = {
         }));
     },
 
+    // --- Métodos de Matérias ---
     addSubject: (name, color) => {
         store.subjects.push({ id: 'sub-' + Date.now(), name, color });
         store.save();
@@ -156,6 +185,7 @@ const store = {
         }
     },
 
+    // --- Métodos de Reviews ---
     addReviews: (newReviews) => {
         store.reviews = [...store.reviews, ...newReviews];
         store.save();
@@ -186,7 +216,8 @@ const store = {
         }
     },
 
-    // --- NOVA FUNÇÃO DE LOTE (Correção Solicitada) ---
+    // --- NOVO: Atualização em Lote (Batch Update) ---
+    // Aplica o novo tópico para todos os cards que compartilham o mesmo batchId
     updateBatchTopic: (batchId, newTopic) => {
         let count = 0;
         store.reviews.forEach(r => {
@@ -200,7 +231,6 @@ const store = {
             if (typeof ui !== 'undefined' && ui.render) ui.render();
         }
     },
-    // -------------------------------------------------
 
     deleteReview: (id) => {
         if(confirm("Tem certeza que deseja excluir esta revisão?")) {
@@ -210,6 +240,7 @@ const store = {
         }
     },
 
+    // --- Métodos de Tarefas ---
     removeTask: (id) => {
         store.tasks = store.tasks.filter(t => t.id !== id);
         store.save();
@@ -218,14 +249,20 @@ const store = {
     }
 };
 
+// ==========================================
+// 3. TASK MANAGER
+// ==========================================
+
 const taskManager = {
     openModal: () => {
+        // Popula o select de matérias
         const select = document.getElementById('task-subject');
         if(select) {
             select.innerHTML = store.subjects.map(s => 
                 `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
             ).join('');
         }
+        // Define data padrão como hoje
         const dateInput = document.getElementById('task-date');
         if(dateInput && !dateInput.value) dateInput.value = getLocalISODate();
         
@@ -250,6 +287,7 @@ const taskManager = {
         });
         store.save();
         
+        // Limpa campos de texto (mas mantém a data)
         document.getElementById('task-subcategory').value = '';
         document.getElementById('task-obs').value = '';
         
@@ -284,6 +322,7 @@ const taskManager = {
             return;
         }
 
+        // Ordena por data (mais antigas/atrasadas primeiro)
         const sortedTasks = [...store.tasks].sort((a, b) => a.date.localeCompare(b.date));
         const today = getLocalISODate();
 
@@ -292,6 +331,7 @@ const taskManager = {
             const textColor = getContrastYIQ(subject.color);
             const isLate = t.date < today;
             
+            // Ícone de alerta se atrasado
             const alertIcon = isLate 
                 ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm animate-pulse" title="Atrasado!"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></div>` 
                 : '';

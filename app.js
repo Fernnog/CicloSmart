@@ -1,7 +1,7 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.8 Split + Connected Studies + Robust Mobile UI)
+ * CICLOSMART APP CONTROLLER (v1.9 Split + Connected Studies + Robust Mobile UI)
  * Contém: Lógica de Aplicação, UI Renderer, Batch Logic e DOM Injection.
  */
 
@@ -30,7 +30,7 @@ const app = {
             if (migrationCount > 0) {
                 console.log(`Migrado: ${migrationCount} estudos antigos para o novo formato Connected Studies.`);
                 store.save();
-                setTimeout(() => toast.show('Sistema atualizado para suportar Conexão de Estudos.', 'info', 'Upgrade Realizado'), 2000);
+                setTimeout(() => toast.show('Sistema atualizado para suportar Edição/Exclusão em Lote.', 'info', 'Upgrade Realizado'), 2000);
             }
         }
         // ------------------------------------
@@ -278,7 +278,7 @@ const app = {
             type: 'NOVO', 
             status: 'PENDING',
             cycleIndex: finalCycleIndex,
-            batchId: batchId // Vínculo Essencial
+            batchId: batchId // Vínculo
         };
         newReviews.push(acquisitionEntry);
 
@@ -326,7 +326,7 @@ const app = {
                 type: typeLabel,
                 status: 'PENDING',
                 cycleIndex: finalCycleIndex,
-                batchId: batchId // Vínculo Essencial
+                batchId: batchId // Vínculo
             });
         }
 
@@ -469,7 +469,7 @@ const app = {
         }
     },
 
-    // --- NOVA LÓGICA DE EDIÇÃO EM LOTE (Smart Batch Edit) ---
+    // --- LÓGICA DE EDIÇÃO EM LOTE ---
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
@@ -484,20 +484,12 @@ const app = {
             let updateAll = false;
 
             if (isBatch) {
-                // Aqui usamos o confirm nativo para perguntar ao usuário
                 updateAll = confirm(`Este estudo tem ${siblings.length} revisões conectadas.\nDeseja renomear TODAS para "${newTopic}"?\n\n[OK] Sim, corrigir tudo.\n[Cancelar] Não, apenas este card.`);
             }
 
             if (updateAll) {
                 // Atualiza em lote
-                // Fallback: Se store.updateBatchTopic não existir (core.js não atualizado), fazemos manual aqui
-                if (typeof store.updateBatchTopic === 'function') {
-                    store.updateBatchTopic(r.batchId, newTopic);
-                } else {
-                    siblings.forEach(s => s.topic = newTopic);
-                    store.save();
-                    ui.render();
-                }
+                store.updateBatchTopic(r.batchId, newTopic);
                 toast.show(`Tópico corrigido em ${siblings.length} cards.`, 'success', 'Correção em Lote');
             } else {
                 // Atualiza individual
@@ -512,6 +504,41 @@ const app = {
             }
         }
     },
+
+    // --- LÓGICA DE EXCLUSÃO INTELIGENTE (Smart Delete) ---
+    confirmDelete: (id) => {
+        const r = store.reviews.find(x => x.id === id);
+        if(!r) return;
+
+        // Verifica se existem irmãos (mesmo batchId)
+        const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
+        const isBatch = siblings.length > 1;
+
+        if (isBatch) {
+            // Pergunta Inteligente
+            const deleteAll = confirm(
+                `🗑️ EXCLUSÃO EM LOTE\n\nEste item faz parte de um ciclo com ${siblings.length} cards (Ataque + Revisões).\n\n[OK] Sim, apagar TODO o ciclo.\n[Cancelar] Não, apagar apenas este card.`
+            );
+
+            if (deleteAll) {
+                store.deleteBatch(r.batchId);
+                toast.show(`Ciclo completo removido (${siblings.length} itens).`, 'error', 'Limpeza em Lote');
+            } else {
+                // Se clicou em Cancelar, confirma se quer apagar só este (Segurança extra)
+                if(confirm("Confirma a exclusão APENAS deste card específico?")) {
+                    store.deleteReview(id);
+                    toast.show('Item removido individualmente.', 'info');
+                }
+            }
+        } else {
+            // Item único (legado ou orfão)
+            if(confirm("Tem certeza que deseja excluir esta revisão?")) {
+                store.deleteReview(id);
+                toast.show('Estudo removido.', 'info');
+            }
+        }
+    },
+    // -----------------------------------------------------
 
     // --- LÓGICA DE EXPORTAÇÃO ICS ---
 
@@ -942,7 +969,8 @@ const ui = {
                         <input type="checkbox" onclick="store.toggleStatus(${review.id})" ${isDone ? 'checked' : ''} 
                                class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
-                        <button onclick="store.deleteReview(${review.id})" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir">
+                        <!-- BOTÃO DE EXCLUSÃO ATUALIZADO PARA SUPORTAR LOTE -->
+                        <button onclick="app.confirmDelete(${review.id})" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir">
                             <i data-lucide="trash" class="w-4 h-4"></i>
                         </button>
                     </div>

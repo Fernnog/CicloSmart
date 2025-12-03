@@ -7,11 +7,10 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <meta name="description" content="MVP de Gestão de Estudos com Algoritmo SRS e Exportação ICS">
     
-    <!-- PWA Setup (Caminhos Relativos para Isolamento no GitHub) -->
+    <!-- PWA Setup -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#ffffff">
-    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- Legacy iOS -->
-    <meta name="mobile-web-app-capable" content="yes"> <!-- Modern Standard -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="CicloSmart">
     <link rel="apple-touch-icon" href="./icon-192.png">
@@ -21,24 +20,25 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="style.css">
 
-    <!-- FIREBASE SETUP (Module) -->
+    <!-- FIREBASE SETUP (Autenticação e Nuvem) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-        // CONFIGURAÇÃO DO FIREBASE
-        // Substitua os valores abaixo pelos do seu Console Firebase
-    const firebaseConfig = {
-  apiKey: "AIzaSyAGEj_PTWHgtHmZRQR2pMLs8Dq6POYpA34",
-  authDomain: "ciclosmart-11844.firebaseapp.com",
-  projectId: "ciclosmart-11844",
-  storageBucket: "ciclosmart-11844.firebasestorage.app",
-  messagingSenderId: "311066999862",
-  appId: "1:311066999862:web:94bbf933ef5d09ddd96c97",
-  measurementId: "G-WNDQB3PKBB"
-};
-
+      
+        // --- ATENÇÃO: MANTENHA SUAS CHAVES REAIS AQUI ---
+        // Se você já configurou e "Deu certo", não altere este bloco com dados fictícios.
+        // Mantenha o que você já tem funcionando no seu arquivo local.
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY_AQUI", 
+            authDomain: "seu-projeto.firebaseapp.com",
+            databaseURL: "https://seu-projeto-default-rtdb.firebaseio.com",
+            projectId: "seu-projeto",
+            storageBucket: "seu-projeto.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:12345:web:abcdef"
+        };
+      
         // Inicialização
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -49,7 +49,7 @@
         window.fireDb = db;
         window.fireMethods = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, ref, set, onValue, get };
 
-        // Disparar evento para avisar o app.js que o Firebase está pronto (Correção Race Condition)
+        // Disparo de Evento para corrigir Race Condition (O App espera isso)
         console.log("[Firebase] SDK Carregado. Disparando evento...");
         window.dispatchEvent(new CustomEvent('firebase-ready'));
     </script>
@@ -57,7 +57,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
 
     <!-- Header Principal -->
-    <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm z-20 shrink-0">
+    <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm z-20 shrink-0 relative">
         <div class="flex items-center gap-3">
             <div class="bg-white p-1 rounded-full border-2 border-indigo-50 shadow-sm hidden md:flex items-center justify-center w-11 h-11 shrink-0 overflow-hidden">
                 <img src="logo.webp" alt="Logo CicloSmart" class="w-full h-full object-contain">
@@ -66,32 +66,6 @@
                 <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
                 <button id="app-version-btn" onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
                 </button>
-            </div>
-
-            <!-- Área de Autenticação (Firebase) - Visível em todas as telas -->
-            <div id="auth-container" class="flex flex-col justify-center ml-4 border-l border-slate-200 pl-4 h-10">
-                <!-- Estado: Deslogado -->
-                <form id="auth-form" class="flex items-center gap-2">
-                    <input type="email" id="auth-email" placeholder="email@exemplo.com" class="px-2 py-1 text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none w-32" required>
-                    <input type="password" id="auth-pass" placeholder="senha" class="px-2 py-1 text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none w-24" required>
-                    <button type="submit" class="bg-slate-800 text-white text-[10px] font-bold px-3 py-1 rounded hover:bg-slate-700 transition-colors shadow-sm">
-                        Entrar
-                    </button>
-                    <button type="button" id="btn-signup" class="text-[10px] text-indigo-600 font-bold hover:underline" title="Criar conta com estes dados">
-                        Cadastrar
-                    </button>
-                </form>
-
-                <!-- Estado: Logado -->
-                <div id="user-info" class="hidden items-center gap-3">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm"></div>
-                        <span id="user-email-display" class="truncate max-w-[150px]">...</span>
-                    </div>
-                    <button id="btn-logout" class="text-[10px] font-bold text-red-500 border border-red-100 bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 transition-colors">
-                        Sair
-                    </button>
-                </div>
             </div>
             
             <button id="mode-toggle" onclick="app.toggleMode()" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
@@ -113,8 +87,45 @@
             </div>
         </div>
 
+        <!-- Área de Autenticação (RESPONSIVA: Drawer Mobile / Barra Desktop) -->
+        <div id="auth-container" class="hidden md:flex flex-col md:flex-row md:items-center justify-center 
+                absolute md:static top-[60px] left-0 w-full md:w-auto bg-white md:bg-transparent 
+                p-4 md:p-0 md:pl-4 md:border-l md:border-slate-200 z-40 shadow-lg md:shadow-none border-b md:border-b-0 border-slate-200 md:h-10 transition-all">
+            
+            <!-- Estado: Deslogado -->
+            <form id="auth-form" class="flex flex-col md:flex-row items-center gap-2 w-full md:w-auto">
+                <input type="email" id="auth-email" placeholder="email@exemplo.com" class="w-full md:w-32 px-2 py-2 md:py-1 text-xs md:text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none" required>
+                <input type="password" id="auth-pass" placeholder="senha" class="w-full md:w-24 px-2 py-2 md:py-1 text-xs md:text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none" required>
+                
+                <div class="flex w-full md:w-auto gap-2 mt-2 md:mt-0">
+                    <button type="submit" class="flex-1 md:flex-none bg-slate-800 text-white text-xs md:text-[10px] font-bold px-3 py-2 md:py-1 rounded hover:bg-slate-700 transition-colors">
+                        Entrar
+                    </button>
+                    <button type="button" id="btn-signup" class="flex-1 md:flex-none text-center bg-indigo-50 md:bg-transparent border md:border-0 border-indigo-100 rounded py-2 md:py-0 text-xs md:text-[10px] text-indigo-600 font-bold hover:underline" title="Criar conta">
+                        Cadastrar
+                    </button>
+                </div>
+            </form>
+
+            <!-- Estado: Logado -->
+            <div id="user-info" class="hidden flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600 mb-2 md:mb-0">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span id="user-email-display">...</span>
+                </div>
+                <button id="btn-logout" class="w-full md:w-auto text-xs md:text-[10px] font-bold text-red-500 border border-red-100 bg-red-50 px-3 py-2 md:py-0.5 rounded hover:bg-red-100 transition-colors">
+                    Sair
+                </button>
+            </div>
+        </div>
+
         <!-- Botões de Ação -->
         <div class="flex gap-2">
+            <!-- Botão Trigger de Login Mobile (NOVO) -->
+            <button onclick="document.getElementById('auth-container').classList.toggle('hidden')" class="md:hidden p-2 text-slate-500 hover:text-indigo-600 rounded-lg border border-transparent hover:border-slate-200 focus:ring-2 focus:ring-indigo-100 outline-none" title="Acessar Conta">
+                <i data-lucide="user-circle-2" class="w-5 h-5"></i>
+            </button>
+
             <button onclick="taskManager.openModal()" class="relative group flex items-center justify-center p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Atividades Complementares">
                 <div id="task-alert-badge" class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white hidden"></div>
                 <i data-lucide="clipboard-list" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600" id="task-icon-main"></i>
@@ -490,8 +501,6 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Importante: O scope './' garante o funcionamento correto em subpastas do GitHub Pages
-                // sem conflitar com outros apps no mesmo domínio
                 navigator.serviceWorker.register('./sw.js', { scope: './' })
                     .then(reg => console.log('[PWA CicloSmart] Service Worker registrado no escopo:', reg.scope))
                     .catch(err => console.error('[PWA CicloSmart] Falha ao registrar Service Worker:', err));
@@ -500,7 +509,7 @@
     </script>
 
     <script src="changelog.js"></script>
-    <script src="core.js"></script> <!-- Dados e Utilitários -->
-    <script src="app.js"></script>  <!-- Interface e Lógica de Controle -->
+    <script src="core.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

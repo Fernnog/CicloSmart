@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.0', 
+        version: '1.1.1', 
         date: 'Hoje', 
+        changes: [
+            '☁️ <strong>Cloud Sync (Sincronização em Nuvem):</strong> Adeus, perda de dados! Integração completa com <strong>Firebase Realtime Database</strong>. Seus estudos agora ficam salvos na nuvem, permitindo acesso simultâneo via celular e computador.',
+            '🔐 <strong>Autenticação Integrada:</strong> Novo painel de login minimalista no cabeçalho. Crie sua conta com e-mail e senha para garantir que seu progresso sobreviva à limpeza de cache do navegador.',
+            '⚡ <strong>Arquitetura Híbrida & Event-Driven:</strong> O núcleo do sistema foi reescrito para eliminar "Race Conditions" (erros de carregamento). O App agora gerencia inteligentemente o estado offline (Local Storage) e online (Firebase) sem travamentos.'
+        ] 
+    },
+    { 
+        version: '1.1.0', 
+        date: 'Anterior', 
         changes: [
             '🔓 <strong>Planejamento no Modo Defesa:</strong> A "trava" evoluiu. Agora você pode abrir o menu de Novo Estudo em dias de Defesa para <strong>agendar datas futuras</strong>. A proteção continua ativa: o sistema bloqueia apenas registros para "Hoje", garantindo o foco na revisão.',
             '⚡ <strong>Refatoração de Arquitetura:</strong> O código principal (`logic.js`) foi desacoplado em camadas de Dados (`core.js`) e Aplicação (`app.js`). Isso aumenta a robustez do sistema e facilita a manutenção futura.',

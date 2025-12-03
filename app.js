@@ -1,8 +1,8 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.9 Split + Connected Studies + Robust Mobile UI + Cloud Sync)
- * Contém: Lógica de Aplicação, UI Renderer, Batch Logic, DOM Injection e Auth Handlers.
+ * CICLOSMART APP CONTROLLER (v1.9 Split + Connected Studies + Robust Mobile UI)
+ * Contém: Lógica de Aplicação, UI Renderer, Batch Logic e DOM Injection.
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -17,10 +17,12 @@ const app = {
         store.load();
         
         // --- AUTO-REPARO DE DADOS LEGADOS ---
+        // Adiciona batchId para estudos antigos que não têm, permitindo que o clique funcione.
         let migrationCount = 0;
         if (store.reviews && store.reviews.length > 0) {
             store.reviews.forEach(r => {
                 if (!r.batchId) {
+                    // Gera um ID único retroativo para permitir o funcionamento do modal
                     r.batchId = 'legacy-' + r.id + '-' + Math.floor(Math.random() * 1000); 
                     migrationCount++;
                 }
@@ -32,12 +34,14 @@ const app = {
             }
         }
         // ------------------------------------
+        
+        // Inicializa a autenticação (Seja imediata ou via evento)
+        if (typeof app.initAuth === 'function') {
+            app.initAuth(); 
+        }
 
         app.initVersionControl();
         app.checkSmartCycle();
-
-        // Inicializa Autenticação (Firebase)
-        app.initAuth();
 
         ui.initSubjects(); 
         ui.render();
@@ -58,6 +62,140 @@ const app = {
         ui.switchTab('today');
     },
 
+    initAuth: () => {
+        // Função interna que inicializa a lógica do Firebase
+        const startFirebaseLogic = () => {
+            console.log("[CicloSmart Auth] Iniciando ouvintes...");
+            
+            if (!window.fireMethods || !window.fireAuth) {
+                console.error("[CicloSmart Auth] Erro crítico: Firebase ainda indefinido.");
+                return;
+            }
+
+            const { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, ref, onValue, get, set } = window.fireMethods;
+            const auth = window.fireAuth;
+            const db = window.fireDb;
+
+            // Elementos UI
+            const containerForm = document.getElementById('auth-form');
+            const containerUser = document.getElementById('user-info');
+            const txtEmail = document.getElementById('auth-email');
+            const txtPass = document.getElementById('auth-pass');
+            const lblUser = document.getElementById('user-email-display');
+
+            // Listener Global de Estado
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    store.currentUser = user;
+                    // Atualiza UI para Logado
+                    if(containerForm) {
+                        containerForm.classList.add('hidden');
+                        containerForm.classList.remove('flex');
+                    }
+                    if(containerUser) {
+                        containerUser.classList.remove('hidden');
+                        containerUser.classList.add('flex');
+                    }
+                    if(lblUser) lblUser.innerText = user.email;
+
+                    // Sincronizar dados da Nuvem
+                    const userRef = ref(db, 'users/' + user.uid);
+                    
+                    get(userRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            store.load(snapshot.val());
+                            toast.show('Dados sincronizados da nuvem.', 'success', 'Conectado');
+                        } else {
+                            // Se é novo na nuvem, sobe os dados locais
+                            store.save(); 
+                            toast.show('Seus dados locais foram salvos na nuvem.', 'info', 'Primeiro Acesso');
+                        }
+                        
+                        // Escuta em tempo real
+                        onValue(userRef, (snap) => {
+                            const val = snap.val();
+                            if(val) store.load(val); 
+                        });
+                    });
+
+                    // Sobrescreve temporariamente store.save para garantir envio para nuvem
+                    // (Garante funcionamento mesmo se core.js não tiver sido modificado)
+                    const originalSave = store.save;
+                    store.save = function() {
+                        originalSave.call(store); // Salva localmente
+                        // Salva na nuvem
+                        const dataToSave = {
+                            reviews: store.reviews,
+                            subjects: store.subjects,
+                            tasks: store.tasks,
+                            capacity: store.capacity,
+                            profile: store.profile,
+                            cycleState: store.cycleState,
+                            lastAttackDate: store.lastAttackDate,
+                            cycleStartDate: store.cycleStartDate,
+                            lastUpdate: new Date().toISOString()
+                        };
+                        set(ref(db, 'users/' + user.uid), dataToSave)
+                            .catch(err => console.error("Erro no sync:", err));
+                    };
+
+                } else {
+                    store.currentUser = null;
+                    // Atualiza UI para Deslogado
+                    if(containerForm) {
+                        containerForm.classList.remove('hidden');
+                        containerForm.classList.add('flex');
+                    }
+                    if(containerUser) {
+                        containerUser.classList.add('hidden');
+                        containerUser.classList.remove('flex');
+                    }
+                    store.load(null); 
+                }
+            });
+
+            // Evento: Login
+            const form = document.getElementById('auth-form');
+            if(form) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    signInWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
+                        .catch((error) => toast.show('Erro ao entrar: ' + error.message, 'error'));
+                });
+            }
+            
+            // Evento: Logout
+            const btnLogout = document.getElementById('btn-logout');
+            if(btnLogout) {
+                btnLogout.addEventListener('click', () => {
+                    signOut(auth).then(() => toast.show('Desconectado.', 'info'));
+                });
+            }
+             
+             // Evento: Cadastro
+             const btnSignup = document.getElementById('btn-signup');
+             if(btnSignup) {
+                 btnSignup.addEventListener('click', () => {
+                    if(txtEmail.value && txtPass.value) {
+                        createUserWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
+                            .then(() => toast.show('Conta criada com sucesso!', 'success'))
+                            .catch((error) => toast.show('Erro ao criar: ' + error.message, 'error'));
+                    } else {
+                        toast.show('Preencha e-mail e senha.', 'warning');
+                    }
+                 });
+             }
+        };
+
+        // LÓGICA DE ESPERA (Race Condition Fix)
+        if (window.fireMethods && window.fireAuth) {
+            startFirebaseLogic();
+        } else {
+            console.log("[CicloSmart Auth] Aguardando Firebase carregar...");
+            window.addEventListener('firebase-ready', startFirebaseLogic);
+        }
+    },
+
     initVersionControl: () => {
         if (typeof changelogData !== 'undefined' && changelogData.length > 0) {
             const latest = changelogData[0].version;
@@ -66,149 +204,6 @@ const app = {
             document.title = `CicloSmart v${latest} | Plataforma de Estudos`;
         }
     },
-
-    // --- NOVA FUNCIONALIDADE: HANDLERS DE AUTENTICAÇÃO ---
-    initAuth: () => {
-        // Verifica se o Firebase foi injetado globalmente
-        if (!window.fireAuth || !window.fireMethods) {
-            console.warn('[CicloSmart Auth] Firebase não detectado.');
-            return;
-        }
-
-        const { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, ref, onValue, get } = window.fireMethods;
-        const auth = window.fireAuth;
-        const db = window.fireDb;
-    
-        // Elementos UI
-        const containerForm = document.getElementById('auth-form');
-        const containerUser = document.getElementById('user-info');
-        const txtEmail = document.getElementById('auth-email');
-        const txtPass = document.getElementById('auth-pass');
-        const lblUser = document.getElementById('user-email-display');
-        const btnLogin = containerForm ? containerForm.querySelector('button[type="submit"]') : null;
-    
-        if (!containerForm || !containerUser) return;
-
-        // Listener de Estado (Logado/Deslogado)
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // USUÁRIO LOGOU
-                store.currentUser = user;
-                
-                containerForm.classList.add('hidden');
-                containerForm.classList.remove('flex');
-                
-                containerUser.classList.remove('hidden');
-                containerUser.classList.add('flex');
-                
-                if(lblUser) lblUser.innerText = user.email;
-    
-                // Sincronizar dados
-                const userRef = ref(db, 'users/' + user.uid);
-                
-                // 1. Verificar dados iniciais
-                get(userRef).then((snapshot) => {
-                    if (snapshot.exists()) {
-                        // Nuvem tem dados -> Carrega para o App
-                        const cloudData = snapshot.val();
-                        store.load(cloudData); // Assumes store.load supports object injection
-                        toast.show('Dados sincronizados da nuvem.', 'success', 'Conectado');
-                    } else {
-                        // Nuvem vazia -> Sobe os dados locais atuais
-                        store.save(); 
-                        toast.show('Seus dados locais foram salvos na nuvem.', 'info', 'Primeiro Acesso');
-                    }
-                    
-                    // 2. Manter escuta ativa para mudanças em tempo real
-                    onValue(userRef, (snap) => {
-                        const val = snap.val();
-                        // Atualiza store apenas se houver dados e evitar loop infinito (basic check)
-                        if(val && JSON.stringify(val.lastUpdate) !== JSON.stringify(store.lastUpdate)) {
-                            store.load(val);
-                        }
-                    });
-                }).catch(err => {
-                    console.error("Erro ao acessar DB:", err);
-                    toast.show('Erro na sincronização.', 'error');
-                });
-    
-            } else {
-                // USUÁRIO SAIU
-                store.currentUser = null;
-                
-                containerForm.classList.remove('hidden');
-                containerForm.classList.add('flex');
-                
-                containerUser.classList.add('hidden');
-                containerUser.classList.remove('flex');
-                
-                if(lblUser) lblUser.innerText = '...';
-                if(txtEmail) txtEmail.value = '';
-                if(txtPass) txtPass.value = '';
-
-                // Opcional: Recarregar dados locais "limpos" ou manter estado atual
-                // store.load(); 
-            }
-        });
-    
-        // Evento Login
-        containerForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if(!txtEmail.value || !txtPass.value) return;
-            
-            containerForm.classList.add('auth-loading');
-            if(btnLogin) btnLogin.innerText = '...';
-
-            signInWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
-                .then(() => {
-                    // Sucesso tratado pelo onAuthStateChanged
-                })
-                .catch((error) => {
-                    let msg = "Falha ao entrar.";
-                    if(error.code === 'auth/invalid-credential') msg = "E-mail ou senha incorretos.";
-                    if(error.code === 'auth/invalid-email') msg = "E-mail inválido.";
-                    toast.show(msg, 'error', 'Erro de Acesso');
-                })
-                .finally(() => {
-                    containerForm.classList.remove('auth-loading');
-                    if(btnLogin) btnLogin.innerText = 'Entrar';
-                });
-        });
-    
-        // Evento Cadastro
-        const btnSignup = document.getElementById('btn-signup');
-        if (btnSignup) {
-            btnSignup.addEventListener('click', () => {
-                if(txtEmail.value && txtPass.value) {
-                    if(confirm("Criar nova conta com este e-mail e senha?")) {
-                        containerForm.classList.add('auth-loading');
-                        
-                        createUserWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
-                            .then(() => toast.show('Conta criada! Seus dados locais foram salvos.', 'success', 'Bem-vindo'))
-                            .catch((error) => {
-                                let msg = error.message;
-                                if(error.code === 'auth/email-already-in-use') msg = "Este e-mail já está cadastrado.";
-                                if(error.code === 'auth/weak-password') msg = "A senha deve ter pelo menos 6 caracteres.";
-                                toast.show(msg, 'error', 'Erro no Cadastro');
-                            })
-                            .finally(() => containerForm.classList.remove('auth-loading'));
-                    }
-                } else {
-                    toast.show('Preencha e-mail e senha para cadastrar.', 'warning');
-                    txtEmail.focus();
-                }
-            });
-        }
-    
-        // Evento Logout
-        const btnLogout = document.getElementById('btn-logout');
-        if (btnLogout) {
-            btnLogout.addEventListener('click', () => {
-                signOut(auth).then(() => toast.show('Desconectado. Modo offline ativo.', 'info'));
-            });
-        }
-    },
-    // -----------------------------------------------------
 
     checkSmartCycle: () => {
         if (store.profile !== 'pendular' || !store.lastAttackDate) return;

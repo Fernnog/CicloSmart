@@ -469,7 +469,7 @@ const app = {
         }
     },
 
-    // --- NOVA LÓGICA DE EDIÇÃO EM LOTE ---
+    // --- NOVA LÓGICA DE EDIÇÃO EM LOTE (Smart Batch Edit) ---
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
@@ -488,7 +488,7 @@ const app = {
             }
 
             if (updateAll) {
-                // Atualiza em lote
+                // Atualiza em lote diretamente aqui para garantir atomicidade sem depender de core.js externo
                 siblings.forEach(s => s.topic = newTopic);
                 store.save();
                 ui.render();

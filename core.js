@@ -217,6 +217,7 @@ const store = {
     },
 
     // --- NOVO: Atualização em Lote (Batch Update) ---
+    // Aplica o novo tópico para todos os cards que compartilham o mesmo batchId
     updateBatchTopic: (batchId, newTopic) => {
         let count = 0;
         store.reviews.forEach(r => {

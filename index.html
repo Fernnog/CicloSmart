@@ -10,7 +10,8 @@
     <!-- PWA Setup (Caminhos Relativos para Isolamento no GitHub) -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#ffffff">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- Legacy iOS -->
+    <meta name="mobile-web-app-capable" content="yes"> <!-- Modern Standard -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="CicloSmart">
     <link rel="apple-touch-icon" href="./icon-192.png">
@@ -20,42 +21,37 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="style.css">
 
-    <!-- FIREBASE SETUP -->
+    <!-- FIREBASE SETUP (Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // CONFIGURAÇÃO DO FIREBASE (SUBSTITUA PELOS SEUS DADOS)
-       const firebaseConfig = {
-  apiKey: "AIzaSyAGEj_PTWHgtHmZRQR2pMLs8Dq6POYpA34",
-  authDomain: "ciclosmart-11844.firebaseapp.com",
-  projectId: "ciclosmart-11844",
-  storageBucket: "ciclosmart-11844.firebasestorage.app",
-  messagingSenderId: "311066999862",
-  appId: "1:311066999862:web:94bbf933ef5d09ddd96c97",
-  measurementId: "G-WNDQB3PKBB"
-};
+        // CONFIGURAÇÃO DO FIREBASE
+        // Substitua os valores abaixo pelos do seu Console Firebase
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY_AQUI",
+            authDomain: "SEU_PROJETO.firebaseapp.com",
+            databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
+            projectId: "SEU_PROJETO_ID",
+            storageBucket: "SEU_PROJETO.appspot.com",
+            messagingSenderId: "SEU_SENDER_ID",
+            appId: "SEU_APP_ID"
+        };
 
         // Inicialização
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
-
-        // Expor para o escopo global (para ser usado no core.js e app.js)
+        
+        // Exportar para uso global no app.js
         window.fireAuth = auth;
         window.fireDb = db;
-        window.fireMethods = { 
-            signInWithEmailAndPassword, 
-            createUserWithEmailAndPassword, 
-            signOut, 
-            onAuthStateChanged, 
-            ref, 
-            set, 
-            onValue, 
-            get 
-        };
-        console.log('[Firebase] Inicializado e exposto globalmente.');
+        window.fireMethods = { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, ref, set, onValue, get };
+
+        // Disparar evento para avisar o app.js que o Firebase está pronto (Correção Race Condition)
+        console.log("[Firebase] SDK Carregado. Disparando evento...");
+        window.dispatchEvent(new CustomEvent('firebase-ready'));
     </script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
@@ -69,14 +65,14 @@
             <div>
                 <h1 class="text-lg md:text-xl font-bold tracking-tight text-slate-900 leading-none">CicloSmart</h1>
                 <button id="app-version-btn" onclick="ui.toggleChangelog(true)" class="mt-1 text-[10px] font-bold tracking-wide text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-indigo-200">
-                    </button>
+                </button>
             </div>
 
-            <!-- UI DE AUTENTICAÇÃO (FIREBASE) -->
+            <!-- Área de Autenticação (Firebase) - Visível em todas as telas -->
             <div id="auth-container" class="flex flex-col justify-center ml-4 border-l border-slate-200 pl-4 h-10">
                 <!-- Estado: Deslogado -->
                 <form id="auth-form" class="flex items-center gap-2">
-                    <input type="email" id="auth-email" placeholder="email@exemplo.com" class="px-2 py-1 text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none w-36" required>
+                    <input type="email" id="auth-email" placeholder="email@exemplo.com" class="px-2 py-1 text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none w-32" required>
                     <input type="password" id="auth-pass" placeholder="senha" class="px-2 py-1 text-[10px] border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none w-24" required>
                     <button type="submit" class="bg-slate-800 text-white text-[10px] font-bold px-3 py-1 rounded hover:bg-slate-700 transition-colors shadow-sm">
                         Entrar
@@ -85,12 +81,12 @@
                         Cadastrar
                     </button>
                 </form>
-        
+
                 <!-- Estado: Logado -->
                 <div id="user-info" class="hidden items-center gap-3">
                     <div class="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span id="user-email-display">...</span>
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm"></div>
+                        <span id="user-email-display" class="truncate max-w-[150px]">...</span>
                     </div>
                     <button id="btn-logout" class="text-[10px] font-bold text-red-500 border border-red-100 bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 transition-colors">
                         Sair

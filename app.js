@@ -1,3 +1,5 @@
+--- START OF FILE app.js ---
+
 /* --- START OF FILE app.js --- */
 
 /**
@@ -278,7 +280,7 @@ const app = {
             type: 'NOVO', 
             status: 'PENDING',
             cycleIndex: finalCycleIndex,
-            batchId: batchId // Vínculo
+            batchId: batchId // Vínculo Essencial
         };
         newReviews.push(acquisitionEntry);
 
@@ -326,7 +328,7 @@ const app = {
                 type: typeLabel,
                 status: 'PENDING',
                 cycleIndex: finalCycleIndex,
-                batchId: batchId // Vínculo
+                batchId: batchId // Vínculo Essencial
             });
         }
 
@@ -484,14 +486,20 @@ const app = {
             let updateAll = false;
 
             if (isBatch) {
+                // Aqui usamos o confirm nativo para perguntar ao usuário
                 updateAll = confirm(`Este estudo tem ${siblings.length} revisões conectadas.\nDeseja renomear TODAS para "${newTopic}"?\n\n[OK] Sim, corrigir tudo.\n[Cancelar] Não, apenas este card.`);
             }
 
             if (updateAll) {
-                // Atualiza em lote diretamente aqui para garantir atomicidade sem depender de core.js externo
-                siblings.forEach(s => s.topic = newTopic);
-                store.save();
-                ui.render();
+                // Atualiza em lote
+                // Fallback: Se store.updateBatchTopic não existir (core.js não atualizado), fazemos manual aqui
+                if (typeof store.updateBatchTopic === 'function') {
+                    store.updateBatchTopic(r.batchId, newTopic);
+                } else {
+                    siblings.forEach(s => s.topic = newTopic);
+                    store.save();
+                    ui.render();
+                }
                 toast.show(`Tópico corrigido em ${siblings.length} cards.`, 'success', 'Correção em Lote');
             } else {
                 // Atualiza individual

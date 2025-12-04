@@ -16,6 +16,10 @@ const app = {
     init: () => {
         store.load();
         
+        // --- NOVO: REGISTRO DO OBSERVER ---
+        // Garante que o ícone de tarefas seja atualizado sempre que o store for salvo
+        store.subscribe(taskManager.checkOverdue);
+
         // --- AUTO-REPARO DE DADOS LEGADOS ---
         let migrationCount = 0;
         if (store.reviews && store.reviews.length > 0) {
@@ -520,89 +524,8 @@ const app = {
         );
     },
 
-    downloadBackup: () => {
-        const data = {
-            version: '1.8', 
-            timestamp: new Date().toISOString(),
-            store: {
-                reviews: store.reviews,
-                subjects: store.subjects,
-                capacity: store.capacity,
-                profile: store.profile,
-                cycleState: store.cycleState,
-                lastAttackDate: store.lastAttackDate,
-                cycleStartDate: store.cycleStartDate,
-                tasks: store.tasks 
-            }
-        };
-        
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ciclosmart-backup-${getLocalISODate()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        toast.show(
-            'Arquivo .JSON criado. Guarde-o em uma nuvem segura (Google Drive/Dropbox).', 
-            'success', 
-            '💾 Backup Seguro Gerado'
-        );
-    },
-
-    restoreData: (input) => {
-        const file = input.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const json = JSON.parse(e.target.result);
-                
-                if (!json.store || !Array.isArray(json.store.reviews)) {
-                    throw new Error("Formato de arquivo inválido.");
-                }
-
-                if (confirm(`Restaurar backup de ${formatDateDisplay(json.timestamp.split('T')[0])}? \nISSO SUBSTITUIRÁ OS DADOS ATUAIS.`)) {
-                    store.reviews = json.store.reviews;
-                    store.subjects = json.store.subjects || defaultSubjects;
-                    store.capacity = json.store.capacity || 240;
-                    store.profile = json.store.profile || 'standard';
-                    store.cycleState = json.store.cycleState || 'ATTACK';
-                    store.lastAttackDate = json.store.lastAttackDate || null;
-                    store.cycleStartDate = json.store.cycleStartDate || null;
-                    
-                    store.tasks = json.store.tasks || []; 
-                    
-                    // Garante migração imediata ao restaurar
-                    store.reviews.forEach(r => { 
-                        if(!r.batchId) r.batchId = 'legacy-'+r.id+'-'+Math.floor(Math.random()*1000); 
-                    });
-
-                    store.save(); 
-                    
-                    ui.initSubjects();
-                    ui.render();
-                    app.init(); 
-                    
-                    if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
-                        ui.renderHeatmap();
-                    }
-                    
-                    toast.show('Seus dados foram recuperados com sucesso.', 'info', '♻️ Sistema Restaurado');
-                    ui.toggleSubjectModal(false);
-                }
-            } catch (err) {
-                console.error(err);
-                toast.show('Erro ao ler arquivo: ' + err.message, 'error', 'Falha na Restauração');
-            }
-            input.value = '';
-        };
-        reader.readAsText(file);
-    },
+    // FUNÇÕES DE BACKUP (downloadBackup e restoreData) REMOVIDAS
+    // A persistência agora é gerenciada automaticamente pelo Firebase no store.save()
 
     updateCapacitySetting: (val) => {
         const min = parseInt(val);

@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.2', 
+        version: '1.1.3', 
         date: 'Hoje', 
+        changes: [
+            '🔴 <strong>Feedback Visual em Tempo Real (Observer):</strong> O ícone de alerta de tarefas (ponto vermelho) foi reescrito usando arquitetura reativa. Agora ele apaga ou acende instantaneamente ao editar uma tarefa, sem precisar recarregar.',
+            '🗓️ <strong>Datas Humanizadas:</strong> A lista de tarefas ficou mais inteligente. Em vez de apenas datas numéricas, o sistema agora exibe <strong>"Hoje"</strong>, <strong>"Amanhã"</strong> ou <strong>"Ontem"</strong> para facilitar seu planejamento.',
+            '🧹 <strong>Limpeza de Interface (Legacy):</strong> A seção de Backup/Restaurar manual foi removida do menu de Matérias. Com a sincronização automática em Nuvem (Firebase) operando 100%, esses botões antigos tornaram-se desnecessários.'
+        ] 
+    },
+    { 
+        version: '1.1.2', 
+        date: 'Anterior', 
         changes: [
             '👤 <strong>Menu de Usuário Unificado:</strong> O formulário de login antigo foi substituído por um <strong>Botão de Perfil Inteligente</strong>. Ele economiza espaço no cabeçalho e resolve definitivamente os problemas de clique em dispositivos móveis.',
             '🎨 <strong>Feedback Visual de Status:</strong> Agora o ícone do usuário muda de cor! <strong>Borda Verde</strong> indica que você está conectado e sincronizando; <strong>Cinza</strong> indica que você está offline/deslogado.',

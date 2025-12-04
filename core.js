@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.10 - Observer Pattern & Friendly Dates)
+ * CICLOSMART CORE (v1.1.4 - Observer Pattern & Friendly Dates)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Suporte a Edição de Tarefas, Reatividade e UX de Datas.
+ * ATUALIZADO: Arquitetura Reativa e UX de Datas Relativas.
  */
 
 // ==========================================
@@ -49,7 +49,8 @@ const formatDateDisplay = (isoDate) => {
 // NOVO: Utilitário de Data Amigável (UX)
 const getFriendlyDate = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr + 'T00:00:00'); // Corrige fuso horário local
+    // Ajuste de fuso horário para comparação precisa
+    const date = new Date(dateStr + 'T00:00:00');
     const todayStr = getLocalISODate();
     const today = new Date(todayStr + 'T00:00:00');
     
@@ -121,7 +122,7 @@ const toast = {
 };
 
 // ==========================================
-// 2. STORE (ESTADO & PERSISTÊNCIA)
+// 2. STORE (ESTADO & PERSISTÊNCIA REATIVA)
 // ==========================================
 
 const store = {
@@ -135,17 +136,22 @@ const store = {
     cycleStartDate: null,
     currentUser: null,
     
-    // NOVO: Sistema de Observer (Reatividade)
+    // --- NOVO: SISTEMA DE OBSERVER (Reatividade) ---
     listeners: [],
 
     subscribe: (fn) => {
-        store.listeners.push(fn);
+        // Evita duplicidade de ouvintes
+        if (typeof fn === 'function' && !store.listeners.includes(fn)) {
+            store.listeners.push(fn);
+        }
     },
 
     notify: () => {
+        // Notifica todos os componentes inscritos que os dados mudaram
         // console.log('[Store] Notificando ouvintes...');
         store.listeners.forEach(fn => fn());
     },
+    // -----------------------------------------------
 
     // Lógica de Load
     load: (fromCloudData = null) => {
@@ -188,7 +194,7 @@ const store = {
             ui.render();
             if (typeof taskManager !== 'undefined') {
                 taskManager.render();
-                store.notify(); // Garante verificação de estado inicial
+                store.notify(); // Garante verificação de estado inicial (badges, etc)
             }
         }
     },
@@ -227,7 +233,7 @@ const store = {
                 .catch(err => console.error("[Core] Erro na sincronização:", err));
         }
 
-        // NOVO: Dispara notificação para atualizar UI dependente (ex: badge de tarefas)
+        // NOVO: Dispara notificação para atualizar UI dependente (listas, badges, etc)
         store.notify();
     },
 
@@ -309,14 +315,13 @@ const store = {
     // --- Métodos de Tarefas ---
     removeTask: (id) => {
         store.tasks = store.tasks.filter(t => t.id !== id);
+        // O store.save() agora dispara o notify(), que chamará taskManager.render() automaticamente.
         store.save();
-        taskManager.render();
-        // A verificação de overdue agora acontece via observer no store.save()
     }
 };
 
 // ==========================================
-// 3. TASK MANAGER (ATUALIZADO: Reatividade & UX)
+// 3. TASK MANAGER (ATUALIZADO: Reatividade & Agrupamento Inteligente)
 // ==========================================
 
 const taskManager = {
@@ -330,6 +335,7 @@ const taskManager = {
         
         // Garante estado limpo ao abrir
         taskManager.cancelEdit();
+        // Render já é garantido pelo subscribe, mas forçamos aqui para garantir atualização de selects
         taskManager.render();
         
         if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
@@ -361,12 +367,12 @@ const taskManager = {
             date,
             obs
         });
+        
+        // Dispara notify(), que atualizará a lista e badges
         store.save();
         
-        // Limpa o formulário
+        // Limpa o formulário e sai do modo de edição
         taskManager.cancelEdit();
-        taskManager.render();
-        // checkOverdue é chamado automaticamente via store.save > notify
         
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
@@ -380,9 +386,9 @@ const taskManager = {
             store.tasks[taskIndex].date = document.getElementById('task-date').value;
             store.tasks[taskIndex].obs = document.getElementById('task-obs').value;
             
-            store.save(); // Dispara notify()
+            // Dispara notify()
+            store.save(); 
             taskManager.cancelEdit(); // Sai do modo de edição
-            taskManager.render();
             
             toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
         }
@@ -434,7 +440,7 @@ const taskManager = {
         if(dateInput) dateInput.value = getLocalISODate();
     },
 
-    // Verificação de Atrasos (Agora corrigida visualmente)
+    // Verificação de Atrasos (Visual)
     checkOverdue: () => {
         const today = getLocalISODate();
         const hasOverdue = store.tasks.some(t => t.date < today);
@@ -445,15 +451,16 @@ const taskManager = {
             if (hasOverdue) {
                 badge.classList.remove('hidden');
                 icon.classList.add('text-red-500');
-                icon.classList.remove('text-slate-400'); // Garante limpeza da cor neutra
+                icon.classList.remove('text-slate-400');
             } else {
                 badge.classList.add('hidden');
-                icon.classList.remove('text-red-500'); // Remove vermelho
-                icon.classList.add('text-slate-400'); // Restaura cor neutra
+                icon.classList.remove('text-red-500');
+                icon.classList.add('text-slate-400');
             }
         }
     },
 
+    // --- NOVA LÓGICA DE RENDERIZAÇÃO AGRUPADA ---
     render: () => {
         const container = document.getElementById('task-list-container');
         if (!container) return;
@@ -463,56 +470,71 @@ const taskManager = {
             return;
         }
 
-        const sortedTasks = [...store.tasks].sort((a, b) => a.date.localeCompare(b.date));
         const today = getLocalISODate();
 
-        container.innerHTML = sortedTasks.map(t => {
-            const subject = store.subjects.find(s => s.id === t.subjectId) || { name: 'Geral', color: '#cbd5e1' };
-            const textColor = getContrastYIQ(subject.color);
-            const isLate = t.date < today;
+        // 1. Separação dos Grupos
+        const late = store.tasks.filter(t => t.date < today).sort((a,b) => a.date.localeCompare(b.date));
+        const present = store.tasks.filter(t => t.date === today);
+        const future = store.tasks.filter(t => t.date > today).sort((a,b) => a.date.localeCompare(b.date));
+
+        // 2. Componente Helper de Renderização de Grupo
+        const renderGroup = (title, tasks, headerClass) => {
+            if (tasks.length === 0) return '';
             
-            const alertIcon = isLate 
-                ? `<div class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm animate-pulse" title="Atrasado!"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></div>` 
-                : '';
+            const cards = tasks.map(t => {
+                const subject = store.subjects.find(s => s.id === t.subjectId) || { name: 'Geral', color: '#cbd5e1' };
+                const textColor = getContrastYIQ(subject.color);
+                const isLate = t.date < today;
+                
+                return `
+                <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2" 
+                     style="background-color: ${subject.color}; color: ${textColor}">
+                    
+                    <div class="mt-1">
+                        <input type="checkbox" onclick="store.removeTask(${t.id})" 
+                               class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current">
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded">
+                                ${subject.name}
+                            </span>
+                            <button onclick="taskManager.startEdit(${t.id})" class="opacity-70 hover:opacity-100 transition-all ml-2" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center gap-1 mt-1">
+                            <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate ? 'text-red-600' : ''}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                ${getFriendlyDate(t.date)}
+                            </span>
+                        </div>
+                        
+                        <h4 class="font-bold text-sm leading-tight mt-1 truncate">${t.subCategory}</h4>
+                        ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words">${t.obs}</p>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
 
             return `
-            <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3" 
-                 style="background-color: ${subject.color}; color: ${textColor}">
-                ${alertIcon}
-                
-                <div class="mt-1 flex flex-col gap-2">
-                    <input type="checkbox" onclick="store.removeTask(${t.id})" 
-                           class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current">
+                <div class="mb-5 animate-fade-in">
+                    <h4 class="text-xs font-bold uppercase tracking-wide mb-2 border-b border-slate-200 pb-1 ${headerClass}">
+                        ${title} <span class="ml-1 opacity-60 text-[10px]">(${tasks.length})</span>
+                    </h4>
+                    <div class="space-y-2">${cards}</div>
                 </div>
-                
-                <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded">
-                            ${subject.name}
-                        </span>
-                        
-                        <!-- Botão de Editar -->
-                        <button onclick="taskManager.startEdit(${t.id})" class="opacity-70 hover:opacity-100 hover:scale-110 transition-all ml-2" title="Editar Tarefa">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                        </button>
-                    </div>
-                    
-                    <div class="flex items-center gap-1 mt-1">
-                        <!-- USO DE DATA AMIGÁVEL AQUI -->
-                        <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate ? 'underline decoration-wavy' : ''}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                            ${getFriendlyDate(t.date)}
-                        </span>
-                    </div>
-                    
-                    <h4 class="font-bold text-sm leading-tight mt-1 truncate">${t.subCategory}</h4>
-                    
-                    ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words">${t.obs}</p>` : ''}
-                </div>
-            </div>
             `;
-        }).join('');
-        
+        };
+
+        // 3. Montagem Final
+        let html = '';
+        html += renderGroup('🚨 Atrasados', late, 'text-red-600 border-red-100');
+        html += renderGroup('⭐ Foco Hoje', present, 'text-indigo-600 border-indigo-100');
+        html += renderGroup('📅 Próximos', future, 'text-slate-500 border-slate-200');
+
+        container.innerHTML = html;
         if(window.lucide) lucide.createIcons();
     }
 };

@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.1', 
+        version: '1.1.2', 
         date: 'Hoje', 
+        changes: [
+            '👤 <strong>Menu de Usuário Unificado:</strong> O formulário de login antigo foi substituído por um <strong>Botão de Perfil Inteligente</strong>. Ele economiza espaço no cabeçalho e resolve definitivamente os problemas de clique em dispositivos móveis.',
+            '🎨 <strong>Feedback Visual de Status:</strong> Agora o ícone do usuário muda de cor! <strong>Borda Verde</strong> indica que você está conectado e sincronizando; <strong>Cinza</strong> indica que você está offline/deslogado.',
+            '🔥 <strong>Correção Crítica de Nuvem:</strong> Solução definitiva para o erro de conexão com o <strong>Firebase Realtime Database</strong>. A persistência dos seus estudos na nuvem agora está 100% operacional.'
+        ] 
+    },
+    { 
+        version: '1.1.1', 
+        date: 'Anterior', 
         changes: [
             '☁️ <strong>Cloud Sync (Sincronização em Nuvem):</strong> Adeus, perda de dados! Integração completa com <strong>Firebase Realtime Database</strong>. Seus estudos agora ficam salvos na nuvem, permitindo acesso simultâneo via celular e computador.',
             '🔐 <strong>Autenticação Integrada:</strong> Novo painel de login minimalista no cabeçalho. Crie sua conta com e-mail e senha para garantir que seu progresso sobreviva à limpeza de cache do navegador.',

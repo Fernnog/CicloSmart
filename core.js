@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.9 Batch Support - Edit & Delete)
+ * CICLOSMART CORE (v1.10 - Observer Pattern & Friendly Dates)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Suporte a Edição de Tarefas e Melhorias de UI
+ * ATUALIZADO: Suporte a Edição de Tarefas, Reatividade e UX de Datas.
  */
 
 // ==========================================
@@ -44,6 +44,24 @@ const getRelativeDate = (daysOffset) => {
 const formatDateDisplay = (isoDate) => {
     const [y, m, d] = isoDate.split('-');
     return `${d}/${m}`;
+};
+
+// NOVO: Utilitário de Data Amigável (UX)
+const getFriendlyDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr + 'T00:00:00'); // Corrige fuso horário local
+    const todayStr = getLocalISODate();
+    const today = new Date(todayStr + 'T00:00:00');
+    
+    // Diferença em dias
+    const diffTime = date - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Hoje';
+    if (diffDays === 1) return 'Amanhã';
+    if (diffDays === -1) return 'Ontem';
+    
+    return formatDateDisplay(dateStr); // Retorna dd/mm se não for data próxima
 };
 
 // Utilitário de Contraste (YIQ) para Legibilidade dos Cards de Tarefa
@@ -116,8 +134,20 @@ const store = {
     lastAttackDate: null, 
     cycleStartDate: null,
     currentUser: null,
+    
+    // NOVO: Sistema de Observer (Reatividade)
+    listeners: [],
 
-    // Lógica de Load Atualizada (Suporta Dados da Nuvem)
+    subscribe: (fn) => {
+        store.listeners.push(fn);
+    },
+
+    notify: () => {
+        // console.log('[Store] Notificando ouvintes...');
+        store.listeners.forEach(fn => fn());
+    },
+
+    // Lógica de Load
     load: (fromCloudData = null) => {
         if (fromCloudData) {
             const data = fromCloudData;
@@ -152,10 +182,14 @@ const store = {
             }
         }
         
+        // Renderização inicial
         if (typeof ui !== 'undefined' && ui.render) {
             ui.initSubjects(); 
             ui.render();
-            if (typeof taskManager !== 'undefined') taskManager.render();
+            if (typeof taskManager !== 'undefined') {
+                taskManager.render();
+                store.notify(); // Garante verificação de estado inicial
+            }
         }
     },
 
@@ -170,7 +204,7 @@ const store = {
         store.cycleStartDate = null; 
     },
 
-    // Lógica de Save Atualizada (Híbrido: Local + Nuvem)
+    // Lógica de Save Atualizada (Chama Notify)
     save: () => {
         const dataToSave = {
             reviews: store.reviews,
@@ -192,6 +226,9 @@ const store = {
                 .then(() => console.log('[Core] Sincronizado com nuvem.'))
                 .catch(err => console.error("[Core] Erro na sincronização:", err));
         }
+
+        // NOVO: Dispara notificação para atualizar UI dependente (ex: badge de tarefas)
+        store.notify();
     },
 
     // --- Métodos de Matérias ---
@@ -274,12 +311,12 @@ const store = {
         store.tasks = store.tasks.filter(t => t.id !== id);
         store.save();
         taskManager.render();
-        taskManager.checkOverdue();
+        // A verificação de overdue agora acontece via observer no store.save()
     }
 };
 
 // ==========================================
-// 3. TASK MANAGER (ATUALIZADO: Suporte a Edição)
+// 3. TASK MANAGER (ATUALIZADO: Reatividade & UX)
 // ==========================================
 
 const taskManager = {
@@ -298,7 +335,7 @@ const taskManager = {
         if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
     },
 
-    // Nova função para gerenciar o Submit (Criar ou Editar)
+    // Gerencia o Submit (Criar ou Editar)
     handleFormSubmit: (e) => {
         e.preventDefault();
         const idEditing = document.getElementById('task-id-editing')?.value;
@@ -326,15 +363,15 @@ const taskManager = {
         });
         store.save();
         
-        // Limpa o formulário usando a função de cancelamento para resetar estados
+        // Limpa o formulário
         taskManager.cancelEdit();
-        
         taskManager.render();
-        taskManager.checkOverdue();
+        // checkOverdue é chamado automaticamente via store.save > notify
+        
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
 
-    // Nova função para Atualizar Tarefa Existente
+    // Atualizar Tarefa Existente
     updateTask: (id) => {
         const taskIndex = store.tasks.findIndex(t => t.id === id);
         if (taskIndex > -1) {
@@ -343,15 +380,15 @@ const taskManager = {
             store.tasks[taskIndex].date = document.getElementById('task-date').value;
             store.tasks[taskIndex].obs = document.getElementById('task-obs').value;
             
-            store.save();
+            store.save(); // Dispara notify()
             taskManager.cancelEdit(); // Sai do modo de edição
             taskManager.render();
-            taskManager.checkOverdue();
+            
             toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
         }
     },
 
-    // Nova função para Iniciar Edição
+    // Iniciar Edição
     startEdit: (id) => {
         const task = store.tasks.find(t => t.id === id);
         if (!task) return;
@@ -378,7 +415,7 @@ const taskManager = {
         document.getElementById('task-date').focus();
     },
 
-    // Nova função para Cancelar/Limpar Edição
+    // Cancelar/Limpar Edição
     cancelEdit: () => {
         const form = document.getElementById('form-task');
         if(form) form.reset();
@@ -397,6 +434,7 @@ const taskManager = {
         if(dateInput) dateInput.value = getLocalISODate();
     },
 
+    // Verificação de Atrasos (Agora corrigida visualmente)
     checkOverdue: () => {
         const today = getLocalISODate();
         const hasOverdue = store.tasks.some(t => t.date < today);
@@ -407,9 +445,11 @@ const taskManager = {
             if (hasOverdue) {
                 badge.classList.remove('hidden');
                 icon.classList.add('text-red-500');
+                icon.classList.remove('text-slate-400'); // Garante limpeza da cor neutra
             } else {
                 badge.classList.add('hidden');
-                icon.classList.remove('text-red-500');
+                icon.classList.remove('text-red-500'); // Remove vermelho
+                icon.classList.add('text-slate-400'); // Restaura cor neutra
             }
         }
     },
@@ -451,16 +491,17 @@ const taskManager = {
                             ${subject.name}
                         </span>
                         
-                        <!-- Botão de Editar (Novo) -->
+                        <!-- Botão de Editar -->
                         <button onclick="taskManager.startEdit(${t.id})" class="opacity-70 hover:opacity-100 hover:scale-110 transition-all ml-2" title="Editar Tarefa">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                         </button>
                     </div>
                     
                     <div class="flex items-center gap-1 mt-1">
+                        <!-- USO DE DATA AMIGÁVEL AQUI -->
                         <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate ? 'underline decoration-wavy' : ''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                            ${formatDateDisplay(t.date)}
+                            ${getFriendlyDate(t.date)}
                         </span>
                     </div>
                     

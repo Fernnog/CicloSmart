@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.3', 
+        version: '1.1.4', 
         date: 'Hoje', 
+        changes: [
+            '🧠 <strong>Arquitetura Reativa (Observer):</strong> O núcleo do sistema agora é "autociente". Qualquer alteração nos dados atualiza automaticamente a interface (ícones e listas) sem recarregamentos manuais.',
+            '📂 <strong>Ordenação Inteligente:</strong> O painel de Tarefas agora agrupa itens em <strong>🚨 Atrasados</strong>, <strong>⭐ Foco Hoje</strong> e <strong>📅 Futuro</strong>, facilitando a priorização.',
+            '🗣️ <strong>Datas em Linguagem Natural:</strong> O sistema agora exibe "Hoje", "Amanhã" ou "Ontem" nas datas das tarefas para reduzir a carga cognitiva.'
+        ] 
+    },
+    { 
+        version: '1.1.3', 
+        date: 'Anterior', 
         changes: [
             '🔴 <strong>Feedback Visual em Tempo Real (Observer):</strong> O ícone de alerta de tarefas (ponto vermelho) foi reescrito usando arquitetura reativa. Agora ele apaga ou acende instantaneamente ao editar uma tarefa, sem precisar recarregar.',
             '🗓️ <strong>Datas Humanizadas:</strong> A lista de tarefas ficou mais inteligente. Em vez de apenas datas numéricas, o sistema agora exibe <strong>"Hoje"</strong>, <strong>"Amanhã"</strong> ou <strong>"Ontem"</strong> para facilitar seu planejamento.',

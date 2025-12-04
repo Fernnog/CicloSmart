@@ -1,7 +1,7 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.9 Split + Connected Studies + Robust Mobile UI)
+ * CICLOSMART APP CONTROLLER (v1.1.4 - Reactive Architecture)
  * Contém: Lógica de Aplicação, UI Renderer, Batch Logic e DOM Injection.
  */
 
@@ -16,9 +16,12 @@ const app = {
     init: () => {
         store.load();
         
-        // --- NOVO: REGISTRO DO OBSERVER ---
-        // Garante que o ícone de tarefas seja atualizado sempre que o store for salvo
-        store.subscribe(taskManager.checkOverdue);
+        // --- ARQUITETURA REATIVA (OBSERVER v1.1.4) ---
+        // Registra os componentes que devem ser atualizados automaticamente
+        // sempre que os dados no store forem modificados/salvos.
+        store.subscribe(taskManager.checkOverdue); // Atualiza o badge vermelho de atraso
+        store.subscribe(taskManager.render);       // Atualiza a lista de tarefas (Smart Grouping)
+        // ---------------------------------------------
 
         // --- AUTO-REPARO DE DADOS LEGADOS ---
         let migrationCount = 0;

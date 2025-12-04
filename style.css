@@ -195,3 +195,38 @@ input[type="color"]::-webkit-color-swatch {
         display: none; /* Em mobile, isso garante que o header não quebre */
     }
 }
+
+/* 
+   ==========================================================================
+   6. MELHORIAS E CORREÇÕES DE LAYOUT (Prioridade 1 - Scroll Fixes)
+   ========================================================================== 
+*/
+
+/* 
+   Garante que o container principal não exceda a altura da tela 
+   e respeite o flex-shrink em navegadores como Firefox/Chrome.
+*/
+#main-kanban {
+    min-height: 0; 
+}
+
+/* 
+   Define que as colunas do Kanban devem ocupar no máximo 100% da altura do pai
+   e permite que elas encolham (min-height: 0) para forçar o scroll interno.
+*/
+.kanban-column {
+    min-height: 0; 
+    max-height: 100%; 
+    display: flex;
+    flex-direction: column;
+}
+
+/* 
+   Assegura que a lista interna (onde estão os cards) tenha permissão para rolar (scroll)
+   e o cabeçalho permaneça fixo no topo da coluna.
+*/
+#list-late, #list-today, #list-future {
+    flex: 1 1 auto; /* Permite crescer e encolher conforme necessário */
+    min-height: 0;  /* Habilita o cálculo correto do overflow */
+    overflow-y: auto; /* Força a aparição da barra de rolagem quando necessário */
+}

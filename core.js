@@ -3,6 +3,7 @@
 /**
  * CICLOSMART CORE (v1.9 Batch Support - Edit & Delete)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
+ * ATUALIZADO: Suporte a Edição de Tarefas e Melhorias de UI
  */
 
 // ==========================================
@@ -114,14 +115,11 @@ const store = {
     cycleState: 'ATTACK', 
     lastAttackDate: null, 
     cycleStartDate: null,
-    
-    // Novo: Armazena o usuário logado no Firebase
     currentUser: null,
 
     // Lógica de Load Atualizada (Suporta Dados da Nuvem)
     load: (fromCloudData = null) => {
         if (fromCloudData) {
-            // Se vierem dados da nuvem, usamos eles
             const data = fromCloudData;
             store.reviews = data.reviews || [];
             store.subjects = data.subjects && data.subjects.length > 0 ? data.subjects : defaultSubjects;
@@ -133,7 +131,6 @@ const store = {
             store.cycleStartDate = data.cycleStartDate || null;
             console.log('[Core] Dados carregados via Firebase Cloud.');
         } else {
-            // Fallback: Tenta carregar do LocalStorage
             const raw = localStorage.getItem(CONFIG.storageKey);
             if (raw) {
                 try {
@@ -155,7 +152,6 @@ const store = {
             }
         }
         
-        // Atualiza a interface se ela estiver disponível
         if (typeof ui !== 'undefined' && ui.render) {
             ui.initSubjects(); 
             ui.render();
@@ -185,13 +181,11 @@ const store = {
             cycleState: store.cycleState,
             lastAttackDate: store.lastAttackDate,
             cycleStartDate: store.cycleStartDate,
-            lastUpdate: new Date().toISOString() // Metadata útil para conflitos
+            lastUpdate: new Date().toISOString()
         };
 
-        // 1. Sempre salva localmente (Backup/Offline)
         localStorage.setItem(CONFIG.storageKey, JSON.stringify(dataToSave));
 
-        // 2. Se logado, salva no Firebase
         if (store.currentUser && window.fireMethods && window.fireDb) {
             const { ref, set } = window.fireMethods;
             set(ref(window.fireDb, 'users/' + store.currentUser.uid), dataToSave)
@@ -246,7 +240,6 @@ const store = {
         }
     },
 
-    // --- LÓGICA DE ATUALIZAÇÃO EM LOTE ---
     updateBatchTopic: (batchId, newTopic) => {
         let count = 0;
         store.reviews.forEach(r => {
@@ -261,9 +254,6 @@ const store = {
         }
     },
 
-    // --- LÓGICA DE EXCLUSÃO (BATCH & INDIVIDUAL) ---
-    
-    // 1. Deleta todo o lote
     deleteBatch: (batchId) => {
         const count = store.reviews.filter(r => r.batchId === batchId).length;
         if(count > 0) {
@@ -273,13 +263,11 @@ const store = {
         }
     },
 
-    // 2. Deleta apenas um
     deleteReview: (id) => {
         store.reviews = store.reviews.filter(r => r.id !== id);
         store.save();
         if (typeof ui !== 'undefined' && ui.render) ui.render();
     },
-    // -----------------------------------------------
 
     // --- Métodos de Tarefas ---
     removeTask: (id) => {
@@ -291,7 +279,7 @@ const store = {
 };
 
 // ==========================================
-// 3. TASK MANAGER
+// 3. TASK MANAGER (ATUALIZADO: Suporte a Edição)
 // ==========================================
 
 const taskManager = {
@@ -302,15 +290,27 @@ const taskManager = {
                 `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
             ).join('');
         }
-        const dateInput = document.getElementById('task-date');
-        if(dateInput && !dateInput.value) dateInput.value = getLocalISODate();
         
+        // Garante estado limpo ao abrir
+        taskManager.cancelEdit();
         taskManager.render();
+        
         if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
     },
 
-    addTask: (e) => {
+    // Nova função para gerenciar o Submit (Criar ou Editar)
+    handleFormSubmit: (e) => {
         e.preventDefault();
+        const idEditing = document.getElementById('task-id-editing')?.value;
+        
+        if (idEditing) {
+            taskManager.updateTask(parseInt(idEditing));
+        } else {
+            taskManager.addTask();
+        }
+    },
+
+    addTask: () => {
         const select = document.getElementById('task-subject');
         const subjectId = select.value;
         const subCategory = document.getElementById('task-subcategory').value;
@@ -326,12 +326,75 @@ const taskManager = {
         });
         store.save();
         
-        document.getElementById('task-subcategory').value = '';
-        document.getElementById('task-obs').value = '';
+        // Limpa o formulário usando a função de cancelamento para resetar estados
+        taskManager.cancelEdit();
         
         taskManager.render();
         taskManager.checkOverdue();
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
+    },
+
+    // Nova função para Atualizar Tarefa Existente
+    updateTask: (id) => {
+        const taskIndex = store.tasks.findIndex(t => t.id === id);
+        if (taskIndex > -1) {
+            store.tasks[taskIndex].subjectId = document.getElementById('task-subject').value;
+            store.tasks[taskIndex].subCategory = document.getElementById('task-subcategory').value;
+            store.tasks[taskIndex].date = document.getElementById('task-date').value;
+            store.tasks[taskIndex].obs = document.getElementById('task-obs').value;
+            
+            store.save();
+            taskManager.cancelEdit(); // Sai do modo de edição
+            taskManager.render();
+            taskManager.checkOverdue();
+            toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
+        }
+    },
+
+    // Nova função para Iniciar Edição
+    startEdit: (id) => {
+        const task = store.tasks.find(t => t.id === id);
+        if (!task) return;
+
+        // Preenche campos
+        const hiddenId = document.getElementById('task-id-editing');
+        if(hiddenId) hiddenId.value = task.id;
+        
+        document.getElementById('task-subject').value = task.subjectId;
+        document.getElementById('task-subcategory').value = task.subCategory;
+        document.getElementById('task-date').value = task.date;
+        document.getElementById('task-obs').value = task.obs || '';
+
+        // Ajusta UI dos botões
+        const btnCancel = document.getElementById('btn-cancel-task');
+        if(btnCancel) btnCancel.classList.remove('hidden');
+        
+        const btnText = document.getElementById('btn-task-text');
+        if(btnText) btnText.innerText = 'Salvar Alterações';
+
+        // Feedback visual e scroll
+        const form = document.getElementById('form-task');
+        if(form) form.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('task-date').focus();
+    },
+
+    // Nova função para Cancelar/Limpar Edição
+    cancelEdit: () => {
+        const form = document.getElementById('form-task');
+        if(form) form.reset();
+        
+        const hiddenId = document.getElementById('task-id-editing');
+        if(hiddenId) hiddenId.value = '';
+        
+        const btnCancel = document.getElementById('btn-cancel-task');
+        if(btnCancel) btnCancel.classList.add('hidden');
+        
+        const btnText = document.getElementById('btn-task-text');
+        if(btnText) btnText.innerText = 'Adicionar Tarefa';
+        
+        // Define data padrão novamente
+        const dateInput = document.getElementById('task-date');
+        if(dateInput) dateInput.value = getLocalISODate();
     },
 
     checkOverdue: () => {
@@ -377,7 +440,7 @@ const taskManager = {
                  style="background-color: ${subject.color}; color: ${textColor}">
                 ${alertIcon}
                 
-                <div class="mt-1">
+                <div class="mt-1 flex flex-col gap-2">
                     <input type="checkbox" onclick="store.removeTask(${t.id})" 
                            class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current">
                 </div>
@@ -387,6 +450,14 @@ const taskManager = {
                         <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded">
                             ${subject.name}
                         </span>
+                        
+                        <!-- Botão de Editar (Novo) -->
+                        <button onclick="taskManager.startEdit(${t.id})" class="opacity-70 hover:opacity-100 hover:scale-110 transition-all ml-2" title="Editar Tarefa">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-1 mt-1">
                         <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate ? 'underline decoration-wavy' : ''}">
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                             ${formatDateDisplay(t.date)}

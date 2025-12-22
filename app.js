@@ -1,5 +1,3 @@
---- START OF FILE app.js ---
-
 /* --- START OF FILE app.js --- */
 
 /**

@@ -1,3 +1,5 @@
+--- START OF FILE app.js ---
+
 /* --- START OF FILE app.js --- */
 
 /**
@@ -739,27 +741,32 @@ const app = {
         toast.show('Arquivo gerado com horários empilhados.', 'info', '📅 Agenda Sincronizada');
     },
 
-    // --- NOVA FUNCIONALIDADE: MODO FÉRIAS / REAGENDAMENTO ---
+    // --- LÓGICA DE REAGENDAMENTO (Modo Férias / Ajuste de Atrasos) ---
     handleReschedule: () => {
         const dateInput = document.getElementById('input-reschedule-date');
-        const targetDateStr = dateInput ? dateInput.value : null;
+        const targetDateStr = dateInput.value;
+        const todayStr = getLocalISODate(); // Data de hoje (core.js)
         
         if (!targetDateStr) return toast.show('Selecione uma data para retomar os estudos.', 'warning');
 
-        // 1. Encontrar o estudo pendente mais antigo (o gargalo)
-        const pendingReviews = store.reviews.filter(r => r.status === 'PENDING');
+        // 1. Filtrar APENAS os itens que estão ESTRITAMENTE no passado (< Hoje)
+        // Isso impede que o estudo de 'hoje' entre na conta e seja movido desnecessariamente
+        const overdueReviews = store.reviews.filter(r => 
+            r.status === 'PENDING' && 
+            r.date < todayStr 
+        );
         
-        if (pendingReviews.length === 0) {
-            return toast.show('Você não possui revisões pendentes para reagendar.', 'info');
+        if (overdueReviews.length === 0) {
+            return toast.show('Você não possui revisões atrasadas (anteriores a hoje) para reagendar.', 'success');
         }
 
-        // Ordena para pegar o mais antigo (Ascendente)
-        pendingReviews.sort((a, b) => a.date.localeCompare(b.date));
-        const oldestDateStr = pendingReviews[0].date;
+        // Ordena para pegar o mais antigo (o início do atraso)
+        overdueReviews.sort((a, b) => a.date.localeCompare(b.date));
+        const oldestDateStr = overdueReviews[0].date;
 
-        // Validar lógica de tempo
+        // Validação básica: Não permitir voltar no tempo além do atraso
         if (targetDateStr < oldestDateStr) {
-            return toast.show(`A data de retomada deve ser posterior ou igual ao seu estudo mais atrasado (${formatDateDisplay(oldestDateStr)}).`, 'warning');
+            return toast.show('A data de retomada deve ser posterior ao atraso mais antigo.', 'warning');
         }
 
         // 2. Calcular a diferença em dias (Delta)
@@ -769,29 +776,30 @@ const app = {
         const diffTime = dateTarget - dateOldest;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays <= 0) {
-             return toast.show('Selecione uma data futura para empurrar o cronograma.', 'info');
+        if (diffDays === 0) {
+            return toast.show('As datas já coincidem.', 'info');
         }
 
-        // 3. Confirmação do Usuário
-        const confirmMsg = `MODO FÉRIAS / REAGENDAMENTO\n\nIsso moverá ${pendingReviews.length} estudos ${diffDays} dias para frente.\n\nO atraso de ${formatDateDisplay(oldestDateStr)} passará para ${formatDateDisplay(targetDateStr)}.\n\nDeseja confirmar?`;
+        // 3. Confirmação
+        const confirmMsg = `Isso moverá APENAS os ${overdueReviews.length} estudos atrasados.\n\nO item mais antigo (${formatDateDisplay(oldestDateStr)}) passará para ${formatDateDisplay(targetDateStr)}.\n\nOs estudos de hoje e futuros NÃO serão alterados.\nDeseja confirmar?`;
         
         if (!confirm(confirmMsg)) return;
 
-        // 4. Aplicação do Shift (Deslocamento)
+        // 4. Aplicação do Shift (COM FILTRO DE DATA)
         let moveCount = 0;
         store.reviews.forEach(r => {
-            if (r.status === 'PENDING') {
+            // A MÁGICA ESTÁ AQUI: Só move se for pendente E for data passada
+            if (r.status === 'PENDING' && r.date < todayStr) {
                 const current = new Date(r.date + 'T00:00:00');
                 current.setDate(current.getDate() + diffDays);
-                r.date = getLocalISODate(current); 
+                r.date = getLocalISODate(current);
                 moveCount++;
             }
         });
 
-        store.save(); // Salva e notifica a UI
+        store.save(); 
         ui.toggleModal('modal-heatmap', false);
-        toast.show(`${moveCount} estudos reagendados com sucesso!`, 'success', 'Cronograma Ajustado');
+        toast.show(`${moveCount} itens atrasados foram trazidos para frente.`, 'success', 'Cronograma Ajustado');
     }
 };
 
@@ -903,11 +911,10 @@ const ui = {
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
 
-        // --- ATUALIZAÇÃO (PRIORIDADE 3) ---
-        // Preenche automaticamente o campo de Reagendamento com a data de "Hoje"
+        // --- NOVO: Inicializa o input de reagendamento com Hoje ---
         const rescheduleInput = document.getElementById('input-reschedule-date');
         if(rescheduleInput) rescheduleInput.value = getLocalISODate();
-        // ----------------------------------
+        // ----------------------------------------------------------
 
         ui.renderHeatmap();
         ui.toggleModal('modal-heatmap', true);

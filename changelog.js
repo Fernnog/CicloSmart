@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.4', 
+        version: '1.1.5', 
         date: 'Hoje', 
+        changes: [
+            '🗓️ <strong>Reagendamento Inteligente (Modo Férias):</strong> Nova ferramenta localizada no menu Radar/Configurações. Ideal para retomar os estudos após dias parados ou imprevistos.',
+            '⏩ <strong>Cálculo de Delta (Ajuste em Lote):</strong> O sistema detecta automaticamente seu estudo mais atrasado e empurra todas as pendências passadas para a data de retomada escolhida, preservando matematicamente os intervalos originais entre as revisões.',
+            '🛡️ <strong>Proteção de Escopo:</strong> A lógica foi refinada para afetar <strong>apenas o passivo (atrasados)</strong>. Seus estudos agendados para "Hoje" e para o futuro permanecem intocados, evitando bagunçar seu planejamento atual.'
+        ] 
+    },
+    { 
+        version: '1.1.4', 
+        date: 'Anterior', 
         changes: [
             '🧠 <strong>Arquitetura Reativa (Observer):</strong> O núcleo do sistema agora é "autociente". Qualquer alteração nos dados atualiza automaticamente a interface (ícones e listas) sem recarregamentos manuais.',
             '📂 <strong>Ordenação Inteligente:</strong> O painel de Tarefas agora agrupa itens em <strong>🚨 Atrasados</strong>, <strong>⭐ Foco Hoje</strong> e <strong>📅 Futuro</strong>, facilitando a priorização.',
@@ -60,7 +69,7 @@ const changelogData = [
         date: 'Anterior', 
         changes: [
             '📅 <strong>Smart Export (Exportação 2.0):</strong> Nova central de agendamento. Defina datas (Hoje/Amanhã) e horário de início antes de exportar.',
-            '⏱️ <strong>Empilhamento Sequencial:</strong> O algoritmo agora organiza seus estudos um após o outro automaticamente, baseando-se na duração real de cada card.',
+            '⏱️ <strong>Empilhamento Sequencial:</strong> O algoritmo organiza seus estudos um após o outro automaticamente, baseando-se na duração real de cada card.',
             '☕ <strong>Modo Humano (Pausas):</strong> Nova opção para inserir automaticamente 10min de intervalo entre sessões de estudo no seu calendário.'
         ] 
     },

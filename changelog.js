@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.5', 
+        version: '1.1.6', 
         date: 'Hoje', 
+        changes: [
+            '🌊 <strong>Nivelamento em Cascata (Waterfall):</strong> O sistema de reagendamento agora possui inteligência anti-sobrecarga. Se mover seus atrasados lotar um dia específico, o excedente "transborda" automaticamente para o dia seguinte, criando uma agenda equilibrada.',
+            '🔗 <strong>Integridade SRS (Macro Shift):</strong> Agora, ao reagendar um estudo atrasado, o sistema move junto <strong>todas as revisões futuras</strong> conectadas a ele. Isso preserva a distância matemática entre as revisões (Curva de Esquecimento), garantindo que a metodologia não seja quebrada pelo atraso.',
+            '🛡️ <strong>Drift Protection:</strong> A lógica foi refinada para tratar grupos de estudo como "vagões de trem": se a locomotiva (estudo base) atrasa, todos os vagões (revisões) mantêm a distância relativa original.'
+        ] 
+    },
+    { 
+        version: '1.1.5', 
+        date: 'Anterior', 
         changes: [
             '🗓️ <strong>Reagendamento Inteligente (Modo Férias):</strong> Nova ferramenta localizada no menu Radar/Configurações. Ideal para retomar os estudos após dias parados ou imprevistos.',
             '⏩ <strong>Cálculo de Delta (Ajuste em Lote):</strong> O sistema detecta automaticamente seu estudo mais atrasado e empurra todas as pendências passadas para a data de retomada escolhida, preservando matematicamente os intervalos originais entre as revisões.',

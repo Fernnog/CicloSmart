@@ -739,65 +739,128 @@ const app = {
         toast.show('Arquivo gerado com horários empilhados.', 'info', '📅 Agenda Sincronizada');
     },
 
-    // --- LÓGICA DE REAGENDAMENTO (Modo Férias / Ajuste de Atrasos) ---
+    // --- LÓGICA DE REAGENDAMENTO V2 (SRS INTEGRITY + WATERFALL) ---
+    // Substituição completa com Macro Shift e Nivelamento de Carga
     handleReschedule: () => {
         const dateInput = document.getElementById('input-reschedule-date');
         const targetDateStr = dateInput.value;
-        const todayStr = getLocalISODate(); // Data de hoje (core.js)
+        const todayStr = getLocalISODate();
         
         if (!targetDateStr) return toast.show('Selecione uma data para retomar os estudos.', 'warning');
 
-        // 1. Filtrar APENAS os itens que estão ESTRITAMENTE no passado (< Hoje)
-        // Isso impede que o estudo de 'hoje' entre na conta e seja movido desnecessariamente
+        // 1. Identificar o Delta (Atraso)
+        // Filtra pendências estritamente no passado
         const overdueReviews = store.reviews.filter(r => 
             r.status === 'PENDING' && 
             r.date < todayStr 
         );
         
         if (overdueReviews.length === 0) {
-            return toast.show('Você não possui revisões atrasadas (anteriores a hoje) para reagendar.', 'success');
+            return toast.show('Você não possui revisões atrasadas para reagendar.', 'success');
         }
 
-        // Ordena para pegar o mais antigo (o início do atraso)
+        // Ordena para pegar o atraso mais antigo (Marco Zero)
         overdueReviews.sort((a, b) => a.date.localeCompare(b.date));
         const oldestDateStr = overdueReviews[0].date;
 
-        // Validação básica: Não permitir voltar no tempo além do atraso
         if (targetDateStr < oldestDateStr) {
             return toast.show('A data de retomada deve ser posterior ao atraso mais antigo.', 'warning');
         }
 
-        // 2. Calcular a diferença em dias (Delta)
         const dateOldest = new Date(oldestDateStr + 'T00:00:00');
         const dateTarget = new Date(targetDateStr + 'T00:00:00');
-        
         const diffTime = dateTarget - dateOldest;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays === 0) {
-            return toast.show('As datas já coincidem.', 'info');
-        }
+        if (diffDays === 0) return toast.show('As datas já coincidem.', 'info');
 
-        // 3. Confirmação
-        const confirmMsg = `Isso moverá APENAS os ${overdueReviews.length} estudos atrasados.\n\nO item mais antigo (${formatDateDisplay(oldestDateStr)}) passará para ${formatDateDisplay(targetDateStr)}.\n\nOs estudos de hoje e futuros NÃO serão alterados.\nDeseja confirmar?`;
+        // Confirmação com contexto de SRS
+        const confirmMsg = `⚠️ REAGENDAMENTO INTELIGENTE\n\n1. O sistema detectou um atraso de ${diffDays} dias.\n2. Todos os estudos atrasados E suas revisões futuras conectadas serão movidos para frente para preservar a curva de memória.\n3. Se houver sobrecarga, o excedente será distribuído nos dias seguintes.\n\nDeseja aplicar?`;
         
         if (!confirm(confirmMsg)) return;
 
-        // 4. Aplicação do Shift (COM FILTRO DE DATA)
-        let moveCount = 0;
+        // 2. FASE 1: MACRO SHIFT (Preservação de SRS)
+        // Identificar quais "Batch IDs" (Famílias) foram afetados pelo atraso
+        const affectedBatches = new Set(overdueReviews.map(r => r.batchId));
+        
+        let shiftCount = 0;
+        
         store.reviews.forEach(r => {
-            // A MÁGICA ESTÁ AQUI: Só move se for pendente E for data passada
-            if (r.status === 'PENDING' && r.date < todayStr) {
+            // Se o item pertence a um lote atrasado e ainda não foi feito, ele deve se mover
+            // Isso move o atrasado E as revisões futuras desse mesmo assunto
+            if (r.status === 'PENDING' && r.batchId && affectedBatches.has(r.batchId)) {
                 const current = new Date(r.date + 'T00:00:00');
                 current.setDate(current.getDate() + diffDays);
                 r.date = getLocalISODate(current);
-                moveCount++;
+                shiftCount++;
+            }
+            // Fallback para itens órfãos (sem batchId, legado) que estão atrasados
+            else if (r.status === 'PENDING' && !r.batchId && r.date < todayStr) {
+                const current = new Date(r.date + 'T00:00:00');
+                current.setDate(current.getDate() + diffDays);
+                r.date = getLocalISODate(current);
+                shiftCount++;
             }
         });
 
+        // 3. FASE 2: WATERFALL (Nivelamento de Carga)
+        // Agora que tudo foi movido, verificamos se algum dia explodiu a capacidade
+        let dateCursor = new Date(targetDateStr + 'T00:00:00');
+        const safetyLimit = 90; // Analisa até 3 meses à frente para dissipar a onda
+        let daysProcessed = 0;
+        let waterfallCount = 0;
+        let hasChanges = true;
+
+        // Função auxiliar para carga
+        const getDayLoad = (dStr) => store.reviews
+            .filter(r => r.date === dStr && r.status === 'PENDING')
+            .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+
+        while (hasChanges && daysProcessed < safetyLimit) {
+            hasChanges = false;
+            const cursorStr = getLocalISODate(dateCursor);
+            const dayLoad = getDayLoad(cursorStr);
+            const capacity = store.capacity || 240;
+
+            if (dayLoad > capacity) {
+                let overflowNeeded = dayLoad - capacity;
+                
+                // Pega itens do dia, priorizando jogar para frente os de ciclos mais avançados (revisões distantes)
+                // ou simplesmente os últimos da lista para manter FIFO
+                const itemsOnDay = store.reviews
+                    .filter(r => r.date === cursorStr && r.status === 'PENDING')
+                    .sort((a, b) => b.cycleIndex - a.cycleIndex); // Joga as revisões finais para frente primeiro
+                
+                const nextDay = new Date(dateCursor);
+                nextDay.setDate(nextDay.getDate() + 1);
+                const nextDayStr = getLocalISODate(nextDay);
+
+                for (let item of itemsOnDay) {
+                    if (overflowNeeded <= 0) break;
+                    
+                    item.date = nextDayStr;
+                    overflowNeeded -= item.time;
+                    waterfallCount++;
+                    hasChanges = true; // Força o loop a continuar verificando o efeito cascata
+                }
+            }
+            
+            dateCursor.setDate(dateCursor.getDate() + 1);
+            daysProcessed++;
+        }
+
         store.save(); 
         ui.toggleModal('modal-heatmap', false);
-        toast.show(`${moveCount} itens atrasados foram trazidos para frente.`, 'success', 'Cronograma Ajustado');
+        
+        const details = waterfallCount > 0 
+            ? ` (${waterfallCount} itens redistribuídos por sobrecarga)` 
+            : '';
+            
+        toast.show(
+            `Cronograma realinhado com sucesso! ${shiftCount} cartões ajustados${details}.`, 
+            'neuro', 
+            'SRS Preservado & Carga Nivelada'
+        );
     }
 };
 

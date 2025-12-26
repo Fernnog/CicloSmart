@@ -1,7 +1,7 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.2.0 - Auto-Shift & Integrity Unified)
+ * CICLOSMART APP CONTROLLER (v1.1.4 - Reactive Architecture)
  * Contém: Lógica de Aplicação, UI Renderer, Batch Logic e DOM Injection.
  */
 
@@ -16,11 +16,14 @@ const app = {
     init: () => {
         store.load();
         
-        // --- ARQUITETURA REATIVA ---
-        store.subscribe(taskManager.checkOverdue); 
-        store.subscribe(taskManager.render);       
+        // --- ARQUITETURA REATIVA (OBSERVER v1.1.4) ---
+        // Registra os componentes que devem ser atualizados automaticamente
+        // sempre que os dados no store forem modificados/salvos.
+        store.subscribe(taskManager.checkOverdue); // Atualiza o badge vermelho de atraso
+        store.subscribe(taskManager.render);       // Atualiza a lista de tarefas (Smart Grouping)
+        // ---------------------------------------------
 
-        // --- MIGRAÇÃO DE DADOS LEGADOS ---
+        // --- AUTO-REPARO DE DADOS LEGADOS ---
         let migrationCount = 0;
         if (store.reviews && store.reviews.length > 0) {
             store.reviews.forEach(r => {
@@ -30,10 +33,12 @@ const app = {
                 }
             });
             if (migrationCount > 0) {
-                console.log(`Migrado: ${migrationCount} estudos antigos.`);
+                console.log(`Migrado: ${migrationCount} estudos antigos para o novo formato Connected Studies.`);
                 store.save();
+                setTimeout(() => toast.show('Sistema atualizado para suportar Edição/Exclusão em Lote.', 'info', 'Upgrade Realizado'), 2000);
             }
         }
+        // ------------------------------------
 
         app.initVersionControl();
         app.checkSmartCycle();
@@ -61,62 +66,84 @@ const app = {
 
         ui.switchTab('today');
 
-        // --- DIAGNÓSTICO AUTOMÁTICO AO INICIAR ---
+        // --- PRIORIDADE 1 e 2: VERIFICAÇÃO DE INTEGRIDADE ---
+        // Roda após um breve delay para garantir que a UI e dados estejam prontos
         setTimeout(() => app.checkCycleIntegrity(), 1000);
+        // ----------------------------------------------------
     },
 
-    // --- AUTENTICAÇÃO (MANTIDA INTEGRALMENTE) ---
+    // --- NOVA FUNÇÃO DE AUTENTICAÇÃO (RESPONSIVA & EVENT-DRIVEN) ---
     initAuth: () => {
+        // Função interna que realmente liga os botões e listeners
         const startFirebaseLogic = () => {
-            console.log("[CicloSmart Auth] Iniciando...");
-            if (!window.fireMethods || !window.fireAuth) return;
+            console.log("[CicloSmart Auth] Iniciando ouvintes...");
+            
+            // Verificação de segurança extra
+            if (!window.fireMethods || !window.fireAuth) {
+                console.error("[CicloSmart Auth] Erro crítico: Firebase ainda indefinido.");
+                return;
+            }
 
             const { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, ref, onValue, get } = window.fireMethods;
             const auth = window.fireAuth;
             const db = window.fireDb;
 
+            // Elementos UI NOVOS
             const btnUser = document.getElementById('user-menu-btn');
             const popover = document.getElementById('auth-popover');
             const viewLogin = document.getElementById('auth-view-login');
             const viewUser = document.getElementById('auth-view-user');
+            
+            // Inputs do Popover
             const txtEmail = document.getElementById('popover-email');
             const txtPass = document.getElementById('popover-pass');
             const lblUserEmail = document.getElementById('popover-user-email');
 
+            // Toggle do Popover (Abrir/Fechar)
             if(btnUser) {
                 btnUser.addEventListener('click', (e) => {
-                    e.stopPropagation(); 
+                    e.stopPropagation(); // Impede fechar ao clicar no botão
                     popover.classList.toggle('hidden');
                 });
             }
 
+            // Fechar Popover ao clicar fora
             document.addEventListener('click', (e) => {
                 if(popover && !popover.classList.contains('hidden') && !popover.contains(e.target) && e.target !== btnUser) {
                     popover.classList.add('hidden');
                 }
             });
 
+            // Listener de Estado (Logado/Deslogado)
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     store.currentUser = user;
+                    
+                    // 1. VISUAL DO BOTÃO: LOGADO (Borda Verde + Ícone Ativo)
                     if(btnUser) {
                         btnUser.classList.remove('border-slate-300', 'text-slate-400');
                         btnUser.classList.add('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
+                        // Opcional: Mostrar bolinha de status
                         const dot = document.getElementById('user-status-dot');
                         if(dot) {
                             dot.classList.remove('hidden', 'bg-slate-400');
                             dot.classList.add('bg-emerald-500');
                         }
                     }
+
+                    // 2. CONTEÚDO DO POPOVER
                     if(viewLogin) viewLogin.classList.add('hidden');
                     if(viewUser) viewUser.classList.remove('hidden');
                     if(lblUserEmail) lblUserEmail.innerText = user.email;
 
+                    // Sincronização de dados (Mantém lógica original)
                     const userRef = ref(db, 'users/' + user.uid);
                     get(userRef).then((snapshot) => {
                         if (snapshot.exists()) {
                             store.load(snapshot.val());
                             toast.show('Sincronizado.', 'success');
+                            // Re-executa verificação de integridade após sync
+                            setTimeout(() => app.checkCycleIntegrity(), 1500);
                         } else {
                             store.save(); 
                         }
@@ -128,42 +155,55 @@ const app = {
 
                 } else {
                     store.currentUser = null;
+                    
+                    // 1. VISUAL DO BOTÃO: DESLOGADO (Cinza Padrão)
                     if(btnUser) {
                         btnUser.classList.add('border-slate-300', 'text-slate-400');
                         btnUser.classList.remove('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
+                         // Opcional
                         const dot = document.getElementById('user-status-dot');
-                        if(dot) dot.classList.add('hidden');
+                        if(dot) {
+                            dot.classList.add('hidden');
+                        }
                     }
+
+                    // 2. CONTEÚDO DO POPOVER
                     if(viewLogin) viewLogin.classList.remove('hidden');
                     if(viewUser) viewUser.classList.add('hidden');
+
                     store.load(null); 
                 }
             });
 
+            // Evento Login (Formulário do Popover)
             const formPopover = document.getElementById('auth-form-popover');
             if(formPopover) {
                 formPopover.addEventListener('submit', (e) => {
                     e.preventDefault();
                     signInWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
-                        .then(() => popover.classList.add('hidden'))
+                        .then(() => {
+                            popover.classList.add('hidden'); // Fecha popover ao logar
+                        })
                         .catch((error) => toast.show('Erro: ' + error.message, 'error'));
                 });
             }
             
+            // Evento Logout
             const btnLogout = document.getElementById('btn-logout-popover');
             if(btnLogout) {
                 btnLogout.addEventListener('click', () => {
                     signOut(auth).then(() => {
-                        popover.classList.add('hidden');
+                        popover.classList.add('hidden'); // Fecha popover ao sair
                         toast.show('Desconectado.', 'info');
                     });
                 });
             }
                 
+            // Evento Cadastro
             const btnSignup = document.getElementById('btn-signup-popover');
             if(btnSignup) {
                 btnSignup.addEventListener('click', (e) => {
-                    e.preventDefault();
+                    e.preventDefault(); // Evita refresh
                     if(txtEmail.value && txtPass.value) {
                         createUserWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
                             .then(() => {
@@ -178,18 +218,22 @@ const app = {
             }
         };
 
+        // LÓGICA DE ESPERA (CORREÇÃO DE RACE CONDITION)
         if (window.fireMethods && window.fireAuth) {
             startFirebaseLogic();
         } else {
+            console.log("[CicloSmart Auth] Aguardando Firebase carregar...");
             window.addEventListener('firebase-ready', startFirebaseLogic);
         }
     },
+    // -----------------------------------------------------------
 
     initVersionControl: () => {
         if (typeof changelogData !== 'undefined' && changelogData.length > 0) {
             const latest = changelogData[0].version;
             const btn = document.getElementById('app-version-btn');
             if (btn) btn.innerText = `v${latest}`;
+            document.title = `CicloSmart v${latest} | Plataforma de Estudos`;
         }
     },
 
@@ -207,48 +251,75 @@ const app = {
             if (store.cycleState !== 'DEFENSE') {
                 store.cycleState = 'DEFENSE';
                 store.save();
-                setTimeout(() => toast.show('Modo Defesa Ativo (Consolidação).', 'neuro'), 800);
+                setTimeout(() => toast.show(
+                    'Como você estudou matéria nova ontem, hoje ativamos o Modo Defesa para consolidação.', 
+                    'neuro', 
+                    '🔄 Smart Cycle: Defesa Ativa'
+                ), 800);
             }
         } 
         else if (diffDays >= 2) {
             if (store.cycleState !== 'ATTACK') {
                 store.cycleState = 'ATTACK';
                 store.save();
-                setTimeout(() => toast.show('Modo Ataque Liberado!', 'neuro'), 800);
+                setTimeout(() => toast.show(
+                    'Após o descanso, seu ciclo reiniciou. Modo Ataque liberado!', 
+                    'neuro', 
+                    '⚔️ Bateria Recarregada'
+                ), 800);
             }
         }
     },
 
     setProfile: (mode) => {
         store.profile = mode;
-        if (mode === 'pendular') app.checkSmartCycle();
+        if (mode === 'pendular') {
+            app.checkSmartCycle();
+        }
         store.save();
         app.updateProfileUI(mode);
         ui.updateModeUI();
-        toast.show('Perfil Atualizado.', 'info');
+        
+        const msg = mode === 'pendular' 
+            ? 'Teto de 90min e Ciclo Inteligente ativados.' 
+            : 'Modo Integrado sem limites rígidos.';
+        
+        toast.show(msg, 'info', 'Perfil Atualizado');
     },
 
     toggleMode: () => {
         if (store.profile !== 'pendular') {
-            toast.show('Ative o perfil Pendular no Radar para usar este recurso.', 'warning');
+            toast.show('Alterne para o perfil Pendular nas configurações para usar este modo.', 'warning', 'Ação Inválida');
             return;
         }
+
         store.cycleState = store.cycleState === 'ATTACK' ? 'DEFENSE' : 'ATTACK';
         store.save();
         ui.updateModeUI();
+        
+        const msg = store.cycleState === 'ATTACK' 
+            ? 'Matéria nova liberada manualmente!' 
+            : 'Planejamento futuro habilitado manualmente.';
+        
         const title = store.cycleState === 'ATTACK' ? '⚔️ Modo ATAQUE' : '🛡️ Modo DEFESA';
-        toast.show(`Alternado manualmente para ${title}`, 'warning'); 
+        
+        toast.show(msg, 'warning', title); 
     },
 
     updateCycleStart: (dateStr) => {
         if(dateStr) {
             store.cycleStartDate = dateStr;
             store.save();
-            toast.show('Novo início de ciclo definido.', 'success');
+            toast.show('Seus novos cards seguirão esta referência.', 'success', '📅 Ciclo Ancorado');
+            
+            // Re-verifica integridade ao mudar a data de início
+            setTimeout(() => app.checkCycleIntegrity(), 500);
         }
     },
 
-    handleNewStudyClick: () => ui.openNewStudyModal(),
+    handleNewStudyClick: () => {
+        ui.openNewStudyModal();
+    },
 
     updateProfileUI: (mode) => {
         const timeInput = document.getElementById('input-study-time');
@@ -266,6 +337,122 @@ const app = {
         }
     },
 
+    // --- PRIORIDADE 3: CÁLCULO ROBUSTO DO CICLO ---
+    calculateCycleIndex: (targetDateStr) => {
+        if (!store.cycleStartDate) return 1;
+        
+        // 1. Coleta todas as datas únicas de estudos NOVOS ativos no ciclo atual
+        const activeDays = new Set(store.reviews
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
+            .map(r => r.date)
+        );
+        
+        // 2. Adiciona a data alvo ao conjunto (para garantir que ela entre na ordenação)
+        activeDays.add(targetDateStr);
+        
+        // 3. Transforma em array e ordena cronologicamente
+        const sortedUniqueDays = Array.from(activeDays).sort();
+        
+        // 4. O índice da data alvo (+1) é o seu número no ciclo real
+        return sortedUniqueDays.indexOf(targetDateStr) + 1;
+    },
+    // ------------------------------------------------
+
+    // --- PRIORIDADE 1: VERIFICADOR DE INTEGRIDADE (DIAGNÓSTICO) ---
+    checkCycleIntegrity: () => {
+        if (!store.cycleStartDate) return;
+
+        // Pega todos os estudos NOVOS do ciclo atual ordenados por data
+        const cycleStudies = store.reviews
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        let isBroken = false;
+        let conflictListHtml = '';
+        let uniqueDateCounter = 0;
+        let lastDate = null;
+
+        // Simula a contagem correta
+        cycleStudies.forEach(study => {
+            if (study.date !== lastDate) {
+                uniqueDateCounter++;
+                lastDate = study.date;
+            }
+            
+            // Se o número gravado for diferente do contador cronológico
+            if (study.cycleIndex !== uniqueDateCounter) {
+                isBroken = true;
+                conflictListHtml += `
+                    <div class="p-3 flex justify-between items-center bg-white border-b border-slate-50 last:border-0">
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${formatDateDisplay(study.date)}</div>
+                            <div class="text-xs font-bold text-slate-800">${study.subject}</div>
+                            <div class="text-[10px] text-slate-500 truncate w-40 italic">${study.topic}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-red-400 font-bold line-through text-xs opacity-70">#${study.cycleIndex}</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i>
+                            <span class="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 shadow-sm">#${uniqueDateCounter}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        if (isBroken) {
+            const listEl = document.getElementById('repair-list');
+            if(listEl) listEl.innerHTML = conflictListHtml;
+            
+            ui.toggleModal('modal-repair', true);
+            toast.show('Inconsistência na numeração do ciclo detectada.', 'warning', 'Diagnóstico de Sistema');
+            if(window.lucide) lucide.createIcons();
+        }
+    },
+    // -----------------------------------------------------------------
+
+    // --- PRIORIDADE 2: EXECUTOR DO REPARO (CORREÇÃO EM LOTE) ---
+    runCycleRepair: () => {
+        if (!store.cycleStartDate) return;
+
+        const cycleStudies = store.reviews
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        let uniqueDateCounter = 0;
+        let lastDate = null;
+        let changesCount = 0;
+
+        cycleStudies.forEach(study => {
+            if (study.date !== lastDate) {
+                uniqueDateCounter++;
+                lastDate = study.date;
+            }
+
+            // Se precisa corrigir
+            if (study.cycleIndex !== uniqueDateCounter) {
+                const correctIndex = uniqueDateCounter;
+                
+                // Atualiza o card principal E todos os irmãos (revisões) desse lote
+                store.reviews.forEach(r => {
+                    if (r.batchId === study.batchId) {
+                        r.cycleIndex = correctIndex;
+                    }
+                });
+                changesCount++;
+            }
+        });
+
+        if (changesCount > 0) {
+            store.save();
+            ui.render(); // Atualiza a tela
+            ui.toggleModal('modal-repair', false);
+            toast.show(`Ciclo reparado! ${changesCount} estudos reordenados cronologicamente.`, 'success', 'Integridade Restaurada');
+        } else {
+            ui.toggleModal('modal-repair', false);
+        }
+    },
+    // -------------------------------------------------------------
+
     handleNewEntry: (e) => {
         e.preventDefault();
         
@@ -280,25 +467,31 @@ const app = {
         const todayStr = getLocalISODate();
 
         if (store.profile === 'pendular' && studyTime > 90) {
-            return toast.show('O tempo limite para estudo neste modo é 90 minutos.', 'warning');
+            return toast.show(
+                'O tempo limite para estudo de qualidade neste modo é 90 minutos.', 
+                'warning', 
+                '⚠️ Atenção: Teto Cognitivo'
+            );
         }
 
         if (store.profile === 'pendular' && store.cycleState === 'DEFENSE' && selectedDateStr === todayStr) {
-            return toast.show('Hoje é dia de Defesa. Agende para amanhã.', 'error');
+            return toast.show(
+                'Hoje é dia exclusivo de consolidação. Para manter a qualidade, agende novos conteúdos a partir de amanhã.', 
+                'error', 
+                '🛡️ Protocolo de Escudo Ativo'
+            );
         }
 
         pendingStudyData = {
             subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target
         };
 
-        // --- CÁLCULO UNIFICADO (COM LOGS DE DEBUG) ---
+        // --- PRIORIDADE 3: USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
         let projectedDay = 1;
         if (store.cycleStartDate) {
-            // Chama a autoridade central de cálculo
-            projectedDay = app.calculateCycleIndex(selectedDateStr);
-            console.log(`[UI] Prévia calculada: Dia #${projectedDay} para ${selectedDateStr}`);
+             projectedDay = app.calculateCycleIndex(selectedDateStr);
         }
-        // ---------------------------------------------
+        // ------------------------------------------------------
 
         const descEl = document.getElementById('cycle-option-keep-desc');
         if(descEl) descEl.innerText = `Será registrado como Dia #${projectedDay}`;
@@ -312,7 +505,11 @@ const app = {
         if (startNew) {
             store.cycleStartDate = pendingStudyData.selectedDateStr;
             store.save();
-            toast.show('Ciclo reiniciado! Dia #1 definido.', 'neuro');
+            toast.show(
+                'Ciclo reiniciado! Este estudo foi definido como o Dia #1.', 
+                'neuro', 
+                '🚩 Novo Ciclo Iniciado'
+            );
         }
 
         app.processStudyEntry(pendingStudyData);
@@ -327,6 +524,8 @@ const app = {
     processStudyEntry: (data) => {
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
+
+        // GERAÇÃO DE ID DE LOTE (NOVO) - Conecta todas as revisões deste estudo
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
 
         if (!store.cycleStartDate) {
@@ -338,41 +537,25 @@ const app = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // --- CÁLCULO UNIFICADO COM LÓGICA DE SHIFT (EMPURRÃO) ---
-        // 1. Calcula onde o novo estudo deve entrar
+        // --- PRIORIDADE 3: USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
         const finalCycleIndex = app.calculateCycleIndex(selectedDateStr);
-        console.log(`[SAVE] Salvando estudo com Ciclo Index: #${finalCycleIndex}`);
-
-        // 2. VERIFICA E EMPURRA ESTUDOS FUTUROS (CORREÇÃO V1.2.0)
-        // Se eu vou inserir o #3 hoje, e já existe um #3 no futuro, o futuro deve virar #4.
-        const cyclesToShift = store.reviews.filter(r => 
-            r.type === 'NOVO' && 
-            r.date >= store.cycleStartDate && 
-            r.cycleIndex >= finalCycleIndex // Pega quem está ocupando a vaga ou está na frente
-        );
-
-        if (cyclesToShift.length > 0) {
-            // Cria um Set dos batchIds afetados para mover o ciclo completo (revisões filhas)
-            const affectedBatches = new Set(cyclesToShift.map(r => r.batchId));
-            console.log(`[SHIFT] Detectado conflito de numeração. Movendo ${affectedBatches.size} ciclos futuros para frente.`);
-            
-            store.reviews.forEach(r => {
-                // Se o estudo faz parte de um lote que precisa ser empurrado
-                if (affectedBatches.has(r.batchId)) {
-                    r.cycleIndex += 1; // Incrementa o número do ciclo
-                }
-            });
-        }
-        // -----------------------------------------------------------
+        // ------------------------------------------------------
 
         const newReviews = [];
         let blocker = null;
 
+        // CARD ORIGINAL (Com batchId)
         const acquisitionEntry = {
             id: Date.now() + Math.random(), 
-            subject: subjectName, color: subjectColor, topic: topic, time: studyTime,
-            date: selectedDateStr, type: 'NOVO', status: 'PENDING',
-            cycleIndex: finalCycleIndex, batchId: batchId 
+            subject: subjectName,
+            color: subjectColor,
+            topic: topic,
+            time: studyTime,
+            date: selectedDateStr, 
+            type: 'NOVO', 
+            status: 'PENDING',
+            cycleIndex: finalCycleIndex,
+            batchId: batchId // Vínculo
         };
         newReviews.push(acquisitionEntry);
 
@@ -389,26 +572,49 @@ const app = {
             
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
-            const existingLoad = store.reviews.filter(r => r.date === isoDate).reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+            const existingLoad = store.reviews
+                .filter(r => r.date === isoDate) 
+                .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
-            if (existingLoad + estimatedTime > reviewLimitMinutes) {
-                blocker = { date: formatDateDisplay(isoDate), load: existingLoad + estimatedTime };
+            const projectedLoad = existingLoad + estimatedTime;
+
+            if (projectedLoad > reviewLimitMinutes) {
+                blocker = {
+                    date: formatDateDisplay(isoDate),
+                    load: projectedLoad,
+                    limit: reviewLimitMinutes,
+                    interval: effectiveInterval
+                };
                 break; 
             }
 
             let typeLabel = interval === 1 ? '24h' : interval + 'd';
-            if (store.profile === 'pendular') typeLabel = interval === 1 ? 'Defesa' : effectiveInterval + 'd+'; 
+            if (store.profile === 'pendular') {
+                typeLabel = interval === 1 ? 'Defesa' : effectiveInterval + 'd+'; 
+            }
 
             newReviews.push({
                 id: Date.now() + Math.random() + effectiveInterval,
-                subject: subjectName, color: subjectColor, topic: topic, time: estimatedTime,
-                date: isoDate, type: typeLabel, status: 'PENDING',
-                cycleIndex: finalCycleIndex, batchId: batchId
+                subject: subjectName,
+                color: subjectColor,
+                topic: topic,
+                time: estimatedTime,
+                date: isoDate,
+                type: typeLabel,
+                status: 'PENDING',
+                cycleIndex: finalCycleIndex,
+                batchId: batchId // Vínculo
             });
         }
 
         if (blocker) {
-            toast.show(`Bloqueio: Dia ${blocker.date} excederia o limite (40%).`, 'error');
+            toast.show(
+                `Adicionar este estudo faria o dia ${blocker.date} exceder o limite de revisões (40%). Tente reduzir a carga inicial.`, 
+                'error', 
+                '🚫 Bloqueio de Segurança'
+            );
+            
+            if(window.lucide) lucide.createIcons();
             return; 
         }
 
@@ -419,9 +625,23 @@ const app = {
 
         store.addReviews(newReviews);
         
+        const msg = selectedDateStr < todayStr 
+            ? 'Estudo retroativo registrado.'
+            : selectedDateStr > todayStr
+                ? 'Agendamento futuro realizado com sucesso.'
+                : 'Estudo registrado e primeiras revisões calculadas.';
+        
         const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
-        toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada (Dia ${indexMsg})`);
+
+        toast.show(
+            `${msg} O algoritmo cuidará do resto.`, 
+            'neuro', 
+            `🧠 Trilha de Memória Criada (Dia ${indexMsg})`
+        );
     },
+
+    // FUNÇÕES DE BACKUP (downloadBackup e restoreData) REMOVIDAS
+    // A persistência agora é gerenciada automaticamente pelo Firebase no store.save()
 
     updateCapacitySetting: (val) => {
         const min = parseInt(val);
@@ -436,29 +656,44 @@ const app = {
     addSubjectUI: () => {
         const nameInput = document.getElementById('new-subj-name');
         const colorInput = document.getElementById('new-subj-color');
+        
         if (nameInput.value.trim()) {
             store.addSubject(nameInput.value.trim(), colorInput.value);
             nameInput.value = ''; 
+        } else {
+            alert("Digite o nome da matéria.");
         }
     },
 
+    // --- LÓGICA DE EDIÇÃO EM LOTE ---
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
+
+        // Tenta edição de Tópico primeiro
         const newTopic = prompt("Editar Tópico (Nome):", r.topic);
         
         if (newTopic !== null && newTopic !== r.topic) {
+            // Verifica se é lote
             const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
             const isBatch = siblings.length > 1;
-            
-            if (isBatch && confirm(`Renomear os ${siblings.length} cards conectados?`)) {
+            let updateAll = false;
+
+            if (isBatch) {
+                updateAll = confirm(`Este estudo tem ${siblings.length} revisões conectadas.\nDeseja renomear TODAS para "${newTopic}"?\n\n[OK] Sim, corrigir tudo.\n[Cancelar] Não, apenas este card.`);
+            }
+
+            if (updateAll) {
+                // Atualiza em lote
                 store.updateBatchTopic(r.batchId, newTopic);
-                toast.show('Atualizado em lote.', 'success');
+                toast.show(`Tópico corrigido em ${siblings.length} cards.`, 'success', 'Correção em Lote');
             } else {
+                // Atualiza individual
                 store.updateReview(id, newTopic, r.time);
             }
         } 
         else if (newTopic === r.topic) {
+            // Se usuário não mudou o nome (ou cancelou), oferece mudar o tempo
             const newTime = prompt("Editar Tempo (min):", r.time);
             if (newTime !== null && !isNaN(newTime) && newTime !== r.time) {
                 store.updateReview(id, r.topic, newTime);
@@ -466,38 +701,56 @@ const app = {
         }
     },
 
+    // --- LÓGICA DE EXCLUSÃO INTELIGENTE (Smart Delete) ---
     confirmDelete: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
 
+        // Verifica se existem irmãos (mesmo batchId)
         const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
         const isBatch = siblings.length > 1;
 
         if (isBatch) {
-            if (confirm(`Excluir CICLO COMPLETO (${siblings.length} itens)?\n[Cancelar] para excluir só este.`)) {
+            // Pergunta Inteligente
+            const deleteAll = confirm(
+                `🗑️ EXCLUSÃO EM LOTE\n\nEste item faz parte de um ciclo com ${siblings.length} cards (Ataque + Revisões).\n\n[OK] Sim, apagar TODO o ciclo.\n[Cancelar] Não, apagar apenas este card.`
+            );
+
+            if (deleteAll) {
                 store.deleteBatch(r.batchId);
-                toast.show('Ciclo removido.', 'error');
-            } else if(confirm("Apagar APENAS este card?")) {
-                store.deleteReview(id);
-                toast.show('Item removido.', 'info');
+                toast.show(`Ciclo completo removido (${siblings.length} itens).`, 'error', 'Limpeza em Lote');
+            } else {
+                // Se clicou em Cancelar, confirma se quer apagar só este (Segurança extra)
+                if(confirm("Confirma a exclusão APENAS deste card específico?")) {
+                    store.deleteReview(id);
+                    toast.show('Item removido individualmente.', 'info');
+                }
             }
         } else {
-            if(confirm("Excluir revisão?")) {
+            // Item único (legado ou orfão)
+            if(confirm("Tem certeza que deseja excluir esta revisão?")) {
                 store.deleteReview(id);
-                toast.show('Removido.', 'info');
+                toast.show('Estudo removido.', 'info');
             }
         }
     },
+    // -----------------------------------------------------
+
+    // --- LÓGICA DE EXPORTAÇÃO ICS ---
 
     openExportUI: () => {
         const today = getLocalISODate();
         const startInput = document.getElementById('export-start');
         const endInput = document.getElementById('export-end');
+
         if(startInput) startInput.value = today;
+        
         if(endInput) {
-            const nextMonth = new Date(); nextMonth.setDate(nextMonth.getDate() + 30);
+            const nextMonth = new Date();
+            nextMonth.setDate(nextMonth.getDate() + 30);
             endInput.value = getLocalISODate(nextMonth);
         }
+        
         ui.toggleModal('modal-export', true);
     },
 
@@ -505,16 +758,22 @@ const app = {
         const today = new Date();
         const startInput = document.getElementById('export-start');
         const endInput = document.getElementById('export-end');
+        
         if(!startInput || !endInput) return;
 
         if (type === 'today') {
-            const str = getLocalISODate(today); startInput.value = str; endInput.value = str;
+            const str = getLocalISODate(today);
+            startInput.value = str;
+            endInput.value = str;
         } else if (type === 'tomorrow') {
             today.setDate(today.getDate() + 1);
-            const str = getLocalISODate(today); startInput.value = str; endInput.value = str;
+            const str = getLocalISODate(today);
+            startInput.value = str;
+            endInput.value = str;
         } else if (type === 'all') {
             startInput.value = getLocalISODate(new Date()); 
-            endInput.value = store.reviews.reduce((max, r) => r.date > max ? r.date : max, getLocalISODate());
+            const lastReview = store.reviews.reduce((max, r) => r.date > max ? r.date : max, getLocalISODate());
+            endInput.value = lastReview;
         }
     },
 
@@ -526,153 +785,195 @@ const app = {
 
         if (!startStr || !endStr || !startTimeStr) return alert("Preencha todos os campos.");
 
-        const validReviews = store.reviews.filter(r => r.status === 'PENDING' && r.date >= startStr && r.date <= endStr).sort((a, b) => a.date.localeCompare(b.date));
-        if (validReviews.length === 0) return alert("Nada para exportar.");
+        const validReviews = store.reviews.filter(r => 
+            r.status === 'PENDING' && 
+            r.date >= startStr && 
+            r.date <= endStr
+        ).sort((a, b) => a.date.localeCompare(b.date));
 
-        let icsLines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v2//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+        if (validReviews.length === 0) return alert("Nenhuma revisão encontrada neste período.");
+
+        let icsLines = [
+            "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CicloSmart//v2//PT-BR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"
+        ];
+
         let currentProcessDate = null;
         let accumulatedMinutes = 0;
         const [baseHour, baseMinute] = startTimeStr.split(':').map(Number);
+        
         const breakTime = (breakCheckbox && breakCheckbox.checked) ? 10 : 0; 
 
         validReviews.forEach(r => {
-            if (r.date !== currentProcessDate) { currentProcessDate = r.date; accumulatedMinutes = 0; }
+            if (r.date !== currentProcessDate) {
+                currentProcessDate = r.date;
+                accumulatedMinutes = 0;
+            }
+
             const [y, m, d] = r.date.split('-').map(Number);
             const eventStartObj = new Date(y, m - 1, d, baseHour, baseMinute + accumulatedMinutes);
             const eventEndObj = new Date(eventStartObj.getTime() + (r.time * 60000));
+
             accumulatedMinutes += r.time + breakTime;
 
-            const formatICSDate = (d) => d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + 'T' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + '00';
-            icsLines.push("BEGIN:VEVENT", `UID:${r.id}-${Date.now()}@ciclosmart.app`, `DTSTAMP:${formatICSDate(new Date())}`, `DTSTART:${formatICSDate(eventStartObj)}`, `DTEND:${formatICSDate(eventEndObj)}`, `SUMMARY:[Ciclo #${r.cycleIndex || '?'}] ${r.subject}`, `DESCRIPTION:${r.topic}`, "BEGIN:VALARM", "TRIGGER:-PT10M", "ACTION:DISPLAY", "DESCRIPTION:Estudar", "END:VALARM", "END:VEVENT");
+            const formatICSDate = (d) => {
+                return d.getFullYear() +
+                       String(d.getMonth() + 1).padStart(2, '0') +
+                       String(d.getDate()).padStart(2, '0') + 'T' +
+                       String(d.getHours()).padStart(2, '0') +
+                       String(d.getMinutes()).padStart(2, '0') + '00';
+            };
+
+            const cycleInfo = r.cycleIndex ? `[Ciclo #${r.cycleIndex}] ` : '';
+
+            icsLines.push(
+                "BEGIN:VEVENT",
+                `UID:${r.id}-${Date.now()}@ciclosmart.app`,
+                `DTSTAMP:${formatICSDate(new Date())}`,
+                `DTSTART:${formatICSDate(eventStartObj)}`,
+                `DTEND:${formatICSDate(eventEndObj)}`,
+                `SUMMARY:${cycleInfo}${r.subject}`,
+                `DESCRIPTION:Tópico: ${r.topic}\\nTipo: ${r.type}\\nDuração: ${r.time}min.`,
+                "BEGIN:VALARM", "TRIGGER:-PT10M", "ACTION:DISPLAY", "DESCRIPTION:Estudar", "END:VALARM",
+                "END:VEVENT"
+            );
         });
+
         icsLines.push("END:VCALENDAR");
         
         const blob = new Blob([icsLines.join("\r\n")], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `cronograma.ics`);
-        document.body.appendChild(link); link.click(); document.body.removeChild(link); ui.toggleModal('modal-export', false);
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.setAttribute('download', `cronograma-${startStr}.ics`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        ui.toggleModal('modal-export', false);
+        toast.show('Arquivo gerado com horários empilhados.', 'info', '📅 Agenda Sincronizada');
     },
 
+    // --- LÓGICA DE REAGENDAMENTO V2 (SRS INTEGRITY + WATERFALL) ---
+    // Substituição completa com Macro Shift e Nivelamento de Carga
     handleReschedule: () => {
         const dateInput = document.getElementById('input-reschedule-date');
         const targetDateStr = dateInput.value;
         const todayStr = getLocalISODate();
-        if (!targetDateStr) return toast.show('Selecione data.', 'warning');
+        
+        if (!targetDateStr) return toast.show('Selecione uma data para retomar os estudos.', 'warning');
 
-        const overdueReviews = store.reviews.filter(r => r.status === 'PENDING' && r.date < todayStr).sort((a, b) => a.date.localeCompare(b.date));
-        if (overdueReviews.length === 0) return toast.show('Sem atrasos.', 'success');
+        // 1. Identificar o Delta (Atraso)
+        // Filtra pendências estritamente no passado
+        const overdueReviews = store.reviews.filter(r => 
+            r.status === 'PENDING' && 
+            r.date < todayStr 
+        );
+        
+        if (overdueReviews.length === 0) {
+            return toast.show('Você não possui revisões atrasadas para reagendar.', 'success');
+        }
 
-        const dateOldest = new Date(overdueReviews[0].date + 'T00:00:00');
+        // Ordena para pegar o atraso mais antigo (Marco Zero)
+        overdueReviews.sort((a, b) => a.date.localeCompare(b.date));
+        const oldestDateStr = overdueReviews[0].date;
+
+        if (targetDateStr < oldestDateStr) {
+            return toast.show('A data de retomada deve ser posterior ao atraso mais antigo.', 'warning');
+        }
+
+        const dateOldest = new Date(oldestDateStr + 'T00:00:00');
         const dateTarget = new Date(targetDateStr + 'T00:00:00');
-        const diffDays = Math.ceil((dateTarget - dateOldest) / (1000 * 60 * 60 * 24));
-        if (diffDays === 0) return toast.show('Datas coincidem.', 'info');
+        const diffTime = dateTarget - dateOldest;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (!confirm(`Mover atrasos ${diffDays} dias para frente?`)) return;
+        if (diffDays === 0) return toast.show('As datas já coincidem.', 'info');
 
+        // Confirmação com contexto de SRS
+        const confirmMsg = `⚠️ REAGENDAMENTO INTELIGENTE\n\n1. O sistema detectou um atraso de ${diffDays} dias.\n2. Todos os estudos atrasados E suas revisões futuras conectadas serão movidos para frente para preservar a curva de memória.\n3. Se houver sobrecarga, o excedente será distribuído nos dias seguintes.\n\nDeseja aplicar?`;
+        
+        if (!confirm(confirmMsg)) return;
+
+        // 2. FASE 1: MACRO SHIFT (Preservação de SRS)
+        // Identificar quais "Batch IDs" (Famílias) foram afetados pelo atraso
         const affectedBatches = new Set(overdueReviews.map(r => r.batchId));
+        
+        let shiftCount = 0;
+        
         store.reviews.forEach(r => {
-            if ((r.status === 'PENDING' && r.batchId && affectedBatches.has(r.batchId)) || (r.status === 'PENDING' && !r.batchId && r.date < todayStr)) {
+            // Se o item pertence a um lote atrasado e ainda não foi feito, ele deve se mover
+            // Isso move o atrasado E as revisões futuras desse mesmo assunto
+            if (r.status === 'PENDING' && r.batchId && affectedBatches.has(r.batchId)) {
                 const current = new Date(r.date + 'T00:00:00');
                 current.setDate(current.getDate() + diffDays);
                 r.date = getLocalISODate(current);
+                shiftCount++;
+            }
+            // Fallback para itens órfãos (sem batchId, legado) que estão atrasados
+            else if (r.status === 'PENDING' && !r.batchId && r.date < todayStr) {
+                const current = new Date(r.date + 'T00:00:00');
+                current.setDate(current.getDate() + diffDays);
+                r.date = getLocalISODate(current);
+                shiftCount++;
             }
         });
+
+        // 3. FASE 2: WATERFALL (Nivelamento de Carga)
+        // Agora que tudo foi movido, verificamos se algum dia explodiu a capacidade
+        let dateCursor = new Date(targetDateStr + 'T00:00:00');
+        const safetyLimit = 90; // Analisa até 3 meses à frente para dissipar a onda
+        let daysProcessed = 0;
+        let waterfallCount = 0;
+        let hasChanges = true;
+
+        // Função auxiliar para carga
+        const getDayLoad = (dStr) => store.reviews
+            .filter(r => r.date === dStr && r.status === 'PENDING')
+            .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+
+        while (hasChanges && daysProcessed < safetyLimit) {
+            hasChanges = false;
+            const cursorStr = getLocalISODate(dateCursor);
+            const dayLoad = getDayLoad(cursorStr);
+            const capacity = store.capacity || 240;
+
+            if (dayLoad > capacity) {
+                let overflowNeeded = dayLoad - capacity;
+                
+                // Pega itens do dia, priorizando jogar para frente os de ciclos mais avançados (revisões distantes)
+                // ou simplesmente os últimos da lista para manter FIFO
+                const itemsOnDay = store.reviews
+                    .filter(r => r.date === cursorStr && r.status === 'PENDING')
+                    .sort((a, b) => b.cycleIndex - a.cycleIndex); // Joga as revisões finais para frente primeiro
+                
+                const nextDay = new Date(dateCursor);
+                nextDay.setDate(nextDay.getDate() + 1);
+                const nextDayStr = getLocalISODate(nextDay);
+
+                for (let item of itemsOnDay) {
+                    if (overflowNeeded <= 0) break;
+                    
+                    item.date = nextDayStr;
+                    overflowNeeded -= item.time;
+                    waterfallCount++;
+                    hasChanges = true; // Força o loop a continuar verificando o efeito cascata
+                }
+            }
+            
+            dateCursor.setDate(dateCursor.getDate() + 1);
+            daysProcessed++;
+        }
+
         store.save(); 
         ui.toggleModal('modal-heatmap', false);
-        toast.show('Cronograma ajustado.', 'success');
-    },
-
-    // --- CÉREBRO DO SISTEMA DE CICLOS ---
-    calculateCycleIndex: (targetDateStr) => {
-        console.log("--- DEBUG CÁLCULO CICLO ---");
-        console.log("Alvo:", targetDateStr);
-        if (!store.cycleStartDate) return 1;
-
-        const rawStudies = store.reviews.filter(r => r.type === 'NOVO');
-        // Pega os dias ativos IGNORANDO o dia de hoje se ele já estiver lá (para recálculo limpo)
-        const activeDays = new Set(rawStudies.filter(r => r.date >= store.cycleStartDate).map(r => r.date));
         
-        console.log("Dias já ocupados:", Array.from(activeDays));
-        activeDays.add(targetDateStr); // Adiciona o alvo para ver onde ele cai
-        
-        const sortedUniqueDays = Array.from(activeDays).sort();
-        console.log("Linha do tempo ordenada:", sortedUniqueDays);
-        
-        const index = sortedUniqueDays.indexOf(targetDateStr) + 1;
-        console.log("Resultado final do cálculo:", index);
-        return index;
-    },
-
-    // Auditor de Integridade (Roda na inicialização)
-    checkCycleIntegrity: () => {
-        if (!store.cycleStartDate) return;
-        console.log("[Integrity] Verificando consistência dos dados...");
-        const cycleStudies = store.reviews
-            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
-            .sort((a, b) => a.date.localeCompare(b.date)); 
-
-        let isBroken = false;
-        let conflictListHtml = '';
-        let uniqueDateCounter = 0;
-        let lastDate = null;
-
-        cycleStudies.forEach(study => {
-            if (study.date !== lastDate) {
-                uniqueDateCounter++;
-                lastDate = study.date;
-            }
-            if (study.cycleIndex !== uniqueDateCounter) {
-                isBroken = true;
-                conflictListHtml += `
-                    <div class="p-3 flex justify-between items-center bg-white border-b">
-                        <div>
-                            <div class="text-xs font-bold text-slate-400">${formatDateDisplay(study.date)}</div>
-                            <div class="text-sm font-bold text-slate-800">${study.subject}</div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-red-500 font-bold line-through text-xs">#${study.cycleIndex}</span>
-                            <span>➔</span>
-                            <span class="text-emerald-600 font-bold text-lg">#${uniqueDateCounter}</span>
-                        </div>
-                    </div>`;
-            }
-        });
-
-        if (isBroken) {
-            console.warn("[Integrity] Erros encontrados! Exibindo modal.");
-            const listEl = document.getElementById('repair-list');
-            if(listEl) listEl.innerHTML = conflictListHtml;
-            ui.toggleModal('modal-repair', true);
-            toast.show('Inconsistência de numeração detectada.', 'warning');
-        } else {
-            console.log("[Integrity] Todos os ciclos estão corretos.");
-        }
-    },
-
-    // Reparador (Acionado pelo usuário)
-    runCycleRepair: () => {
-        if (!store.cycleStartDate) return;
-        const cycleStudies = store.reviews.filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate).sort((a, b) => a.date.localeCompare(b.date));
-        let uniqueDateCounter = 0;
-        let lastDate = null;
-        let changesCount = 0;
-
-        cycleStudies.forEach(study => {
-            if (study.date !== lastDate) { uniqueDateCounter++; lastDate = study.date; }
-            if (study.cycleIndex !== uniqueDateCounter) {
-                const correctIndex = uniqueDateCounter;
-                store.reviews.forEach(r => { if (r.batchId === study.batchId) r.cycleIndex = correctIndex; });
-                changesCount++;
-            }
-        });
-
-        if (changesCount > 0) {
-            store.save();
-            ui.render(); 
-            ui.toggleModal('modal-repair', false);
-            toast.show(`Reparado com sucesso: ${changesCount} estudos.`, 'success');
-        } else {
-            ui.toggleModal('modal-repair', false);
-        }
+        const details = waterfallCount > 0 
+            ? ` (${waterfallCount} itens redistribuídos por sobrecarga)` 
+            : '';
+            
+        toast.show(
+            `Cronograma realinhado com sucesso! ${shiftCount} cartões ajustados${details}.`, 
+            'neuro', 
+            'SRS Preservado & Carga Nivelada'
+        );
     }
 };
 
@@ -761,7 +1062,11 @@ const ui = {
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 dateInput.value = getLocalISODate(tomorrow);
                 
-                toast.show('Modo Defesa: Sugestão para amanhã.', 'neuro');
+                toast.show(
+                    'Data sugerida para amanhã. Planeje seus próximos passos!', 
+                    'neuro', 
+                    '🛡️ Modo Defesa: Planejamento'
+                );
             } else {
                 dateInput.value = today; 
             }
@@ -780,8 +1085,10 @@ const ui = {
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
 
+        // --- NOVO: Inicializa o input de reagendamento com Hoje ---
         const rescheduleInput = document.getElementById('input-reschedule-date');
         if(rescheduleInput) rescheduleInput.value = getLocalISODate();
+        // ----------------------------------------------------------
 
         ui.renderHeatmap();
         ui.toggleModal('modal-heatmap', true);
@@ -795,6 +1102,7 @@ const ui = {
         
         for (let i = 0; i < 30; i++) {
             const isoDate = getRelativeDate(i);
+            const displayDate = formatDateDisplay(isoDate);
             
             const dayLoad = store.reviews
                 .filter(r => r.date === isoDate) 
@@ -816,7 +1124,7 @@ const ui = {
 
             container.innerHTML += `
                 <div class="p-3 rounded-lg border ${colorClass} flex flex-col justify-between h-24 relative transition-all hover:scale-105">
-                    <span class="text-xs font-bold opacity-70">${formatDateDisplay(isoDate)}</span>
+                    <span class="text-xs font-bold opacity-70">${displayDate}</span>
                     <div class="text-center">
                         <span class="text-2xl font-bold block">${dayLoad}m</span>
                         <span class="text-[10px] uppercase font-semibold tracking-wider opacity-80">
@@ -950,6 +1258,8 @@ const ui = {
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
+        // --- ATUALIZADO: BADGE INTERATIVO ---
+        // Agora usa a classe .cycle-badge e chama ui.showCycleInfo
         const cycleHtml = review.batchId && review.cycleIndex 
            ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
            : '';
@@ -984,6 +1294,7 @@ const ui = {
                         <input type="checkbox" onclick="store.toggleStatus(${review.id})" ${isDone ? 'checked' : ''} 
                                class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
+                        <!-- BOTÃO DE EXCLUSÃO ATUALIZADO PARA SUPORTAR LOTE -->
                         <button onclick="app.confirmDelete(${review.id})" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir">
                             <i data-lucide="trash" class="w-4 h-4"></i>
                         </button>
@@ -1002,16 +1313,19 @@ const ui = {
         `;
     },
 
+    // --- FUNÇÃO BLINDADA: GERA DOM SE NÃO EXISTIR ---
     showCycleInfo: (batchId, event) => {
         if(event) {
             event.preventDefault();
             event.stopPropagation();
         }
 
+        // 1. Verifica ou cria o Backdrop (Fundo escuro)
         let backdrop = document.getElementById('cycle-popover-backdrop');
         if (!backdrop) {
             backdrop = document.createElement('div');
             backdrop.id = 'cycle-popover-backdrop';
+            // Ao clicar no backdrop, fecha tudo
             backdrop.onclick = () => {
                 document.getElementById('cycle-popover')?.classList.remove('visible');
                 backdrop.classList.remove('visible');
@@ -1019,6 +1333,7 @@ const ui = {
             document.body.appendChild(backdrop);
         }
 
+        // 2. Verifica ou cria o Popover (Janela)
         let popover = document.getElementById('cycle-popover');
         if (!popover) {
             popover = document.createElement('div');
@@ -1026,14 +1341,17 @@ const ui = {
             document.body.appendChild(popover);
         }
 
+        // 3. Busca Dados (Família)
         const family = store.reviews
             .filter(r => r.batchId === batchId)
             .sort((a, b) => a.date.localeCompare(b.date));
 
         if (family.length === 0) return toast.show('Erro: Nenhum dado vinculado.', 'error');
 
+        // Título e Matéria
         const subjectName = family[0].subject;
 
+        // 4. Monta HTML da Lista
         const listHtml = family.map(f => {
             const isDone = f.status === 'DONE';
             const icon = isDone ? '✅' : '⭕';
@@ -1050,6 +1368,7 @@ const ui = {
             `;
         }).join('');
 
+        // Preenche o conteúdo do Modal
         popover.innerHTML = `
             <div class="mb-3 border-b border-slate-100 pb-2">
                 <div class="flex justify-between items-start">
@@ -1073,6 +1392,7 @@ const ui = {
             </button>
         `;
 
+        // 5. Exibe (Adiciona classes visible)
         backdrop.classList.add('visible');
         popover.classList.add('visible');
     },

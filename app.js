@@ -1,7 +1,7 @@
 /* --- START OF FILE app.js --- */
 
 /**
- * CICLOSMART APP CONTROLLER (v1.1.9 - Integrity & Logic Unified)
+ * CICLOSMART APP CONTROLLER (v1.2.0 - Auto-Shift & Integrity Unified)
  * Contém: Lógica de Aplicação, UI Renderer, Batch Logic e DOM Injection.
  */
 
@@ -16,12 +16,11 @@ const app = {
     init: () => {
         store.load();
         
-        // --- ARQUITETURA REATIVA (OBSERVER) ---
+        // --- ARQUITETURA REATIVA ---
         store.subscribe(taskManager.checkOverdue); 
         store.subscribe(taskManager.render);       
-        // ---------------------------------------------
 
-        // --- AUTO-REPARO DE DADOS LEGADOS ---
+        // --- MIGRAÇÃO DE DADOS LEGADOS ---
         let migrationCount = 0;
         if (store.reviews && store.reviews.length > 0) {
             store.reviews.forEach(r => {
@@ -63,13 +62,13 @@ const app = {
         ui.switchTab('today');
 
         // --- DIAGNÓSTICO AUTOMÁTICO AO INICIAR ---
-        // Aguarda 1s para garantir que tudo carregou e roda a verificação
         setTimeout(() => app.checkCycleIntegrity(), 1000);
     },
 
-    // --- AUTENTICAÇÃO (MANTIDA ORIGINAL) ---
+    // --- AUTENTICAÇÃO (MANTIDA INTEGRALMENTE) ---
     initAuth: () => {
         const startFirebaseLogic = () => {
+            console.log("[CicloSmart Auth] Iniciando...");
             if (!window.fireMethods || !window.fireAuth) return;
 
             const { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, ref, onValue, get } = window.fireMethods;
@@ -191,7 +190,6 @@ const app = {
             const latest = changelogData[0].version;
             const btn = document.getElementById('app-version-btn');
             if (btn) btn.innerText = `v${latest}`;
-            document.title = `CicloSmart v${latest} | Plataforma de Estudos`;
         }
     },
 
@@ -340,10 +338,32 @@ const app = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // --- CÁLCULO UNIFICADO (O SALVAMENTO AGORA USA A LÓGICA CORRETA) ---
+        // --- CÁLCULO UNIFICADO COM LÓGICA DE SHIFT (EMPURRÃO) ---
+        // 1. Calcula onde o novo estudo deve entrar
         const finalCycleIndex = app.calculateCycleIndex(selectedDateStr);
-        console.log(`[SAVE] Salvando estudo final como Ciclo Index: #${finalCycleIndex}`);
-        // -------------------------------------------------------------------
+        console.log(`[SAVE] Salvando estudo com Ciclo Index: #${finalCycleIndex}`);
+
+        // 2. VERIFICA E EMPURRA ESTUDOS FUTUROS (CORREÇÃO V1.2.0)
+        // Se eu vou inserir o #3 hoje, e já existe um #3 no futuro, o futuro deve virar #4.
+        const cyclesToShift = store.reviews.filter(r => 
+            r.type === 'NOVO' && 
+            r.date >= store.cycleStartDate && 
+            r.cycleIndex >= finalCycleIndex // Pega quem está ocupando a vaga ou está na frente
+        );
+
+        if (cyclesToShift.length > 0) {
+            // Cria um Set dos batchIds afetados para mover o ciclo completo (revisões filhas)
+            const affectedBatches = new Set(cyclesToShift.map(r => r.batchId));
+            console.log(`[SHIFT] Detectado conflito de numeração. Movendo ${affectedBatches.size} ciclos futuros para frente.`);
+            
+            store.reviews.forEach(r => {
+                // Se o estudo faz parte de um lote que precisa ser empurrado
+                if (affectedBatches.has(r.batchId)) {
+                    r.cycleIndex += 1; // Incrementa o número do ciclo
+                }
+            });
+        }
+        // -----------------------------------------------------------
 
         const newReviews = [];
         let blocker = null;
@@ -528,11 +548,8 @@ const app = {
         icsLines.push("END:VCALENDAR");
         
         const blob = new Blob([icsLines.join("\r\n")], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.setAttribute('download', `cronograma.ics`);
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        ui.toggleModal('modal-export', false);
+        const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `cronograma.ics`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link); ui.toggleModal('modal-export', false);
     },
 
     handleReschedule: () => {
@@ -564,37 +581,24 @@ const app = {
         toast.show('Cronograma ajustado.', 'success');
     },
 
-    // --- NOVA FUNCIONALIDADE UNIFICADA (DEBUG MODE ATIVO) ---
-    // Esta função é o "cérebro" da contagem correta.
+    // --- CÉREBRO DO SISTEMA DE CICLOS ---
     calculateCycleIndex: (targetDateStr) => {
         console.log("--- DEBUG CÁLCULO CICLO ---");
         console.log("Alvo:", targetDateStr);
-        
-        if (!store.cycleStartDate) {
-            console.log("Sem data de início. Retornando 1.");
-            return 1;
-        }
+        if (!store.cycleStartDate) return 1;
 
-        // Filtra apenas estudos novos e ativos no ciclo
         const rawStudies = store.reviews.filter(r => r.type === 'NOVO');
-        const activeDays = new Set(rawStudies
-            .filter(r => r.date >= store.cycleStartDate)
-            .map(r => r.date)
-        );
+        // Pega os dias ativos IGNORANDO o dia de hoje se ele já estiver lá (para recálculo limpo)
+        const activeDays = new Set(rawStudies.filter(r => r.date >= store.cycleStartDate).map(r => r.date));
         
         console.log("Dias já ocupados:", Array.from(activeDays));
-
-        // Adiciona a data alvo para garantir a posição correta na fila
-        activeDays.add(targetDateStr);
+        activeDays.add(targetDateStr); // Adiciona o alvo para ver onde ele cai
         
-        // Ordena cronologicamente
         const sortedUniqueDays = Array.from(activeDays).sort();
         console.log("Linha do tempo ordenada:", sortedUniqueDays);
         
-        // O índice + 1 é o número do dia
         const index = sortedUniqueDays.indexOf(targetDateStr) + 1;
         console.log("Resultado final do cálculo:", index);
-        
         return index;
     },
 
@@ -602,7 +606,6 @@ const app = {
     checkCycleIntegrity: () => {
         if (!store.cycleStartDate) return;
         console.log("[Integrity] Verificando consistência dos dados...");
-        
         const cycleStudies = store.reviews
             .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
             .sort((a, b) => a.date.localeCompare(b.date)); 
@@ -612,13 +615,11 @@ const app = {
         let uniqueDateCounter = 0;
         let lastDate = null;
 
-        // Simula a contagem perfeita
         cycleStudies.forEach(study => {
             if (study.date !== lastDate) {
                 uniqueDateCounter++;
                 lastDate = study.date;
             }
-            // Se o número gravado for diferente da contagem perfeita
             if (study.cycleIndex !== uniqueDateCounter) {
                 isBroken = true;
                 conflictListHtml += `
@@ -650,10 +651,7 @@ const app = {
     // Reparador (Acionado pelo usuário)
     runCycleRepair: () => {
         if (!store.cycleStartDate) return;
-        const cycleStudies = store.reviews
-            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
-            .sort((a, b) => a.date.localeCompare(b.date));
-
+        const cycleStudies = store.reviews.filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate).sort((a, b) => a.date.localeCompare(b.date));
         let uniqueDateCounter = 0;
         let lastDate = null;
         let changesCount = 0;
@@ -662,10 +660,7 @@ const app = {
             if (study.date !== lastDate) { uniqueDateCounter++; lastDate = study.date; }
             if (study.cycleIndex !== uniqueDateCounter) {
                 const correctIndex = uniqueDateCounter;
-                // Corrige o lote inteiro (batchId)
-                store.reviews.forEach(r => {
-                    if (r.batchId === study.batchId) r.cycleIndex = correctIndex;
-                });
+                store.reviews.forEach(r => { if (r.batchId === study.batchId) r.cycleIndex = correctIndex; });
                 changesCount++;
             }
         });
@@ -766,10 +761,7 @@ const ui = {
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 dateInput.value = getLocalISODate(tomorrow);
                 
-                toast.show(
-                    'Modo Defesa: Data sugerida para amanhã.', 
-                    'neuro'
-                );
+                toast.show('Modo Defesa: Sugestão para amanhã.', 'neuro');
             } else {
                 dateInput.value = today; 
             }

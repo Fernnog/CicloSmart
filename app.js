@@ -65,6 +65,11 @@ const app = {
         ui.updateModeUI(); 
 
         ui.switchTab('today');
+
+        // --- PRIORIDADE 1 e 2: VERIFICAÇÃO DE INTEGRIDADE ---
+        // Roda após um breve delay para garantir que a UI e dados estejam prontos
+        setTimeout(() => app.checkCycleIntegrity(), 1000);
+        // ----------------------------------------------------
     },
 
     // --- NOVA FUNÇÃO DE AUTENTICAÇÃO (RESPONSIVA & EVENT-DRIVEN) ---
@@ -137,6 +142,8 @@ const app = {
                         if (snapshot.exists()) {
                             store.load(snapshot.val());
                             toast.show('Sincronizado.', 'success');
+                            // Re-executa verificação de integridade após sync
+                            setTimeout(() => app.checkCycleIntegrity(), 1500);
                         } else {
                             store.save(); 
                         }
@@ -304,6 +311,9 @@ const app = {
             store.cycleStartDate = dateStr;
             store.save();
             toast.show('Seus novos cards seguirão esta referência.', 'success', '📅 Ciclo Ancorado');
+            
+            // Re-verifica integridade ao mudar a data de início
+            setTimeout(() => app.checkCycleIntegrity(), 500);
         }
     },
 
@@ -326,6 +336,122 @@ const app = {
             if(warning) warning.classList.add('hidden');
         }
     },
+
+    // --- PRIORIDADE 3: CÁLCULO ROBUSTO DO CICLO ---
+    calculateCycleIndex: (targetDateStr) => {
+        if (!store.cycleStartDate) return 1;
+        
+        // 1. Coleta todas as datas únicas de estudos NOVOS ativos no ciclo atual
+        const activeDays = new Set(store.reviews
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
+            .map(r => r.date)
+        );
+        
+        // 2. Adiciona a data alvo ao conjunto (para garantir que ela entre na ordenação)
+        activeDays.add(targetDateStr);
+        
+        // 3. Transforma em array e ordena cronologicamente
+        const sortedUniqueDays = Array.from(activeDays).sort();
+        
+        // 4. O índice da data alvo (+1) é o seu número no ciclo real
+        return sortedUniqueDays.indexOf(targetDateStr) + 1;
+    },
+    // ------------------------------------------------
+
+    // --- PRIORIDADE 1: VERIFICADOR DE INTEGRIDADE (DIAGNÓSTICO) ---
+    checkCycleIntegrity: () => {
+        if (!store.cycleStartDate) return;
+
+        // Pega todos os estudos NOVOS do ciclo atual ordenados por data
+        const cycleStudies = store.reviews
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        let isBroken = false;
+        let conflictListHtml = '';
+        let uniqueDateCounter = 0;
+        let lastDate = null;
+
+        // Simula a contagem correta
+        cycleStudies.forEach(study => {
+            if (study.date !== lastDate) {
+                uniqueDateCounter++;
+                lastDate = study.date;
+            }
+            
+            // Se o número gravado for diferente do contador cronológico
+            if (study.cycleIndex !== uniqueDateCounter) {
+                isBroken = true;
+                conflictListHtml += `
+                    <div class="p-3 flex justify-between items-center bg-white border-b border-slate-50 last:border-0">
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${formatDateDisplay(study.date)}</div>
+                            <div class="text-xs font-bold text-slate-800">${study.subject}</div>
+                            <div class="text-[10px] text-slate-500 truncate w-40 italic">${study.topic}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-red-400 font-bold line-through text-xs opacity-70">#${study.cycleIndex}</span>
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i>
+                            <span class="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 shadow-sm">#${uniqueDateCounter}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        if (isBroken) {
+            const listEl = document.getElementById('repair-list');
+            if(listEl) listEl.innerHTML = conflictListHtml;
+            
+            ui.toggleModal('modal-repair', true);
+            toast.show('Inconsistência na numeração do ciclo detectada.', 'warning', 'Diagnóstico de Sistema');
+            if(window.lucide) lucide.createIcons();
+        }
+    },
+    // -----------------------------------------------------------------
+
+    // --- PRIORIDADE 2: EXECUTOR DO REPARO (CORREÇÃO EM LOTE) ---
+    runCycleRepair: () => {
+        if (!store.cycleStartDate) return;
+
+        const cycleStudies = store.reviews
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        let uniqueDateCounter = 0;
+        let lastDate = null;
+        let changesCount = 0;
+
+        cycleStudies.forEach(study => {
+            if (study.date !== lastDate) {
+                uniqueDateCounter++;
+                lastDate = study.date;
+            }
+
+            // Se precisa corrigir
+            if (study.cycleIndex !== uniqueDateCounter) {
+                const correctIndex = uniqueDateCounter;
+                
+                // Atualiza o card principal E todos os irmãos (revisões) desse lote
+                store.reviews.forEach(r => {
+                    if (r.batchId === study.batchId) {
+                        r.cycleIndex = correctIndex;
+                    }
+                });
+                changesCount++;
+            }
+        });
+
+        if (changesCount > 0) {
+            store.save();
+            ui.render(); // Atualiza a tela
+            ui.toggleModal('modal-repair', false);
+            toast.show(`Ciclo reparado! ${changesCount} estudos reordenados cronologicamente.`, 'success', 'Integridade Restaurada');
+        } else {
+            ui.toggleModal('modal-repair', false);
+        }
+    },
+    // -------------------------------------------------------------
 
     handleNewEntry: (e) => {
         e.preventDefault();
@@ -360,18 +486,12 @@ const app = {
             subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target
         };
 
+        // --- PRIORIDADE 3: USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
         let projectedDay = 1;
         if (store.cycleStartDate) {
-             const previousUniqueDays = new Set(store.reviews
-                .filter(r => 
-                    r.type === 'NOVO' && 
-                    r.date >= store.cycleStartDate && 
-                    r.date < selectedDateStr
-                )
-                .map(r => r.date)
-            );
-            projectedDay = previousUniqueDays.size + 1;
+             projectedDay = app.calculateCycleIndex(selectedDateStr);
         }
+        // ------------------------------------------------------
 
         const descEl = document.getElementById('cycle-option-keep-desc');
         if(descEl) descEl.innerText = `Será registrado como Dia #${projectedDay}`;
@@ -417,16 +537,9 @@ const app = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        const previousDays = store.reviews
-            .filter(r => 
-                r.type === 'NOVO' && 
-                r.date >= store.cycleStartDate && 
-                r.date < selectedDateStr
-            )
-            .map(r => r.date);
-
-        const uniquePreviousDays = new Set(previousDays).size;
-        const finalCycleIndex = uniquePreviousDays + 1;
+        // --- PRIORIDADE 3: USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
+        const finalCycleIndex = app.calculateCycleIndex(selectedDateStr);
+        // ------------------------------------------------------
 
         const newReviews = [];
         let blocker = null;

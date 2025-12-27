@@ -1,6 +1,6 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.1.4 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.2.1 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
  */
 
@@ -680,6 +680,13 @@ const app = {
     handleDragStart: (e, id) => {
         e.dataTransfer.setData("text/plain", id);
         e.dataTransfer.effectAllowed = "move";
+        // ATIVA FEEDBACK VISUAL NO BODY
+        document.body.classList.add('is-dragging');
+    },
+
+    // Handler para garantir limpeza se o usuário soltar fora ou cancelar
+    handleDragEnd: (e) => {
+        document.body.classList.remove('is-dragging');
     },
 
     handleDragOver: (e) => {
@@ -689,6 +696,9 @@ const app = {
 
     handleDrop: (e, targetDateStr) => {
         e.preventDefault();
+        // REMOVE FEEDBACK VISUAL
+        document.body.classList.remove('is-dragging');
+
         const id = parseInt(e.dataTransfer.getData("text/plain"));
         const review = store.reviews.find(r => r.id === id);
         

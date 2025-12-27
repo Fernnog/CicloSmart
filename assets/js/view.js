@@ -187,15 +187,30 @@ const ui = {
             
             const listHtml = dayStudies.map(s => {
                 const cycleNum = s.cycleIndex ? `#${s.cycleIndex}` : 'N/A';
+                
+                // --- ATUALIZAÇÃO v1.1.9: Lógica de Abreviação e Tooltip ---
+                let typeShort = s.type;
+                if (s.type === 'Defesa') typeShort = 'DEF';
+                else if (s.type === 'NOVO') typeShort = 'NEW';
+                else typeShort = s.type.toUpperCase(); // Garante 8D, 31D, etc.
+
                 const borderStyle = `border-left: 3px solid ${s.color};`; 
                 const bgStyle = isDarkBg ? 'background-color: rgba(255,255,255,0.1);' : 'background-color: rgba(255,255,255,0.6);';
                 const statusIcon = s.status === 'DONE' ? '✓' : '';
                 
+                // Tooltip detalhado
+                const tooltipText = `Matéria: ${s.subject}\nTópico: ${s.topic}\nTipo: ${s.type}`;
+                
                 return `
-                    <div class="text-[9px] flex items-center justify-between px-1.5 py-0.5 rounded mb-1 border border-slate-100/20 truncate" 
+                    <div title="${tooltipText}" class="text-[9px] flex items-center justify-between px-1.5 py-1 rounded mb-1 border border-slate-100/20 truncate cursor-help hover:ring-1 hover:ring-indigo-300 transition-all" 
                          style="${borderStyle} ${bgStyle}">
-                        <span class="font-bold truncate pr-1" title="${s.subject} - ${s.topic}">${cycleNum}</span>
-                        <span class="opacity-70 text-[8px]">${statusIcon}</span>
+                        
+                        <div class="flex items-baseline gap-1.5 overflow-hidden">
+                            <span class="font-bold text-slate-700">${cycleNum}</span>
+                            <span class="text-[7px] uppercase font-bold text-slate-500 bg-slate-200/50 px-0.5 rounded tracking-tighter">${typeShort}</span>
+                        </div>
+                        
+                        <span class="opacity-70 text-[8px] ml-1 shrink-0">${statusIcon}</span>
                     </div>
                 `;
             }).join('');

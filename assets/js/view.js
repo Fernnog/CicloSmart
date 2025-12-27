@@ -201,33 +201,40 @@ const ui = {
                 // Tooltip detalhado
                 const tooltipText = `Matéria: ${s.subject}\nTópico: ${s.topic}\nTipo: ${s.type}`;
                 
+                // --- DRAG AND DROP (Prioridade 2) ---
                 return `
-                    <div title="${tooltipText}" class="text-[9px] flex items-center justify-between px-1.5 py-1 rounded mb-1 border border-slate-100/20 truncate cursor-help hover:ring-1 hover:ring-indigo-300 transition-all" 
+                    <div draggable="true" 
+                         ondragstart="app.handleDragStart(event, ${s.id})"
+                         title="${tooltipText}" 
+                         class="text-[9px] flex items-center justify-between px-1.5 py-1 rounded mb-1 border border-slate-100/20 truncate cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-indigo-300 transition-all" 
                          style="${borderStyle} ${bgStyle}">
                         
-                        <div class="flex items-baseline gap-1.5 overflow-hidden">
+                        <div class="flex items-baseline gap-1.5 overflow-hidden pointer-events-none">
                             <span class="font-bold text-slate-700">${cycleNum}</span>
                             <span class="text-[7px] uppercase font-bold text-slate-500 bg-slate-200/50 px-0.5 rounded tracking-tighter">${typeShort}</span>
                         </div>
                         
-                        <span class="opacity-70 text-[8px] ml-1 shrink-0">${statusIcon}</span>
+                        <span class="opacity-70 text-[8px] ml-1 shrink-0 pointer-events-none">${statusIcon}</span>
                     </div>
                 `;
             }).join('');
 
+            // --- DRAG AND DROP (Drop Zone) ---
             container.innerHTML += `
-                <div class="p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all hover:shadow-md group">
+                <div ondragover="app.handleDragOver(event)" 
+                     ondrop="app.handleDrop(event, '${isoDate}')"
+                     class="p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all hover:shadow-md group">
                     
-                    <div class="flex justify-between items-center mb-1 pb-1 border-b border-black/5">
+                    <div class="flex justify-between items-center mb-1 pb-1 border-b border-black/5 pointer-events-none">
                         <span class="text-xs font-bold opacity-80">${displayDate}</span>
                         <span class="text-[9px] font-bold opacity-60">${dayLoad > 0 ? Math.round(percentage) + '%' : ''}</span>
                     </div>
 
                     <div class="flex-1 overflow-y-auto custom-scroll pr-0.5 space-y-0.5">
-                        ${listHtml || '<span class="text-[9px] italic opacity-50 block text-center mt-2">- Livre -</span>'}
+                        ${listHtml || '<span class="text-[9px] italic opacity-50 block text-center mt-2 pointer-events-none">- Livre -</span>'}
                     </div>
 
-                    <div class="text-[9px] text-right font-bold opacity-60 mt-1 pt-1 border-t border-black/5">
+                    <div class="text-[9px] text-right font-bold opacity-60 mt-1 pt-1 border-t border-black/5 pointer-events-none">
                         ${dayLoad}m
                     </div>
                 </div>

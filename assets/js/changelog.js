@@ -1,9 +1,24 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.0 ---
+    { 
+        version: '1.2.0', 
+        date: 'Hoje', 
+        changes: [
+            '🎯 <strong>Feedback Visual de Tarefas (Botão):</strong> O botão "Tarefas" agora exibe dois contadores na base: 🔴 Vermelho para atrasados e 🟢 Verde para pendências em dia. Mais clareza, menos ansiedade!',
+            '🖐️ <strong>Reagendamento Interativo (Radar):</strong> Implementada funcionalidade Drag-and-Drop no Heatmap. Arraste um estudo para outra data diretamente no gráfico!',
+            '✅ <strong>Validação Inteligente de Reagendamento:</strong> Ao arrastar um estudo, o sistema agora verifica automaticamente:',
+            '  * <strong>Cronologia Pedagógica:</strong> Impede que um estudo "ultrapasse" sua próxima revisão programada.',
+            '  * <strong>Limite de Capacidade Diária:</strong> Bloqueia o reagendamento se o dia de destino ficar sobrecarregado.',
+            '🎨 <strong>Melhorias de UX no Drag & Drop:</strong> O feedback visual foi aprimorado com cursores indicativos e destaque nas zonas de soltura válidas no Heatmap (a ser ativado futuramente).',
+            '🐛 <strong>Correção:</strong> Tratamento de casos onde `batchId` ou `cycleIndex` podiam estar ausentes em estudos legados para evitar erros no Drag & Drop e nas validações.'
+        ] 
+    },
+    // --- VERSÕES ANTERIORES ---
     { 
         version: '1.1.9', 
-        date: 'Hoje', 
+        date: 'Anterior', 
         changes: [
             '🔍 <strong>Radar de Carga HD:</strong> O Heatmap agora é muito mais informativo. Além do número do ciclo (#1), cada cartão exibe o <strong>Tipo de Revisão</strong> (NEW, DEF, 8D, 30D), permitindo antecipar se o dia será de ataque ou defesa.',
             '🖱️ <strong>Tooltip de Raio-X:</strong> Passe o mouse sobre qualquer bloquinho do radar para ver instantaneamente a <strong>Matéria</strong> e o <strong>Tópico</strong> daquele estudo. Zero cliques necessários para lembrar o que está agendado.',
@@ -22,7 +37,7 @@ const changelogData = [
     },
     { 
         version: '1.1.7', 
-        date: '26/12', 
+        date: 'Anterior', 
         changes: [
             '🗓️ <strong>Raio-X do Calendário (Heatmap Badges):</strong> O Radar deixou de ser apenas visual. Agora, cada dia exibe etiquetas detalhadas com o <strong>número do ciclo (#1, #2...)</strong> e a cor da matéria agendada.',
             '🎨 <strong>Identificação Visual Rápida:</strong> Badges com bordas coloridas permitem saber instantaneamente qual disciplina domina o dia, sem precisar abrir menus.',
@@ -31,7 +46,7 @@ const changelogData = [
     },
     { 
         version: '1.1.6', 
-        date: '26/12', 
+        date: 'Anterior', 
         changes: [
             '🌊 <strong>Nivelamento em Cascata (Waterfall):</strong> O sistema de reagendamento agora possui inteligência anti-sobrecarga. Se mover seus atrasados lotar um dia específico, o excedente "transborda" automaticamente para o dia seguinte, criando uma agenda equilibrada.',
             '🔗 <strong>Integridade SRS (Macro Shift):</strong> Agora, ao reagendar um estudo atrasado, o sistema move junto <strong>todas as revisões futuras</strong> conectadas a ele. Isso preserva a distância matemática entre as revisões (Curva de Esquecimento), garantindo que a metodologia não seja quebrada pelo atraso.',
@@ -62,7 +77,7 @@ const changelogData = [
         changes: [
             '🔴 <strong>Feedback Visual em Tempo Real (Observer):</strong> O ícone de alerta de tarefas (ponto vermelho) foi reescrito usando arquitetura reativa. Agora ele apaga ou acende instantaneamente ao editar uma tarefa, sem precisar recarregar.',
             '🗓️ <strong>Datas Humanizadas:</strong> A lista de tarefas ficou mais inteligente. Em vez de apenas datas numéricas, o sistema agora exibe <strong>"Hoje"</strong>, <strong>"Amanhã"</strong> ou <strong>"Ontem"</strong> para facilitar seu planejamento.',
-            '🧹 <strong>Limpeza de Interface (Legacy):</strong> A seção de Backup/Restaurar manual foi removida do menu de Matérias. Com a sincronização automática em Nuvem (Firebase) operando 100%, esses botões antigos tornaram-se desnecessários.'
+            '🧹 <strong>Limpeza de Interface (Legacy):</strong> A seção de Backup/Restore manual foi removida do menu de Matérias. Com a sincronização automática em Nuvem (Firebase) operando 100%, esses botões antigos tornaram-se desnecessários.'
         ] 
     },
     { 
@@ -165,10 +180,7 @@ const changelogData = [
     { 
         version: '1.0.1', 
         date: 'Legacy', 
-        changes: [
-            '✨ Novo Radar de Carga (Heatmap).',
-            '🎨 Refinamento Visual e Feedback de Conclusão.'
-        ] 
+        changes: ['✨ Novo Radar de Carga (Heatmap).', '🎨 Refinamento Visual e Feedback de Conclusão.'] 
     },
     { 
         version: '1.0.0', 

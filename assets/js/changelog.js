@@ -1,9 +1,19 @@
-/* --- START OF FILE changelog.js --- */
+/* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
     { 
-        version: '1.1.7', 
+        version: '1.1.8', 
         date: 'Hoje', 
+        changes: [
+            '📂 <strong>Reestruturação de Diretórios:</strong> "Faxina" completa na estrutura do projeto. Scripts e imagens foram movidos para pastas dedicadas (`assets/js` e `assets/img`), deixando a raiz da aplicação mais limpa e organizada.',
+            '⚙️ <strong>Painel de Configurações Unificado:</strong> O antigo menu de "Matérias" evoluiu. Agora ele é a central de <strong>Configurações Gerais</strong>, onde você gerencia disciplinas, define sua Capacidade Diária, escolhe a Estratégia (Pendular/Integrado) e ajusta o Ciclo.',
+            '🎯 <strong>Radar Focado:</strong> O modal de Heatmap (Radar) foi limpo. Removemos os inputs de configuração que poluiam a tela, tornando-o uma ferramenta visual pura para análise de carga e desempenho.',
+            '📅 <strong>Acesso Rápido ao Reagendamento:</strong> A ferramenta de "Modo Férias" (Reagendamento em Lote) foi movida para as Configurações Gerais, facilitando o acesso para correções de cronograma.'
+        ] 
+    },
+    { 
+        version: '1.1.7', 
+        date: '26/12', 
         changes: [
             '🗓️ <strong>Raio-X do Calendário (Heatmap Badges):</strong> O Radar deixou de ser apenas visual. Agora, cada dia exibe etiquetas detalhadas com o <strong>número do ciclo (#1, #2...)</strong> e a cor da matéria agendada.',
             '🎨 <strong>Identificação Visual Rápida:</strong> Badges com bordas coloridas permitem saber instantaneamente qual disciplina domina o dia, sem precisar abrir menus.',

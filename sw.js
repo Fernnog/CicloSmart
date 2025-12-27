@@ -1,23 +1,27 @@
 /* --- SW.JS (CicloSmart) - Isolado --- */
 
 // NOME ÚNICO DO CACHE: Fundamental para não misturar com o "Gestor de Leitura"
-const CACHE_NAME = 'ciclosmart-cache-v1';
+const CACHE_NAME = 'ciclosmart-cache-v2'; // Incrementado para v2 devido à mudança de estrutura
 
 // Arquivos a serem cacheados (Use ./ para garantir que pegue desta pasta)
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
-  './core.js',
-  './app.js',
-  './changelog.js',
+  
+  // Novos caminhos de Scripts
+  './assets/js/core.js',
+  './assets/js/app.js',
+  './assets/js/changelog.js',
+  
+  // Arquivos Raiz
   './manifest.json',
   './favicon.ico',
-  './logo.webp', 
   
-  // Ícones PWA (Certifique-se que eles existem na pasta do CicloSmart)
-  './icon-192.png',
-  './icon-512.png',
+  // Novos caminhos de Imagens
+  './assets/img/logo.webp', 
+  './assets/img/icon-192.png',
+  './assets/img/icon-512.png',
 
   // Dependências externas
   'https://cdn.tailwindcss.com',
@@ -47,7 +51,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           // APAGA APENAS caches antigos DO CICLOSMART
-          // Se encontrar 'gerenciador-leitura-cache', ele IGNORA e não apaga.
+          // Apaga também a versão v1 anterior para garantir que pegue a nova estrutura
           if (cacheName !== CACHE_NAME && cacheName.startsWith('ciclosmart')) {
             console.log('[CicloSmart SW] Apagando cache antigo:', cacheName);
             return caches.delete(cacheName);

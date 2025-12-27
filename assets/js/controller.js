@@ -84,12 +84,9 @@ const app = {
 
             const btnUser = document.getElementById('user-menu-btn');
             const popover = document.getElementById('auth-popover');
-            const viewLogin = document.getElementById('auth-view-login');
-            const viewUser = document.getElementById('auth-view-user');
             
             const txtEmail = document.getElementById('popover-email');
             const txtPass = document.getElementById('popover-pass');
-            const lblUserEmail = document.getElementById('popover-user-email');
 
             if(btnUser) {
                 btnUser.addEventListener('click', (e) => {
@@ -108,19 +105,8 @@ const app = {
                 if (user) {
                     store.currentUser = user;
                     
-                    if(btnUser) {
-                        btnUser.classList.remove('border-slate-300', 'text-slate-400');
-                        btnUser.classList.add('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
-                        const dot = document.getElementById('user-status-dot');
-                        if(dot) {
-                            dot.classList.remove('hidden', 'bg-slate-400');
-                            dot.classList.add('bg-emerald-500');
-                        }
-                    }
-
-                    if(viewLogin) viewLogin.classList.add('hidden');
-                    if(viewUser) viewUser.classList.remove('hidden');
-                    if(lblUserEmail) lblUserEmail.innerText = user.email;
+                    // --- ATUALIZAÇÃO VIA UI (Refinamento MVC) ---
+                    ui.updateAuthUI(user);
 
                     const userRef = ref(db, 'users/' + user.uid);
                     get(userRef).then((snapshot) => {
@@ -139,14 +125,10 @@ const app = {
 
                 } else {
                     store.currentUser = null;
-                    if(btnUser) {
-                        btnUser.classList.add('border-slate-300', 'text-slate-400');
-                        btnUser.classList.remove('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
-                        const dot = document.getElementById('user-status-dot');
-                        if(dot) dot.classList.add('hidden');
-                    }
-                    if(viewLogin) viewLogin.classList.remove('hidden');
-                    if(viewUser) viewUser.classList.add('hidden');
+                    
+                    // --- ATUALIZAÇÃO VIA UI (Refinamento MVC) ---
+                    ui.updateAuthUI(null);
+
                     store.load(null); 
                 }
             });
@@ -266,7 +248,12 @@ const app = {
         }
     },
 
-    handleNewStudyClick: () => ui.openNewStudyModal(),
+    handleNewStudyClick: () => {
+        ui.openNewStudyModal();
+        // --- ATUALIZAÇÃO LÓGICA (Refinamento MVC) ---
+        // O Controller aplica as regras de UI (ex: teto 90min) logo após a View abrir o modal
+        app.updateProfileUI(store.profile);
+    },
 
     updateProfileUI: (mode) => {
         const timeInput = document.getElementById('input-study-time');
@@ -666,3 +653,6 @@ const app = {
 
 // Inicialização Automática
 app.init();
+
+// Garante acesso global para os onclicks do HTML
+window.app = app;

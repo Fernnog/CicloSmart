@@ -440,22 +440,44 @@ const taskManager = {
         if(dateInput) dateInput.value = getLocalISODate();
     },
 
-    // Verificação de Atrasos (Visual)
+    // Verificação de Atrasos (Visual) - ATUALIZADO PARA DUAL BADGE
     checkOverdue: () => {
         const today = getLocalISODate();
-        const hasOverdue = store.tasks.some(t => t.date < today);
-        const badge = document.getElementById('task-alert-badge');
+        
+        // Contagem separada
+        const lateCount = store.tasks.filter(t => t.date < today).length;
+        const okCount = store.tasks.filter(t => t.date >= today).length;
+    
+        const badgeLate = document.getElementById('badge-task-late');
+        const badgeOk = document.getElementById('badge-task-ok');
         const icon = document.getElementById('task-icon-main');
         
-        if (badge && icon) {
-            if (hasOverdue) {
-                badge.classList.remove('hidden');
-                icon.classList.add('text-red-500');
-                icon.classList.remove('text-slate-400');
+        // Lógica Visual Vermelha (Atrasados)
+        if (badgeLate) {
+            if (lateCount > 0) {
+                badgeLate.innerText = lateCount > 9 ? '9+' : lateCount;
+                badgeLate.classList.remove('hidden');
+                // Pinta o ícone principal de vermelho se houver atrasos
+                if(icon) {
+                    icon.classList.add('text-red-500');
+                    icon.classList.remove('text-slate-400');
+                }
             } else {
-                badge.classList.add('hidden');
-                icon.classList.remove('text-red-500');
-                icon.classList.add('text-slate-400');
+                badgeLate.classList.add('hidden');
+                if(icon) {
+                    icon.classList.remove('text-red-500');
+                    icon.classList.add('text-slate-400');
+                }
+            }
+        }
+    
+        // Lógica Visual Verde (Em dia)
+        if (badgeOk) {
+            if (okCount > 0) {
+                badgeOk.innerText = okCount > 9 ? '9+' : okCount;
+                badgeOk.classList.remove('hidden');
+            } else {
+                badgeOk.classList.add('hidden');
             }
         }
     },

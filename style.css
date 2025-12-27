@@ -249,3 +249,34 @@ input[type="color"]::-webkit-color-swatch {
     min-width: 14px;
     text-align: center;
 }
+
+/* ==========================================================================
+   8. FEEDBACK VISUAL DE DRAG & DROP (RADAR) - v1.2.1
+   ========================================================================== 
+*/
+
+/* Quando o corpo tiver essa classe (durante o drag), ativa transições nas células */
+body.is-dragging .heatmap-day-cell {
+    transition: all 0.2s ease;
+}
+
+/* Estado de Hover (Destino Potencial) 
+   - Só ativa se o body estiver em 'is-dragging'
+   - Feedback visual claro (Cor Indigo + Sombra) 
+*/
+body.is-dragging .heatmap-day-cell:hover {
+    background-color: #e0e7ff !important; /* indigo-100 */
+    border-color: #6366f1 !important;     /* indigo-500 */
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    z-index: 10; /* Traz para frente para não cortar a sombra */
+}
+
+/* Remove eventos de mouse dos filhos durante o drag
+   Isso evita o "flicker" (piscar) quando o mouse passa sobre 
+   textos ou badges dentro do dia, garantindo que o hover 
+   fique estável no container pai (.heatmap-day-cell).
+*/
+body.is-dragging .heatmap-day-cell * {
+    pointer-events: none;
+}

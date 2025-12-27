@@ -63,7 +63,40 @@ const ui = {
         if (window.lucide) lucide.createIcons();
     },
 
-    // Modais
+    // --- NOVA FUNÇÃO: Gerenciamento Visual da Autenticação ---
+    updateAuthUI: (user) => {
+        const btnUser = document.getElementById('user-menu-btn');
+        const viewLogin = document.getElementById('auth-view-login');
+        const viewUser = document.getElementById('auth-view-user');
+        const lblUserEmail = document.getElementById('popover-user-email');
+        const dot = document.getElementById('user-status-dot');
+
+        if (user) {
+            // Estado: Logado
+            if(btnUser) {
+                btnUser.classList.remove('border-slate-300', 'text-slate-400');
+                btnUser.classList.add('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
+            }
+            if(dot) {
+                dot.classList.remove('hidden', 'bg-slate-400');
+                dot.classList.add('bg-emerald-500');
+            }
+            if(viewLogin) viewLogin.classList.add('hidden');
+            if(viewUser) viewUser.classList.remove('hidden');
+            if(lblUserEmail) lblUserEmail.innerText = user.email;
+        } else {
+            // Estado: Deslogado
+            if(btnUser) {
+                btnUser.classList.add('border-slate-300', 'text-slate-400');
+                btnUser.classList.remove('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
+            }
+            if(dot) dot.classList.add('hidden');
+            if(viewLogin) viewLogin.classList.remove('hidden');
+            if(viewUser) viewUser.classList.add('hidden');
+        }
+    },
+    // ---------------------------------------------------------
+
     toggleModal: (id, show) => {
         const el = document.getElementById(id);
         if(!el) return;
@@ -96,21 +129,9 @@ const ui = {
                 dateInput.value = today; 
             }
         }
-        // Nota: Chama função do app (Controller) se necessário, mas idealmente só atualiza UI
-        // app.updateProfileUI(store.profile); -> Movido para lógica do controller ou mantido se for puramente UI
-        const timeInput = document.getElementById('input-study-time');
-        const warning = document.getElementById('time-warning');
         
-        if(timeInput) {
-             if (store.profile === 'pendular') {
-                timeInput.max = 90;
-                if(parseInt(timeInput.value) > 90) timeInput.value = 90;
-                if(warning) warning.classList.remove('hidden');
-            } else {
-                timeInput.max = 300;
-                if(warning) warning.classList.add('hidden');
-            }
-        }
+        // OBS: A lógica de travar o input de tempo (90min) foi removida daqui 
+        // para ser tratada exclusivamente pelo Controller através de app.updateProfileUI.
 
         ui.toggleModal('modal-new', true);
     },
@@ -132,7 +153,6 @@ const ui = {
         ui.toggleModal('modal-heatmap', true);
     },
 
-    // Heatmap Badge System
     renderHeatmap: () => {
         const container = document.getElementById('heatmap-grid');
         if(!container) return;
@@ -324,7 +344,6 @@ const ui = {
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
 
-        // OBS: app.promptEdit e app.confirmDelete são chamados aqui. O navegador resolverá 'app' no escopo global.
         return `
             <div class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative" 
                 style="border-left-color: ${review.color}">
@@ -430,7 +449,7 @@ const ui = {
                     </div>
                     <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
                         class="text-slate-400 hover:text-slate-600 font-bold p-1">✕</button>
-                </div>
+                    </div>
                 <div class="text-xs text-slate-500 truncate mt-1 italic">"${family[0].topic}"</div>
             </div>
             

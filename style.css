@@ -6,7 +6,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* 2. Scrollbars Customizadas */
+/* 2. Scrollbars Customizadas (Padrão Geral) */
 .custom-scroll::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -196,22 +196,19 @@ input[type="color"]::-webkit-color-swatch {
     }
 }
 
-/* 
-   ==========================================================================
-   6. MELHORIAS E CORREÇÕES DE LAYOUT (Prioridade 1 - Scroll Fixes)
+/* ==========================================================================
+   6. MELHORIAS E CORREÇÕES DE LAYOUT (Scroll Fixes)
    ========================================================================== 
 */
 
-/* 
-   Garante que o container principal não exceda a altura da tela 
+/* Garante que o container principal não exceda a altura da tela 
    e respeite o flex-shrink em navegadores como Firefox/Chrome.
 */
 #main-kanban {
     min-height: 0; 
 }
 
-/* 
-   Define que as colunas do Kanban devem ocupar no máximo 100% da altura do pai
+/* Define que as colunas do Kanban devem ocupar no máximo 100% da altura do pai
    e permite que elas encolham (min-height: 0) para forçar o scroll interno.
 */
 .kanban-column {
@@ -221,12 +218,27 @@ input[type="color"]::-webkit-color-swatch {
     flex-direction: column;
 }
 
-/* 
-   Assegura que a lista interna (onde estão os cards) tenha permissão para rolar (scroll)
+/* Assegura que a lista interna (onde estão os cards) tenha permissão para rolar (scroll)
    e o cabeçalho permaneça fixo no topo da coluna.
 */
 #list-late, #list-today, #list-future {
     flex: 1 1 auto; /* Permite crescer e encolher conforme necessário */
     min-height: 0;  /* Habilita o cálculo correto do overflow */
     overflow-y: auto; /* Força a aparição da barra de rolagem quando necessário */
+}
+
+/* ==========================================================================
+   7. COMPONENTES ESPECÍFICOS (OVERRIDES) - Prioridade 2
+   ========================================================================== 
+*/
+
+/* Refinamento para scrollbars dentro dos cards do heatmap (Radar) */
+/* Necessário pois os cards são pequenos (h-32) e a barra padrão ocupa muito espaço */
+#heatmap-grid .custom-scroll::-webkit-scrollbar {
+    width: 3px; /* Barra bem fina */
+}
+
+#heatmap-grid .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
 }

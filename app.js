@@ -17,10 +17,8 @@ const app = {
         store.load();
         
         // --- ARQUITETURA REATIVA (OBSERVER v1.1.4) ---
-        // Registra os componentes que devem ser atualizados automaticamente
-        // sempre que os dados no store forem modificados/salvos.
-        store.subscribe(taskManager.checkOverdue); // Atualiza o badge vermelho de atraso
-        store.subscribe(taskManager.render);       // Atualiza a lista de tarefas (Smart Grouping)
+        store.subscribe(taskManager.checkOverdue); 
+        store.subscribe(taskManager.render);       
         // ---------------------------------------------
 
         // --- AUTO-REPARO DE DADOS LEGADOS ---
@@ -43,7 +41,6 @@ const app = {
         app.initVersionControl();
         app.checkSmartCycle();
 
-        // INICIALIZAÇÃO DA AUTENTICAÇÃO (Firebase)
         if (typeof app.initAuth === 'function') {
             app.initAuth(); 
         }
@@ -67,18 +64,15 @@ const app = {
         ui.switchTab('today');
 
         // --- PRIORIDADE 1 e 2: VERIFICAÇÃO DE INTEGRIDADE ---
-        // Roda após um breve delay para garantir que a UI e dados estejam prontos
         setTimeout(() => app.checkCycleIntegrity(), 1000);
         // ----------------------------------------------------
     },
 
     // --- NOVA FUNÇÃO DE AUTENTICAÇÃO (RESPONSIVA & EVENT-DRIVEN) ---
     initAuth: () => {
-        // Função interna que realmente liga os botões e listeners
         const startFirebaseLogic = () => {
             console.log("[CicloSmart Auth] Iniciando ouvintes...");
             
-            // Verificação de segurança extra
             if (!window.fireMethods || !window.fireAuth) {
                 console.error("[CicloSmart Auth] Erro crítico: Firebase ainda indefinido.");
                 return;
@@ -88,42 +82,35 @@ const app = {
             const auth = window.fireAuth;
             const db = window.fireDb;
 
-            // Elementos UI NOVOS
             const btnUser = document.getElementById('user-menu-btn');
             const popover = document.getElementById('auth-popover');
             const viewLogin = document.getElementById('auth-view-login');
             const viewUser = document.getElementById('auth-view-user');
             
-            // Inputs do Popover
             const txtEmail = document.getElementById('popover-email');
             const txtPass = document.getElementById('popover-pass');
             const lblUserEmail = document.getElementById('popover-user-email');
 
-            // Toggle do Popover (Abrir/Fechar)
             if(btnUser) {
                 btnUser.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Impede fechar ao clicar no botão
+                    e.stopPropagation(); 
                     popover.classList.toggle('hidden');
                 });
             }
 
-            // Fechar Popover ao clicar fora
             document.addEventListener('click', (e) => {
                 if(popover && !popover.classList.contains('hidden') && !popover.contains(e.target) && e.target !== btnUser) {
                     popover.classList.add('hidden');
                 }
             });
 
-            // Listener de Estado (Logado/Deslogado)
             onAuthStateChanged(auth, (user) => {
                 if (user) {
                     store.currentUser = user;
                     
-                    // 1. VISUAL DO BOTÃO: LOGADO (Borda Verde + Ícone Ativo)
                     if(btnUser) {
                         btnUser.classList.remove('border-slate-300', 'text-slate-400');
                         btnUser.classList.add('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
-                        // Opcional: Mostrar bolinha de status
                         const dot = document.getElementById('user-status-dot');
                         if(dot) {
                             dot.classList.remove('hidden', 'bg-slate-400');
@@ -131,18 +118,15 @@ const app = {
                         }
                     }
 
-                    // 2. CONTEÚDO DO POPOVER
                     if(viewLogin) viewLogin.classList.add('hidden');
                     if(viewUser) viewUser.classList.remove('hidden');
                     if(lblUserEmail) lblUserEmail.innerText = user.email;
 
-                    // Sincronização de dados (Mantém lógica original)
                     const userRef = ref(db, 'users/' + user.uid);
                     get(userRef).then((snapshot) => {
                         if (snapshot.exists()) {
                             store.load(snapshot.val());
                             toast.show('Sincronizado.', 'success');
-                            // Re-executa verificação de integridade após sync
                             setTimeout(() => app.checkCycleIntegrity(), 1500);
                         } else {
                             store.save(); 
@@ -156,18 +140,15 @@ const app = {
                 } else {
                     store.currentUser = null;
                     
-                    // 1. VISUAL DO BOTÃO: DESLOGADO (Cinza Padrão)
                     if(btnUser) {
                         btnUser.classList.add('border-slate-300', 'text-slate-400');
                         btnUser.classList.remove('border-emerald-500', 'text-emerald-600', 'bg-emerald-50');
-                         // Opcional
                         const dot = document.getElementById('user-status-dot');
                         if(dot) {
                             dot.classList.add('hidden');
                         }
                     }
 
-                    // 2. CONTEÚDO DO POPOVER
                     if(viewLogin) viewLogin.classList.remove('hidden');
                     if(viewUser) viewUser.classList.add('hidden');
 
@@ -175,35 +156,32 @@ const app = {
                 }
             });
 
-            // Evento Login (Formulário do Popover)
             const formPopover = document.getElementById('auth-form-popover');
             if(formPopover) {
                 formPopover.addEventListener('submit', (e) => {
                     e.preventDefault();
                     signInWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
                         .then(() => {
-                            popover.classList.add('hidden'); // Fecha popover ao logar
+                            popover.classList.add('hidden'); 
                         })
                         .catch((error) => toast.show('Erro: ' + error.message, 'error'));
                 });
             }
             
-            // Evento Logout
             const btnLogout = document.getElementById('btn-logout-popover');
             if(btnLogout) {
                 btnLogout.addEventListener('click', () => {
                     signOut(auth).then(() => {
-                        popover.classList.add('hidden'); // Fecha popover ao sair
+                        popover.classList.add('hidden'); 
                         toast.show('Desconectado.', 'info');
                     });
                 });
             }
                 
-            // Evento Cadastro
             const btnSignup = document.getElementById('btn-signup-popover');
             if(btnSignup) {
                 btnSignup.addEventListener('click', (e) => {
-                    e.preventDefault(); // Evita refresh
+                    e.preventDefault(); 
                     if(txtEmail.value && txtPass.value) {
                         createUserWithEmailAndPassword(auth, txtEmail.value, txtPass.value)
                             .then(() => {
@@ -218,7 +196,6 @@ const app = {
             }
         };
 
-        // LÓGICA DE ESPERA (CORREÇÃO DE RACE CONDITION)
         if (window.fireMethods && window.fireAuth) {
             startFirebaseLogic();
         } else {
@@ -226,7 +203,6 @@ const app = {
             window.addEventListener('firebase-ready', startFirebaseLogic);
         }
     },
-    // -----------------------------------------------------------
 
     initVersionControl: () => {
         if (typeof changelogData !== 'undefined' && changelogData.length > 0) {
@@ -311,8 +287,6 @@ const app = {
             store.cycleStartDate = dateStr;
             store.save();
             toast.show('Seus novos cards seguirão esta referência.', 'success', '📅 Ciclo Ancorado');
-            
-            // Re-verifica integridade ao mudar a data de início
             setTimeout(() => app.checkCycleIntegrity(), 500);
         }
     },
@@ -337,50 +311,57 @@ const app = {
         }
     },
 
-    // --- PRIORIDADE 3: CÁLCULO ROBUSTO DO CICLO ---
+    // --- PRIORIDADE 1: CÁLCULO ROBUSTO DO CICLO (MAX + 1) ---
     calculateCycleIndex: (targetDateStr) => {
         if (!store.cycleStartDate) return 1;
         
-        // 1. Coleta todas as datas únicas de estudos NOVOS ativos no ciclo atual
-        const activeDays = new Set(store.reviews
-            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
-            .map(r => r.date)
+        // Filtra TODOS os estudos NOVOS do ciclo atual
+        const currentCycleReviews = store.reviews.filter(r => 
+            r.type === 'NOVO' && r.date >= store.cycleStartDate
         );
-        
-        // 2. Adiciona a data alvo ao conjunto (para garantir que ela entre na ordenação)
-        activeDays.add(targetDateStr);
-        
-        // 3. Transforma em array e ordena cronologicamente
-        const sortedUniqueDays = Array.from(activeDays).sort();
-        
-        // 4. O índice da data alvo (+1) é o seu número no ciclo real
-        return sortedUniqueDays.indexOf(targetDateStr) + 1;
-    },
-    // ------------------------------------------------
 
-    // --- PRIORIDADE 1: VERIFICADOR DE INTEGRIDADE (DIAGNÓSTICO) ---
+        if (currentCycleReviews.length === 0) return 1;
+
+        // Pega o maior índice existente e soma 1. Garante estabilidade e evita duplicação.
+        const maxIndex = Math.max(...currentCycleReviews.map(r => r.cycleIndex || 0));
+        
+        return maxIndex + 1;
+    },
+    // --------------------------------------------------------
+
+    // --- VERIFICADOR DE INTEGRIDADE ---
     checkCycleIntegrity: () => {
         if (!store.cycleStartDate) return;
 
-        // Pega todos os estudos NOVOS do ciclo atual ordenados por data
         const cycleStudies = store.reviews
             .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
-            .sort((a, b) => a.date.localeCompare(b.date));
+            .sort((a, b) => a.cycleIndex - b.cycleIndex);
 
         let isBroken = false;
         let conflictListHtml = '';
-        let uniqueDateCounter = 0;
+        
+        // Verifica duplicidade de índices ou desordem
+        const seenIndices = new Set();
         let lastDate = null;
 
-        // Simula a contagem correta
         cycleStudies.forEach(study => {
-            if (study.date !== lastDate) {
-                uniqueDateCounter++;
-                lastDate = study.date;
+            let conflictDetected = false;
+
+            // Checagem de Duplicidade
+            if (seenIndices.has(study.cycleIndex)) {
+                conflictDetected = true;
+            } else {
+                seenIndices.add(study.cycleIndex);
             }
-            
-            // Se o número gravado for diferente do contador cronológico
-            if (study.cycleIndex !== uniqueDateCounter) {
+
+            // Checagem de Cronologia (Só avisa se uma data anterior tiver índice maior)
+            if (lastDate && study.date < lastDate) {
+               // Embora não seja estritamente erro (append mode), é bom avisar
+               // conflictDetected = true; // Comentado para permitir Append Mode sem warning constante
+            }
+            lastDate = study.date;
+
+            if (conflictDetected) {
                 isBroken = true;
                 conflictListHtml += `
                     <div class="p-3 flex justify-between items-center bg-white border-b border-slate-50 last:border-0">
@@ -390,9 +371,7 @@ const app = {
                             <div class="text-[10px] text-slate-500 truncate w-40 italic">${study.topic}</div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="text-red-400 font-bold line-through text-xs opacity-70">#${study.cycleIndex}</span>
-                            <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i>
-                            <span class="text-emerald-700 font-bold text-sm bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 shadow-sm">#${uniqueDateCounter}</span>
+                            <span class="text-red-500 font-bold bg-red-100 px-2 py-0.5 rounded border border-red-200">#${study.cycleIndex} (Conflito)</span>
                         </div>
                     </div>
                 `;
@@ -404,51 +383,74 @@ const app = {
             if(listEl) listEl.innerHTML = conflictListHtml;
             
             ui.toggleModal('modal-repair', true);
-            toast.show('Inconsistência na numeração do ciclo detectada.', 'warning', 'Diagnóstico de Sistema');
             if(window.lucide) lucide.createIcons();
         }
     },
     // -----------------------------------------------------------------
 
-    // --- PRIORIDADE 2: EXECUTOR DO REPARO (CORREÇÃO EM LOTE) ---
-    runCycleRepair: () => {
+    // --- PRIORIDADE 1 e 2: EXECUTOR DO REPARO DUAL (Cronológico vs Append) ---
+    runCycleRepair: (mode) => {
         if (!store.cycleStartDate) return;
 
         const cycleStudies = store.reviews
-            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate)
-            .sort((a, b) => a.date.localeCompare(b.date));
+            .filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate);
 
-        let uniqueDateCounter = 0;
-        let lastDate = null;
         let changesCount = 0;
 
-        cycleStudies.forEach(study => {
-            if (study.date !== lastDate) {
-                uniqueDateCounter++;
-                lastDate = study.date;
-            }
+        if (mode === 'chronological') {
+            // MODO 1: Reorganização total por DATA (1, 2, 3...)
+            cycleStudies.sort((a, b) => a.date.localeCompare(b.date));
+            
+            // Re-numera sequencialmente
+            cycleStudies.forEach((study, index) => {
+                 const newIndex = index + 1; 
+                 if (study.cycleIndex !== newIndex) {
+                     store.reviews.forEach(r => {
+                         if (r.batchId === study.batchId) r.cycleIndex = newIndex;
+                     });
+                     changesCount++;
+                 }
+            });
 
-            // Se precisa corrigir
-            if (study.cycleIndex !== uniqueDateCounter) {
-                const correctIndex = uniqueDateCounter;
-                
-                // Atualiza o card principal E todos os irmãos (revisões) desse lote
-                store.reviews.forEach(r => {
-                    if (r.batchId === study.batchId) {
-                        r.cycleIndex = correctIndex;
-                    }
-                });
-                changesCount++;
-            }
-        });
+        } else if (mode === 'append') {
+            // MODO 2: Resolver conflitos jogando para o FINAL
+            
+            // Descobre o teto atual
+            let maxIndex = 0;
+            cycleStudies.forEach(s => {
+                if ((s.cycleIndex || 0) > maxIndex) maxIndex = s.cycleIndex;
+            });
+
+            const seenIndices = new Set();
+            // Ordena por ID (data de criação) para estabilidade
+            cycleStudies.sort((a, b) => a.id - b.id);
+
+            cycleStudies.forEach(study => {
+                if (seenIndices.has(study.cycleIndex)) {
+                    // CONFLITO: Joga para o final da fila
+                    maxIndex++;
+                    const newIndex = maxIndex;
+                    
+                    store.reviews.forEach(r => {
+                        if (r.batchId === study.batchId) r.cycleIndex = newIndex;
+                    });
+                    changesCount++;
+                    seenIndices.add(newIndex);
+                } else {
+                    seenIndices.add(study.cycleIndex);
+                }
+            });
+        }
 
         if (changesCount > 0) {
             store.save();
-            ui.render(); // Atualiza a tela
+            ui.render(); 
             ui.toggleModal('modal-repair', false);
-            toast.show(`Ciclo reparado! ${changesCount} estudos reordenados cronologicamente.`, 'success', 'Integridade Restaurada');
+            const modeText = mode === 'chronological' ? 'por Data' : 'por Anexação';
+            toast.show(`Ciclo reparado! ${changesCount} estudos ajustados ${modeText}.`, 'success', 'Integridade Restaurada');
         } else {
             ui.toggleModal('modal-repair', false);
+            toast.show('Nenhuma alteração necessária.', 'info');
         }
     },
     // -------------------------------------------------------------
@@ -486,12 +488,12 @@ const app = {
             subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target
         };
 
-        // --- PRIORIDADE 3: USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
+        // --- USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
         let projectedDay = 1;
         if (store.cycleStartDate) {
              projectedDay = app.calculateCycleIndex(selectedDateStr);
         }
-        // ------------------------------------------------------
+        // ----------------------------------------
 
         const descEl = document.getElementById('cycle-option-keep-desc');
         if(descEl) descEl.innerText = `Será registrado como Dia #${projectedDay}`;
@@ -525,7 +527,6 @@ const app = {
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
 
-        // GERAÇÃO DE ID DE LOTE (NOVO) - Conecta todas as revisões deste estudo
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
 
         if (!store.cycleStartDate) {
@@ -537,14 +538,11 @@ const app = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
 
-        // --- PRIORIDADE 3: USO DA FUNÇÃO ROBUSTA DE CÁLCULO ---
         const finalCycleIndex = app.calculateCycleIndex(selectedDateStr);
-        // ------------------------------------------------------
 
         const newReviews = [];
         let blocker = null;
 
-        // CARD ORIGINAL (Com batchId)
         const acquisitionEntry = {
             id: Date.now() + Math.random(), 
             subject: subjectName,
@@ -555,7 +553,7 @@ const app = {
             type: 'NOVO', 
             status: 'PENDING',
             cycleIndex: finalCycleIndex,
-            batchId: batchId // Vínculo
+            batchId: batchId 
         };
         newReviews.push(acquisitionEntry);
 
@@ -603,7 +601,7 @@ const app = {
                 type: typeLabel,
                 status: 'PENDING',
                 cycleIndex: finalCycleIndex,
-                batchId: batchId // Vínculo
+                batchId: batchId 
             });
         }
 
@@ -640,9 +638,6 @@ const app = {
         );
     },
 
-    // FUNÇÕES DE BACKUP (downloadBackup e restoreData) REMOVIDAS
-    // A persistência agora é gerenciada automaticamente pelo Firebase no store.save()
-
     updateCapacitySetting: (val) => {
         const min = parseInt(val);
         if(min > 0) {
@@ -665,16 +660,13 @@ const app = {
         }
     },
 
-    // --- LÓGICA DE EDIÇÃO EM LOTE ---
     promptEdit: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
 
-        // Tenta edição de Tópico primeiro
         const newTopic = prompt("Editar Tópico (Nome):", r.topic);
         
         if (newTopic !== null && newTopic !== r.topic) {
-            // Verifica se é lote
             const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
             const isBatch = siblings.length > 1;
             let updateAll = false;
@@ -684,16 +676,13 @@ const app = {
             }
 
             if (updateAll) {
-                // Atualiza em lote
                 store.updateBatchTopic(r.batchId, newTopic);
                 toast.show(`Tópico corrigido em ${siblings.length} cards.`, 'success', 'Correção em Lote');
             } else {
-                // Atualiza individual
                 store.updateReview(id, newTopic, r.time);
             }
         } 
         else if (newTopic === r.topic) {
-            // Se usuário não mudou o nome (ou cancelou), oferece mudar o tempo
             const newTime = prompt("Editar Tempo (min):", r.time);
             if (newTime !== null && !isNaN(newTime) && newTime !== r.time) {
                 store.updateReview(id, r.topic, newTime);
@@ -701,17 +690,14 @@ const app = {
         }
     },
 
-    // --- LÓGICA DE EXCLUSÃO INTELIGENTE (Smart Delete) ---
     confirmDelete: (id) => {
         const r = store.reviews.find(x => x.id === id);
         if(!r) return;
 
-        // Verifica se existem irmãos (mesmo batchId)
         const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
         const isBatch = siblings.length > 1;
 
         if (isBatch) {
-            // Pergunta Inteligente
             const deleteAll = confirm(
                 `🗑️ EXCLUSÃO EM LOTE\n\nEste item faz parte de um ciclo com ${siblings.length} cards (Ataque + Revisões).\n\n[OK] Sim, apagar TODO o ciclo.\n[Cancelar] Não, apagar apenas este card.`
             );
@@ -720,23 +706,18 @@ const app = {
                 store.deleteBatch(r.batchId);
                 toast.show(`Ciclo completo removido (${siblings.length} itens).`, 'error', 'Limpeza em Lote');
             } else {
-                // Se clicou em Cancelar, confirma se quer apagar só este (Segurança extra)
                 if(confirm("Confirma a exclusão APENAS deste card específico?")) {
                     store.deleteReview(id);
                     toast.show('Item removido individualmente.', 'info');
                 }
             }
         } else {
-            // Item único (legado ou orfão)
             if(confirm("Tem certeza que deseja excluir esta revisão?")) {
                 store.deleteReview(id);
                 toast.show('Estudo removido.', 'info');
             }
         }
     },
-    // -----------------------------------------------------
-
-    // --- LÓGICA DE EXPORTAÇÃO ICS ---
 
     openExportUI: () => {
         const today = getLocalISODate();
@@ -852,8 +833,6 @@ const app = {
         toast.show('Arquivo gerado com horários empilhados.', 'info', '📅 Agenda Sincronizada');
     },
 
-    // --- LÓGICA DE REAGENDAMENTO V2 (SRS INTEGRITY + WATERFALL) ---
-    // Substituição completa com Macro Shift e Nivelamento de Carga
     handleReschedule: () => {
         const dateInput = document.getElementById('input-reschedule-date');
         const targetDateStr = dateInput.value;
@@ -861,8 +840,6 @@ const app = {
         
         if (!targetDateStr) return toast.show('Selecione uma data para retomar os estudos.', 'warning');
 
-        // 1. Identificar o Delta (Atraso)
-        // Filtra pendências estritamente no passado
         const overdueReviews = store.reviews.filter(r => 
             r.status === 'PENDING' && 
             r.date < todayStr 
@@ -872,7 +849,6 @@ const app = {
             return toast.show('Você não possui revisões atrasadas para reagendar.', 'success');
         }
 
-        // Ordena para pegar o atraso mais antigo (Marco Zero)
         overdueReviews.sort((a, b) => a.date.localeCompare(b.date));
         const oldestDateStr = overdueReviews[0].date;
 
@@ -887,27 +863,21 @@ const app = {
 
         if (diffDays === 0) return toast.show('As datas já coincidem.', 'info');
 
-        // Confirmação com contexto de SRS
         const confirmMsg = `⚠️ REAGENDAMENTO INTELIGENTE\n\n1. O sistema detectou um atraso de ${diffDays} dias.\n2. Todos os estudos atrasados E suas revisões futuras conectadas serão movidos para frente para preservar a curva de memória.\n3. Se houver sobrecarga, o excedente será distribuído nos dias seguintes.\n\nDeseja aplicar?`;
         
         if (!confirm(confirmMsg)) return;
 
-        // 2. FASE 1: MACRO SHIFT (Preservação de SRS)
-        // Identificar quais "Batch IDs" (Famílias) foram afetados pelo atraso
         const affectedBatches = new Set(overdueReviews.map(r => r.batchId));
         
         let shiftCount = 0;
         
         store.reviews.forEach(r => {
-            // Se o item pertence a um lote atrasado e ainda não foi feito, ele deve se mover
-            // Isso move o atrasado E as revisões futuras desse mesmo assunto
             if (r.status === 'PENDING' && r.batchId && affectedBatches.has(r.batchId)) {
                 const current = new Date(r.date + 'T00:00:00');
                 current.setDate(current.getDate() + diffDays);
                 r.date = getLocalISODate(current);
                 shiftCount++;
             }
-            // Fallback para itens órfãos (sem batchId, legado) que estão atrasados
             else if (r.status === 'PENDING' && !r.batchId && r.date < todayStr) {
                 const current = new Date(r.date + 'T00:00:00');
                 current.setDate(current.getDate() + diffDays);
@@ -916,15 +886,12 @@ const app = {
             }
         });
 
-        // 3. FASE 2: WATERFALL (Nivelamento de Carga)
-        // Agora que tudo foi movido, verificamos se algum dia explodiu a capacidade
         let dateCursor = new Date(targetDateStr + 'T00:00:00');
-        const safetyLimit = 90; // Analisa até 3 meses à frente para dissipar a onda
+        const safetyLimit = 90; 
         let daysProcessed = 0;
         let waterfallCount = 0;
         let hasChanges = true;
 
-        // Função auxiliar para carga
         const getDayLoad = (dStr) => store.reviews
             .filter(r => r.date === dStr && r.status === 'PENDING')
             .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
@@ -938,11 +905,9 @@ const app = {
             if (dayLoad > capacity) {
                 let overflowNeeded = dayLoad - capacity;
                 
-                // Pega itens do dia, priorizando jogar para frente os de ciclos mais avançados (revisões distantes)
-                // ou simplesmente os últimos da lista para manter FIFO
                 const itemsOnDay = store.reviews
                     .filter(r => r.date === cursorStr && r.status === 'PENDING')
-                    .sort((a, b) => b.cycleIndex - a.cycleIndex); // Joga as revisões finais para frente primeiro
+                    .sort((a, b) => b.cycleIndex - a.cycleIndex); 
                 
                 const nextDay = new Date(dateCursor);
                 nextDay.setDate(nextDay.getDate() + 1);
@@ -954,7 +919,7 @@ const app = {
                     item.date = nextDayStr;
                     overflowNeeded -= item.time;
                     waterfallCount++;
-                    hasChanges = true; // Força o loop a continuar verificando o efeito cascata
+                    hasChanges = true; 
                 }
             }
             
@@ -1085,10 +1050,8 @@ const ui = {
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
 
-        // --- NOVO: Inicializa o input de reagendamento com Hoje ---
         const rescheduleInput = document.getElementById('input-reschedule-date');
         if(rescheduleInput) rescheduleInput.value = getLocalISODate();
-        // ----------------------------------------------------------
 
         ui.renderHeatmap();
         ui.toggleModal('modal-heatmap', true);
@@ -1258,8 +1221,6 @@ const ui = {
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
-        // --- ATUALIZADO: BADGE INTERATIVO ---
-        // Agora usa a classe .cycle-badge e chama ui.showCycleInfo
         const cycleHtml = review.batchId && review.cycleIndex 
            ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
            : '';
@@ -1294,7 +1255,6 @@ const ui = {
                         <input type="checkbox" onclick="store.toggleStatus(${review.id})" ${isDone ? 'checked' : ''} 
                                class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
-                        <!-- BOTÃO DE EXCLUSÃO ATUALIZADO PARA SUPORTAR LOTE -->
                         <button onclick="app.confirmDelete(${review.id})" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir">
                             <i data-lucide="trash" class="w-4 h-4"></i>
                         </button>
@@ -1313,19 +1273,16 @@ const ui = {
         `;
     },
 
-    // --- FUNÇÃO BLINDADA: GERA DOM SE NÃO EXISTIR ---
     showCycleInfo: (batchId, event) => {
         if(event) {
             event.preventDefault();
             event.stopPropagation();
         }
 
-        // 1. Verifica ou cria o Backdrop (Fundo escuro)
         let backdrop = document.getElementById('cycle-popover-backdrop');
         if (!backdrop) {
             backdrop = document.createElement('div');
             backdrop.id = 'cycle-popover-backdrop';
-            // Ao clicar no backdrop, fecha tudo
             backdrop.onclick = () => {
                 document.getElementById('cycle-popover')?.classList.remove('visible');
                 backdrop.classList.remove('visible');
@@ -1333,7 +1290,6 @@ const ui = {
             document.body.appendChild(backdrop);
         }
 
-        // 2. Verifica ou cria o Popover (Janela)
         let popover = document.getElementById('cycle-popover');
         if (!popover) {
             popover = document.createElement('div');
@@ -1341,17 +1297,14 @@ const ui = {
             document.body.appendChild(popover);
         }
 
-        // 3. Busca Dados (Família)
         const family = store.reviews
             .filter(r => r.batchId === batchId)
             .sort((a, b) => a.date.localeCompare(b.date));
 
         if (family.length === 0) return toast.show('Erro: Nenhum dado vinculado.', 'error');
 
-        // Título e Matéria
         const subjectName = family[0].subject;
 
-        // 4. Monta HTML da Lista
         const listHtml = family.map(f => {
             const isDone = f.status === 'DONE';
             const icon = isDone ? '✅' : '⭕';
@@ -1368,7 +1321,6 @@ const ui = {
             `;
         }).join('');
 
-        // Preenche o conteúdo do Modal
         popover.innerHTML = `
             <div class="mb-3 border-b border-slate-100 pb-2">
                 <div class="flex justify-between items-start">
@@ -1392,7 +1344,6 @@ const ui = {
             </button>
         `;
 
-        // 5. Exibe (Adiciona classes visible)
         backdrop.classList.add('visible');
         popover.classList.add('visible');
     },

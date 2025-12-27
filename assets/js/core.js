@@ -1,8 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.2.1 - UX & Architecture Update)
- * Contém: Configurações, Utilitários, CycleValidator (NOVO), Store e TaskManager.
+ * CICLOSMART CORE (v1.1.4 - Observer Pattern & Friendly Dates)
+ * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
+ * ATUALIZADO: Arquitetura Reativa e UX de Datas Relativas.
  */
 
 // ==========================================
@@ -45,23 +46,26 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
-// Utilitário de Data Amigável (UX)
+// NOVO: Utilitário de Data Amigável (UX)
 const getFriendlyDate = (dateStr) => {
     if (!dateStr) return '';
+    // Ajuste de fuso horário para comparação precisa
     const date = new Date(dateStr + 'T00:00:00');
     const todayStr = getLocalISODate();
+    const today = new Date(todayStr + 'T00:00:00');
     
-    const diffTime = date - new Date(todayStr + 'T00:00:00');
+    // Diferença em dias
+    const diffTime = date - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return 'Hoje';
     if (diffDays === 1) return 'Amanhã';
     if (diffDays === -1) return 'Ontem';
     
-    return formatDateDisplay(dateStr);
+    return formatDateDisplay(dateStr); // Retorna dd/mm se não for data próxima
 };
 
-// Utilitário de Contraste (YIQ)
+// Utilitário de Contraste (YIQ) para Legibilidade dos Cards de Tarefa
 const getContrastYIQ = (hexcolor) => {
     if (!hexcolor) return 'black';
     hexcolor = hexcolor.replace("#", "");
@@ -118,70 +122,7 @@ const toast = {
 };
 
 // ==========================================
-// 2. CYCLE VALIDATOR (NOVO v1.2.1)
-// ==========================================
-
-const CycleValidator = {
-    /**
-     * Verifica se um estudo pode ser movido para uma nova data.
-     * Centraliza regras de Capacidade e Cronologia (SRS).
-     * @param {number} reviewId - ID do estudo.
-     * @param {string} targetDateStr - Data alvo (YYYY-MM-DD).
-     * @returns {Object} { valid: boolean, msg: string|null, review: Object }
-     */
-    validateMove: (reviewId, targetDateStr) => {
-        const review = store.reviews.find(r => r.id === reviewId);
-        
-        // Validações Básicas
-        if (!review) return { valid: false, msg: 'Estudo não localizado.' };
-        if (review.date === targetDateStr) return { valid: false, msg: null }; // Movimento neutro (mesmo dia)
-        
-        // 1. Validação de Capacidade (Burnout Protection)
-        const capacity = store.capacity || 240;
-        const targetDayLoad = store.reviews
-            .filter(r => r.date === targetDateStr && r.id !== reviewId)
-            .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
-        
-        const newTotal = targetDayLoad + parseInt(review.time);
-
-        if (newTotal > capacity) {
-            return { 
-                valid: false, 
-                msg: `Sobrecarga: O dia ficaria com ${newTotal}min (Máx: ${capacity}min).` 
-            };
-        }
-
-        // 2. Validação Cronológica (Pedagógica)
-        if (review.batchId) {
-            const siblings = store.reviews
-                .filter(r => r.batchId === review.batchId)
-                .sort((a, b) => a.date.localeCompare(b.date));
-            
-            const currentIndex = siblings.findIndex(r => r.id === reviewId);
-            
-            // Trava Futura: Não pode cruzar com a próxima revisão
-            const nextReview = siblings[currentIndex + 1];
-            if (nextReview && targetDateStr >= nextReview.date) {
-                return { valid: false, msg: `Cronologia: Deve ser antes de ${formatDateDisplay(nextReview.date)}.` };
-            }
-            
-            // Trava Passada: Não pode cruzar com a revisão anterior
-            const prevReview = siblings[currentIndex - 1];
-            if (prevReview && targetDateStr <= prevReview.date) {
-                return { valid: false, msg: `Cronologia: Deve ser depois de ${formatDateDisplay(prevReview.date)}.` };
-            }
-        }
-
-        return { valid: true, review: review };
-    }
-};
-
-// Exportação para uso global
-window.CycleValidator = CycleValidator;
-
-
-// ==========================================
-// 3. STORE (ESTADO & PERSISTÊNCIA REATIVA)
+// 2. STORE (ESTADO & PERSISTÊNCIA REATIVA)
 // ==========================================
 
 const store = {
@@ -195,18 +136,22 @@ const store = {
     cycleStartDate: null,
     currentUser: null,
     
-    // --- SISTEMA DE OBSERVER ---
+    // --- NOVO: SISTEMA DE OBSERVER (Reatividade) ---
     listeners: [],
 
     subscribe: (fn) => {
+        // Evita duplicidade de ouvintes
         if (typeof fn === 'function' && !store.listeners.includes(fn)) {
             store.listeners.push(fn);
         }
     },
 
     notify: () => {
+        // Notifica todos os componentes inscritos que os dados mudaram
+        // console.log('[Store] Notificando ouvintes...');
         store.listeners.forEach(fn => fn());
     },
+    // -----------------------------------------------
 
     // Lógica de Load
     load: (fromCloudData = null) => {
@@ -249,7 +194,7 @@ const store = {
             ui.render();
             if (typeof taskManager !== 'undefined') {
                 taskManager.render();
-                store.notify(); 
+                store.notify(); // Garante verificação de estado inicial (badges, etc)
             }
         }
     },
@@ -265,7 +210,7 @@ const store = {
         store.cycleStartDate = null; 
     },
 
-    // Lógica de Save
+    // Lógica de Save Atualizada (Chama Notify)
     save: () => {
         const dataToSave = {
             reviews: store.reviews,
@@ -288,6 +233,7 @@ const store = {
                 .catch(err => console.error("[Core] Erro na sincronização:", err));
         }
 
+        // NOVO: Dispara notificação para atualizar UI dependente (listas, badges, etc)
         store.notify();
     },
 
@@ -369,12 +315,13 @@ const store = {
     // --- Métodos de Tarefas ---
     removeTask: (id) => {
         store.tasks = store.tasks.filter(t => t.id !== id);
+        // O store.save() agora dispara o notify(), que chamará taskManager.render() automaticamente.
         store.save();
     }
 };
 
 // ==========================================
-// 4. TASK MANAGER
+// 3. TASK MANAGER (ATUALIZADO: Reatividade & Agrupamento Inteligente)
 // ==========================================
 
 const taskManager = {
@@ -386,12 +333,15 @@ const taskManager = {
             ).join('');
         }
         
+        // Garante estado limpo ao abrir
         taskManager.cancelEdit();
+        // Render já é garantido pelo subscribe, mas forçamos aqui para garantir atualização de selects
         taskManager.render();
         
         if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
     },
 
+    // Gerencia o Submit (Criar ou Editar)
     handleFormSubmit: (e) => {
         e.preventDefault();
         const idEditing = document.getElementById('task-id-editing')?.value;
@@ -418,11 +368,16 @@ const taskManager = {
             obs
         });
         
+        // Dispara notify(), que atualizará a lista e badges
         store.save();
+        
+        // Limpa o formulário e sai do modo de edição
         taskManager.cancelEdit();
+        
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
 
+    // Atualizar Tarefa Existente
     updateTask: (id) => {
         const taskIndex = store.tasks.findIndex(t => t.id === id);
         if (taskIndex > -1) {
@@ -431,16 +386,20 @@ const taskManager = {
             store.tasks[taskIndex].date = document.getElementById('task-date').value;
             store.tasks[taskIndex].obs = document.getElementById('task-obs').value;
             
+            // Dispara notify()
             store.save(); 
-            taskManager.cancelEdit(); 
+            taskManager.cancelEdit(); // Sai do modo de edição
+            
             toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
         }
     },
 
+    // Iniciar Edição
     startEdit: (id) => {
         const task = store.tasks.find(t => t.id === id);
         if (!task) return;
 
+        // Preenche campos
         const hiddenId = document.getElementById('task-id-editing');
         if(hiddenId) hiddenId.value = task.id;
         
@@ -449,17 +408,20 @@ const taskManager = {
         document.getElementById('task-date').value = task.date;
         document.getElementById('task-obs').value = task.obs || '';
 
+        // Ajusta UI dos botões
         const btnCancel = document.getElementById('btn-cancel-task');
         if(btnCancel) btnCancel.classList.remove('hidden');
         
         const btnText = document.getElementById('btn-task-text');
         if(btnText) btnText.innerText = 'Salvar Alterações';
 
+        // Feedback visual e scroll
         const form = document.getElementById('form-task');
         if(form) form.scrollIntoView({ behavior: 'smooth' });
         document.getElementById('task-date').focus();
     },
 
+    // Cancelar/Limpar Edição
     cancelEdit: () => {
         const form = document.getElementById('form-task');
         if(form) form.reset();
@@ -473,12 +435,16 @@ const taskManager = {
         const btnText = document.getElementById('btn-task-text');
         if(btnText) btnText.innerText = 'Adicionar Tarefa';
         
+        // Define data padrão novamente
         const dateInput = document.getElementById('task-date');
         if(dateInput) dateInput.value = getLocalISODate();
     },
 
+    // Verificação de Atrasos (Visual) - ATUALIZADO PARA DUAL BADGE
     checkOverdue: () => {
         const today = getLocalISODate();
+        
+        // Contagem separada
         const lateCount = store.tasks.filter(t => t.date < today).length;
         const okCount = store.tasks.filter(t => t.date >= today).length;
     
@@ -486,10 +452,12 @@ const taskManager = {
         const badgeOk = document.getElementById('badge-task-ok');
         const icon = document.getElementById('task-icon-main');
         
+        // Lógica Visual Vermelha (Atrasados)
         if (badgeLate) {
             if (lateCount > 0) {
                 badgeLate.innerText = lateCount > 9 ? '9+' : lateCount;
                 badgeLate.classList.remove('hidden');
+                // Pinta o ícone principal de vermelho se houver atrasos
                 if(icon) {
                     icon.classList.add('text-red-500');
                     icon.classList.remove('text-slate-400');
@@ -503,6 +471,7 @@ const taskManager = {
             }
         }
     
+        // Lógica Visual Verde (Em dia)
         if (badgeOk) {
             if (okCount > 0) {
                 badgeOk.innerText = okCount > 9 ? '9+' : okCount;
@@ -513,6 +482,7 @@ const taskManager = {
         }
     },
 
+    // --- NOVA LÓGICA DE RENDERIZAÇÃO AGRUPADA ---
     render: () => {
         const container = document.getElementById('task-list-container');
         if (!container) return;
@@ -524,10 +494,12 @@ const taskManager = {
 
         const today = getLocalISODate();
 
+        // 1. Separação dos Grupos
         const late = store.tasks.filter(t => t.date < today).sort((a,b) => a.date.localeCompare(b.date));
         const present = store.tasks.filter(t => t.date === today);
         const future = store.tasks.filter(t => t.date > today).sort((a,b) => a.date.localeCompare(b.date));
 
+        // 2. Componente Helper de Renderização de Grupo
         const renderGroup = (title, tasks, headerClass) => {
             if (tasks.length === 0) return '';
             
@@ -578,6 +550,7 @@ const taskManager = {
             `;
         };
 
+        // 3. Montagem Final
         let html = '';
         html += renderGroup('🚨 Atrasados', late, 'text-red-600 border-red-100');
         html += renderGroup('⭐ Foco Hoje', present, 'text-indigo-600 border-indigo-100');

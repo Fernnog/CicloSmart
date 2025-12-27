@@ -269,24 +269,36 @@ const app = {
         }
     },
 
-    // Lógica Blindada de Numeração
+ // --- Lógica de Numeração Blindada (v1.2.0 Hotfix) ---
     calculateCycleIndex: (targetDateStr) => {
-        // 1. Se não houver data de início de ciclo, assume que é o primeiro
-        if (!store.cycleStartDate) return 1;
+        // 1. Segurança: Se não há ciclo definido, começa do 1
+        if (!store.cycleStartDate) {
+            console.log('[CicloSmart] Sem data de início definida. Retornando índice 1.');
+            return 1;
+        }
 
-        // 2. Filtra APENAS os estudos 'NOVO' (Matrizes) que pertencem ao ciclo atual
-        // Isso ignora revisões e estudos de ciclos passados
-        const currentCycleReviews = store.reviews.filter(r => 
-            r.type === 'NOVO' && r.date >= store.cycleStartDate
+        // 2. Deep Scan: Busca TODOS os cards a partir da data de início que possuam algum índice definido.
+        // Removemos o filtro 'r.type === NOVO' para garantir que não percamos a contagem 
+        // caso o card original tenha sido deletado mas as revisões existam.
+        const relevantItems = store.reviews.filter(r => 
+            r.date >= store.cycleStartDate && 
+            r.cycleIndex !== undefined && 
+            r.cycleIndex !== null
         );
 
-        if (currentCycleReviews.length === 0) return 1;
+        if (relevantItems.length === 0) {
+            console.log('[CicloSmart] Nenhum estudo anterior encontrado neste ciclo. Retornando índice 1.');
+            return 1;
+        }
 
-        // 3. A MÁGICA: Em vez de contar, busca o MAIOR VALOR (Math.max)
-        // Isso resolve o problema: se você tem os estudos #1, #2 e #15 (após editar),
-        // ele vai ignorar os buracos e retornar 16, e não 4.
-        const maxIndex = Math.max(...currentCycleReviews.map(r => r.cycleIndex || 0));
+        // 3. Sanitização: Converte tudo para Inteiro para evitar erros de String ("10" < "2")
+        const indices = relevantItems.map(r => parseInt(r.cycleIndex));
 
+        // 4. Busca o Maior Número Absoluto
+        const maxIndex = Math.max(...indices);
+        
+        console.log(`[CicloSmart] Último índice encontrado: #${maxIndex}. Próximo será: #${maxIndex + 1}`);
+        
         return maxIndex + 1;
     },
 

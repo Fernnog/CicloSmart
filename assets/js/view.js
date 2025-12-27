@@ -108,7 +108,38 @@ const ui = {
         }
     },
     
-    toggleSubjectModal: (show) => ui.toggleModal('modal-subjects', show),
+    // NOVO: Controle de Abas de Configuração
+    switchSettingsTab: (tabName) => {
+        // Resetar estilos dos botões
+        const inactiveBtnClass = 'pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none';
+        
+        const btnSubj = document.getElementById('tab-btn-subjects');
+        const btnStrat = document.getElementById('tab-btn-strategy');
+        
+        if (btnSubj) btnSubj.className = inactiveBtnClass;
+        if (btnStrat) btnStrat.className = inactiveBtnClass;
+        
+        // Esconder conteúdos
+        const contentSubj = document.getElementById('tab-content-subjects');
+        const contentStrat = document.getElementById('tab-content-strategy');
+        
+        if (contentSubj) contentSubj.classList.add('hidden');
+        if (contentStrat) contentStrat.classList.add('hidden');
+
+        // Ativar aba selecionada
+        const activeBtnClass = 'pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none';
+        const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+        const activeContent = document.getElementById(`tab-content-${tabName}`);
+        
+        if (activeBtn) activeBtn.className = activeBtnClass;
+        if (activeContent) activeContent.classList.remove('hidden');
+    },
+
+    // ATUALIZAÇÃO: Reseta para a aba padrão ao abrir
+    toggleSubjectModal: (show) => {
+        if(show) ui.switchSettingsTab('subjects');
+        ui.toggleModal('modal-subjects', show);
+    },
     
     openNewStudyModal: () => {
         const dateInput = document.getElementById('input-study-date');
@@ -201,10 +232,12 @@ const ui = {
                 // Tooltip detalhado
                 const tooltipText = `Matéria: ${s.subject}\nTópico: ${s.topic}\nTipo: ${s.type}`;
                 
-                // --- DRAG AND DROP (Prioridade 2) ---
+                // --- DRAG AND DROP (Prioridade 2 e 3) ---
+                // Adicionado ondragend="app.handleDragEnd(event)" para limpeza visual
                 return `
                     <div draggable="true" 
                          ondragstart="app.handleDragStart(event, ${s.id})"
+                         ondragend="app.handleDragEnd(event)"
                          title="${tooltipText}" 
                          class="text-[9px] flex items-center justify-between px-1.5 py-1 rounded mb-1 border border-slate-100/20 truncate cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-indigo-300 transition-all" 
                          style="${borderStyle} ${bgStyle}">
@@ -220,10 +253,11 @@ const ui = {
             }).join('');
 
             // --- DRAG AND DROP (Drop Zone) ---
+            // Adicionado classe 'heatmap-day-cell' para feedback via CSS
             container.innerHTML += `
                 <div ondragover="app.handleDragOver(event)" 
                      ondrop="app.handleDrop(event, '${isoDate}')"
-                     class="p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all hover:shadow-md group">
+                     class="heatmap-day-cell p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all group">
                     
                     <div class="flex justify-between items-center mb-1 pb-1 border-b border-black/5 pointer-events-none">
                         <span class="text-xs font-bold opacity-80">${displayDate}</span>

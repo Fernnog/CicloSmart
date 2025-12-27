@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.6', 
+        version: '1.1.7', 
         date: 'Hoje', 
+        changes: [
+            '🗓️ <strong>Raio-X do Calendário (Heatmap Badges):</strong> O Radar deixou de ser apenas visual. Agora, cada dia exibe etiquetas detalhadas com o <strong>número do ciclo (#1, #2...)</strong> e a cor da matéria agendada.',
+            '🎨 <strong>Identificação Visual Rápida:</strong> Badges com bordas coloridas permitem saber instantaneamente qual disciplina domina o dia, sem precisar abrir menus.',
+            '📜 <strong>Micro-Scroll:</strong> A altura dos cards do calendário foi ajustada e recebeu uma barra de rolagem ultra-fina para acomodar dias com alta carga de estudos sem quebrar o layout.'
+        ] 
+    },
+    { 
+        version: '1.1.6', 
+        date: '26/12', 
         changes: [
             '🌊 <strong>Nivelamento em Cascata (Waterfall):</strong> O sistema de reagendamento agora possui inteligência anti-sobrecarga. Se mover seus atrasados lotar um dia específico, o excedente "transborda" automaticamente para o dia seguinte, criando uma agenda equilibrada.',
             '🔗 <strong>Integridade SRS (Macro Shift):</strong> Agora, ao reagendar um estudo atrasado, o sistema move junto <strong>todas as revisões futuras</strong> conectadas a ele. Isso preserva a distância matemática entre as revisões (Curva de Esquecimento), garantindo que a metodologia não seja quebrada pelo atraso.',

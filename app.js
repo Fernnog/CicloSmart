@@ -1057,6 +1057,7 @@ const ui = {
         ui.toggleModal('modal-heatmap', true);
     },
 
+    // --- REESCRITA PARA VISUALIZAÇÃO DE CICLOS (Heatmap Badge System) ---
     renderHeatmap: () => {
         const container = document.getElementById('heatmap-grid');
         if(!container) return;
@@ -1067,32 +1068,62 @@ const ui = {
             const isoDate = getRelativeDate(i);
             const displayDate = formatDateDisplay(isoDate);
             
-            const dayLoad = store.reviews
-                .filter(r => r.date === isoDate) 
-                .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+            // 1. Filtrar estudos deste dia e ordenar por Ciclo
+            const dayStudies = store.reviews
+                .filter(r => r.date === isoDate)
+                .sort((a, b) => (a.cycleIndex || 0) - (b.cycleIndex || 0));
+
+            // 2. Calcular Carga
+            const dayLoad = dayStudies.reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
             const capacity = store.capacity > 0 ? store.capacity : 240;
             const percentage = (dayLoad / capacity) * 100;
             
-            let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-700';
+            // 3. Definir Cores do Card (Fundo)
+            let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-900';
             if (dayLoad === 0) {
                 colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60';
             } else if (percentage > 100) {
                 colorClass = 'bg-slate-800 border-slate-900 text-white'; 
             } else if (percentage > 80) {
-                colorClass = 'bg-red-50 border-red-200 text-red-700';
+                colorClass = 'bg-red-50 border-red-200 text-red-900';
             } else if (percentage > 50) {
-                colorClass = 'bg-amber-50 border-amber-200 text-amber-700';
+                colorClass = 'bg-amber-50 border-amber-200 text-amber-900';
             }
 
+            // 4. Gerar HTML da Lista de Ciclos (Badges)
+            const isDarkBg = percentage > 100;
+            
+            const listHtml = dayStudies.map(s => {
+                const cycleNum = s.cycleIndex ? `#${s.cycleIndex}` : 'N/A';
+                const borderStyle = `border-left: 3px solid ${s.color};`; 
+                const bgStyle = isDarkBg ? 'background-color: rgba(255,255,255,0.1);' : 'background-color: rgba(255,255,255,0.6);';
+                const statusIcon = s.status === 'DONE' ? '✓' : '';
+                
+                return `
+                    <div class="text-[9px] flex items-center justify-between px-1.5 py-0.5 rounded mb-1 border border-slate-100/20 truncate" 
+                         style="${borderStyle} ${bgStyle}">
+                        <span class="font-bold truncate pr-1" title="${s.subject} - ${s.topic}">${cycleNum}</span>
+                        <span class="opacity-70 text-[8px]">${statusIcon}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // 5. Renderização Final do Card (Com altura ajustada para h-32 e scroll)
             container.innerHTML += `
-                <div class="p-3 rounded-lg border ${colorClass} flex flex-col justify-between h-24 relative transition-all hover:scale-105">
-                    <span class="text-xs font-bold opacity-70">${displayDate}</span>
-                    <div class="text-center">
-                        <span class="text-2xl font-bold block">${dayLoad}m</span>
-                        <span class="text-[10px] uppercase font-semibold tracking-wider opacity-80">
-                            ${dayLoad > 0 ? percentage.toFixed(0) + '%' : 'Livre'}
-                        </span>
+                <div class="p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all hover:shadow-md group">
+                    
+                    <div class="flex justify-between items-center mb-1 pb-1 border-b border-black/5">
+                        <span class="text-xs font-bold opacity-80">${displayDate}</span>
+                        <span class="text-[9px] font-bold opacity-60">${dayLoad > 0 ? Math.round(percentage) + '%' : ''}</span>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto custom-scroll pr-0.5 space-y-0.5">
+                        ${listHtml || '<span class="text-[9px] italic opacity-50 block text-center mt-2">- Livre -</span>'}
+                    </div>
+
+                    <div class="text-[9px] text-right font-bold opacity-60 mt-1 pt-1 border-t border-black/5">
+                        ${dayLoad}m
                     </div>
                 </div>
             `;

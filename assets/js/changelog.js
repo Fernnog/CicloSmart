@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.1 (Atualização de Usabilidade) ---
+    { 
+        version: '1.2.1', 
+        date: 'Hoje', 
+        changes: [
+            '📂 <strong>Organização por Abas:</strong> O menu de Configurações Gerais foi reestruturado. Agora, "Matérias" e "Estratégia" ficam em abas separadas, limpando a visualização e facilitando o acesso rápido ao que importa.',
+            '✨ <strong>Feedback Visual no Radar:</strong> A experiência de Drag & Drop ficou mais intuitiva. Ao arrastar um estudo, os dias no gráfico agora "acendem" (iluminam-se) ao passar o mouse, confirmando visualmente o destino antes de soltar.',
+            '🖱️ <strong>Estabilidade de Interface:</strong> Refinamento na lógica de arrasto (Drag End) para garantir que os efeitos visuais sejam limpos instantaneamente, mesmo se o usuário cancelar a ação ou soltar o item fora da área válida.'
+        ] 
+    },
     // --- VERSÃO 1.2.0 ---
     { 
         version: '1.2.0', 
-        date: 'Hoje', 
+        date: 'Anterior', 
         changes: [
             '🎯 <strong>Feedback Visual de Tarefas (Botão):</strong> O botão "Tarefas" agora exibe dois contadores na base: 🔴 Vermelho para atrasados e 🟢 Verde para pendências em dia. Mais clareza, menos ansiedade!',
             '🖐️ <strong>Reagendamento Interativo (Radar):</strong> Implementada funcionalidade Drag-and-Drop no Heatmap. Arraste um estudo para outra data diretamente no gráfico!',

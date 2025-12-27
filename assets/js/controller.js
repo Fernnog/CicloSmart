@@ -673,6 +673,69 @@ const app = {
         store.save(); 
         ui.toggleModal('modal-heatmap', false);
         toast.show(`Cronograma realinhado! ${shiftCount} cartões movidos.`, 'neuro', 'SRS Preservado');
+    },
+
+    // --- DRAG AND DROP HANDLERS (Prioridades 2 e 3) ---
+
+    handleDragStart: (e, id) => {
+        e.dataTransfer.setData("text/plain", id);
+        e.dataTransfer.effectAllowed = "move";
+    },
+
+    handleDragOver: (e) => {
+        e.preventDefault(); // Necessário para permitir o drop
+        e.dataTransfer.dropEffect = "move";
+    },
+
+    handleDrop: (e, targetDateStr) => {
+        e.preventDefault();
+        const id = parseInt(e.dataTransfer.getData("text/plain"));
+        const review = store.reviews.find(r => r.id === id);
+        
+        if (!review) return;
+        if (review.date === targetDateStr) return; // Cancela se for o mesmo dia
+
+        // 1. Validação de Cronologia (Não pode passar da próxima revisão)
+        if (review.batchId) {
+            const siblings = store.reviews
+                .filter(r => r.batchId === review.batchId)
+                .sort((a, b) => a.date.localeCompare(b.date));
+            
+            const currentIndex = siblings.findIndex(r => r.id === id);
+            
+            // Verifica revisão POSTERIOR
+            const nextReview = siblings[currentIndex + 1];
+            if (nextReview && targetDateStr >= nextReview.date) {
+                return toast.show(`Bloqueado: A próxima revisão deste ciclo é em ${formatDateDisplay(nextReview.date)}.`, 'error', '⛔ Cronologia Inválida');
+            }
+            
+            // Verifica revisão ANTERIOR (Opcional, para integridade)
+            const prevReview = siblings[currentIndex - 1];
+            if (prevReview && targetDateStr <= prevReview.date) {
+                 return toast.show(`Bloqueado: A revisão anterior foi em ${formatDateDisplay(prevReview.date)}.`, 'error', '⛔ Cronologia Inválida');
+            }
+        }
+
+        // 2. Validação de Capacidade (Sobrecarga)
+        const targetDayLoad = store.reviews
+            .filter(r => r.date === targetDateStr && r.id !== id)
+            .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+            
+        const newTotal = targetDayLoad + parseInt(review.time);
+        const capacity = store.capacity || 240;
+
+        if (newTotal > capacity) {
+            return toast.show(`Bloqueado: O dia ficaria com ${newTotal}min (Max: ${capacity}min).`, 'warning', '⚠️ Sobrecarga Detectada');
+        }
+
+        // 3. Aplicação
+        review.date = targetDateStr;
+        store.save(); // Salva e notifica
+        
+        ui.renderHeatmap(); // Atualiza o Radar especificamente
+        ui.render(); // Atualiza listas gerais se necessário
+        
+        toast.show('Estudo reagendado com sucesso.', 'success');
     }
 };
 

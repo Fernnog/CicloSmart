@@ -2,8 +2,17 @@
 
 const changelogData = [
     { 
-        version: '1.1.8', 
+        version: '1.1.9', 
         date: 'Hoje', 
+        changes: [
+            '🔍 <strong>Radar de Carga HD:</strong> O Heatmap agora é muito mais informativo. Além do número do ciclo (#1), cada cartão exibe o <strong>Tipo de Revisão</strong> (NEW, DEF, 8D, 30D), permitindo antecipar se o dia será de ataque ou defesa.',
+            '🖱️ <strong>Tooltip de Raio-X:</strong> Passe o mouse sobre qualquer bloquinho do radar para ver instantaneamente a <strong>Matéria</strong> e o <strong>Tópico</strong> daquele estudo. Zero cliques necessários para lembrar o que está agendado.',
+            '🎨 <strong>Micro-Layout:</strong> Ajustes de tipografia e espaçamento para garantir que todas essas informações caibam nos cartões sem poluição visual.'
+        ] 
+    },
+    { 
+        version: '1.1.8', 
+        date: 'Anterior', 
         changes: [
             '📂 <strong>Reestruturação de Diretórios:</strong> "Faxina" completa na estrutura do projeto. Scripts e imagens foram movidos para pastas dedicadas (`assets/js` e `assets/img`), deixando a raiz da aplicação mais limpa e organizada.',
             '⚙️ <strong>Painel de Configurações Unificado:</strong> O antigo menu de "Matérias" evoluiu. Agora ele é a central de <strong>Configurações Gerais</strong>, onde você gerencia disciplinas, define sua Capacidade Diária, escolhe a Estratégia (Pendular/Integrado) e ajusta o Ciclo.',

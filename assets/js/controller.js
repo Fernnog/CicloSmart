@@ -269,11 +269,24 @@ const app = {
         }
     },
 
+    // Lógica Blindada de Numeração
     calculateCycleIndex: (targetDateStr) => {
+        // 1. Se não houver data de início de ciclo, assume que é o primeiro
         if (!store.cycleStartDate) return 1;
-        const currentCycleReviews = store.reviews.filter(r => r.type === 'NOVO' && r.date >= store.cycleStartDate);
+
+        // 2. Filtra APENAS os estudos 'NOVO' (Matrizes) que pertencem ao ciclo atual
+        // Isso ignora revisões e estudos de ciclos passados
+        const currentCycleReviews = store.reviews.filter(r => 
+            r.type === 'NOVO' && r.date >= store.cycleStartDate
+        );
+
         if (currentCycleReviews.length === 0) return 1;
+
+        // 3. A MÁGICA: Em vez de contar, busca o MAIOR VALOR (Math.max)
+        // Isso resolve o problema: se você tem os estudos #1, #2 e #15 (após editar),
+        // ele vai ignorar os buracos e retornar 16, e não 4.
         const maxIndex = Math.max(...currentCycleReviews.map(r => r.cycleIndex || 0));
+
         return maxIndex + 1;
     },
 

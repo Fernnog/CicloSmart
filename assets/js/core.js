@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.1.4 - Observer Pattern & Friendly Dates)
+ * CICLOSMART CORE (v1.2.2 - Streak & Skeleton Support)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Arquitetura Reativa e UX de Datas Relativas.
+ * ATUALIZADO: Lógica de Gamificação (Streak) e Estado de Sessão.
  */
 
 // ==========================================
@@ -46,7 +46,7 @@ const formatDateDisplay = (isoDate) => {
     return `${d}/${m}`;
 };
 
-// NOVO: Utilitário de Data Amigável (UX)
+// Utilitário de Data Amigável (UX)
 const getFriendlyDate = (dateStr) => {
     if (!dateStr) return '';
     // Ajuste de fuso horário para comparação precisa
@@ -136,6 +136,11 @@ const store = {
     cycleStartDate: null,
     currentUser: null,
     
+    // Controle de Sessão (Volátil) - Para UX e Celebrações
+    sessionState: {
+        hasCelebrated: false
+    },
+    
     // --- NOVO: SISTEMA DE OBSERVER (Reatividade) ---
     listeners: [],
 
@@ -148,7 +153,6 @@ const store = {
 
     notify: () => {
         // Notifica todos os componentes inscritos que os dados mudaram
-        // console.log('[Store] Notificando ouvintes...');
         store.listeners.forEach(fn => fn());
     },
     // -----------------------------------------------
@@ -235,6 +239,47 @@ const store = {
 
         // NOVO: Dispara notificação para atualizar UI dependente (listas, badges, etc)
         store.notify();
+    },
+
+    // --- Lógica de Gamificação (Streak) ---
+    calculateStreak: () => {
+        // Filtra dias únicos onde houve estudo concluído
+        const doneDates = [...new Set(store.reviews
+            .filter(r => r.status === 'DONE')
+            .map(r => r.date)
+        )].sort((a, b) => b.localeCompare(a)); // Ordena do mais recente (hoje) para o antigo
+
+        if (doneDates.length === 0) return 0;
+
+        let streak = 0;
+        const today = getLocalISODate();
+        const yesterday = getRelativeDate(-1);
+
+        // Verifica se a chama está viva (estudou hoje ou ontem)
+        // Se a última data for antes de ontem, o streak quebrou.
+        if (doneDates[0] !== today && doneDates[0] !== yesterday) return 0;
+
+        // Configura o cursor de verificação
+        let checkDate = new Date();
+        
+        // Se o último estudo não foi hoje (foi ontem), começamos a contar de ontem
+        if (doneDates[0] !== today) {
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        // Loop de verificação regressiva
+        for (let i = 0; i < doneDates.length; i++) {
+            const dateStr = getLocalISODate(checkDate);
+            
+            if (doneDates.includes(dateStr)) {
+                streak++;
+                checkDate.setDate(checkDate.getDate() - 1); // Volta 1 dia
+            } else {
+                // Se encontrou um buraco, para a contagem
+                break;
+            }
+        }
+        return streak;
     },
 
     // --- Métodos de Matérias ---

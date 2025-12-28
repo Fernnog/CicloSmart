@@ -97,6 +97,26 @@ const ui = {
     },
     // ---------------------------------------------------------
 
+    // --- PRIORIDADE 1A: Atualização do Streak (Constância) ---
+    updateStreak: () => {
+        // Verifica se a função de cálculo existe no core (será implementada a seguir)
+        const streakCount = (store.calculateStreak && typeof store.calculateStreak === 'function') 
+            ? store.calculateStreak() 
+            : 0;
+
+        const container = document.getElementById('streak-container');
+        const label = document.getElementById('streak-count');
+
+        if (container && label) {
+            label.innerText = streakCount;
+            // Se quiser esconder quando for 0, descomente a linha abaixo. 
+            // Por enquanto, mostraremos sempre para incentivar.
+            // if (streakCount === 0) container.classList.add('hidden');
+            // else container.classList.remove('hidden');
+        }
+    },
+    // ---------------------------------------------------------
+
     toggleModal: (id, show) => {
         const el = document.getElementById(id);
         if(!el) return;
@@ -161,9 +181,6 @@ const ui = {
             }
         }
         
-        // OBS: A lógica de travar o input de tempo (90min) foi removida daqui 
-        // para ser tratada exclusivamente pelo Controller através de app.updateProfileUI.
-
         ui.toggleModal('modal-new', true);
     },
     
@@ -219,21 +236,17 @@ const ui = {
             const listHtml = dayStudies.map(s => {
                 const cycleNum = s.cycleIndex ? `#${s.cycleIndex}` : 'N/A';
                 
-                // --- ATUALIZAÇÃO v1.1.9: Lógica de Abreviação e Tooltip ---
                 let typeShort = s.type;
                 if (s.type === 'Defesa') typeShort = 'DEF';
                 else if (s.type === 'NOVO') typeShort = 'NEW';
-                else typeShort = s.type.toUpperCase(); // Garante 8D, 31D, etc.
+                else typeShort = s.type.toUpperCase();
 
                 const borderStyle = `border-left: 3px solid ${s.color};`; 
                 const bgStyle = isDarkBg ? 'background-color: rgba(255,255,255,0.1);' : 'background-color: rgba(255,255,255,0.6);';
                 const statusIcon = s.status === 'DONE' ? '✓' : '';
                 
-                // Tooltip detalhado
                 const tooltipText = `Matéria: ${s.subject}\nTópico: ${s.topic}\nTipo: ${s.type}`;
                 
-                // --- DRAG AND DROP (Prioridade 2 e 3) ---
-                // Adicionado ondragend="app.handleDragEnd(event)" para limpeza visual
                 return `
                     <div draggable="true" 
                          ondragstart="app.handleDragStart(event, ${s.id})"
@@ -252,8 +265,6 @@ const ui = {
                 `;
             }).join('');
 
-            // --- DRAG AND DROP (Drop Zone) ---
-            // Adicionado classe 'heatmap-day-cell' para feedback via CSS
             container.innerHTML += `
                 <div ondragover="app.handleDragOver(event)" 
                      ondrop="app.handleDrop(event, '${isoDate}')"
@@ -329,6 +340,7 @@ const ui = {
 
         if(!containers.late || !containers.today || !containers.future) return;
 
+        // Limpa containers (isso também remove Skeletons se existirem no HTML inicial)
         Object.values(containers).forEach(el => el.innerHTML = '');
 
         const sorted = store.reviews.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -377,11 +389,62 @@ const ui = {
             if(mobileBadge) mobileBadge.innerText = counts[key];
         });
 
-        if(!counts.late) containers.late.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Nenhum atraso! 🎉</div>`;
-        if(!counts.today) containers.today.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Tudo limpo por hoje.</div>`;
-        if(!counts.future) containers.future.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Sem previsões.</div>`;
+        // --- PRIORIDADE 1C & 2: EMPTY STATES & CELEBRAÇÃO ---
+        
+        // 1. Coluna Atrasados: Estado "Limpo" Visual
+        if(!counts.late) {
+            containers.late.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-8 text-emerald-500/80">
+                    <div class="bg-emerald-50 p-2 rounded-full mb-2">
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-xs font-bold">Sem Atrasos</span>
+                </div>`;
+        }
 
+        // 2. Coluna Hoje: Celebração (Meta Batida) vs Estado Inicial
+        if(!counts.today) {
+            // Verificamos se há estudos FEITOS hoje (para diferenciar de "não comecei")
+            const hasCompletedWorkToday = store.reviews.some(r => r.date === todayStr && r.status === 'DONE');
+            
+            if (hasCompletedWorkToday) {
+                // Estado: Meta Batida (Celebração)
+                containers.today.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full py-10 animate-fade-in opacity-80">
+                        <div class="bg-emerald-100 p-4 rounded-full mb-3 shadow-sm ring-4 ring-emerald-50">
+                            <i data-lucide="trophy" class="w-8 h-8 text-emerald-600"></i>
+                        </div>
+                        <p class="text-sm font-bold text-slate-700">Meta Batida!</p>
+                        <p class="text-[10px] text-slate-500">Aproveite o descanso.</p>
+                    </div>
+                `;
+            } else {
+                // Estado: Nada Agendado (Vazio)
+                containers.today.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-8 h-full">
+                         <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group">
+                            <i data-lucide="target" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs font-bold">Definir Meta de Hoje</span>
+                        </button>
+                    </div>`;
+            }
+        }
+
+        // 3. Coluna Futuro: Call to Action
+        if(!counts.future) {
+            containers.future.innerHTML = `
+                <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all group cursor-pointer my-2">
+                    <i data-lucide="calendar-plus" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-bold">Planejar Futuro</span>
+                    <span class="text-[10px] mt-1 text-center">Clique para agendar revisões<br>ou novos estudos.</span>
+                </button>
+            `;
+        }
+
+        // Atualiza UI global
         ui.updateCapacityStats(todayLoad);
+        ui.updateStreak(); // Atualiza contador de constância
+
         if(window.lucide) lucide.createIcons();
     },
 

@@ -73,6 +73,12 @@
                 </button>
             </div>
             
+            <!-- Streak Container (Novo) -->
+            <div id="streak-container" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-full border border-orange-100 ml-4 shadow-sm" title="Dias seguidos de estudo">
+                <i data-lucide="flame" class="w-4 h-4 fill-orange-500 text-orange-600"></i>
+                <span id="streak-count" class="text-xs font-bold">0</span>
+            </div>
+
             <button id="mode-toggle" onclick="app.toggleMode()" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
                 <i id="mode-icon" data-lucide="sword" class="w-4 h-4"></i>
                 <span id="mode-text">Modo Ataque</span>
@@ -205,6 +211,11 @@
                 <span id="count-late" class="bg-red-100 text-red-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-red-200">0</span>
             </div>
             <div id="list-late" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 bg-gradient-to-b from-transparent to-red-50/20 min-h-0">
+                <!-- Skeleton Loader (Prioridade 3) -->
+                <div class="skeleton-loader animate-pulse space-y-3">
+                    <div class="h-24 bg-red-100/50 rounded-lg"></div>
+                    <div class="h-24 bg-red-100/50 rounded-lg"></div>
+                </div>
             </div>
         </section>
 
@@ -217,6 +228,12 @@
                 <span id="count-today" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">0</span>
             </div>
             <div id="list-today" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 min-h-0">
+                <!-- Skeleton Loader (Prioridade 3) -->
+                <div class="skeleton-loader animate-pulse space-y-3">
+                    <div class="h-28 bg-slate-100 rounded-lg"></div>
+                    <div class="h-28 bg-slate-100 rounded-lg"></div>
+                    <div class="h-28 bg-slate-100 rounded-lg"></div>
+                </div>
             </div>
         </section>
 
@@ -229,6 +246,11 @@
                 <span id="count-future" class="bg-slate-200 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-bold border border-slate-300">0</span>
             </div>
             <div id="list-future" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 min-h-0">
+                 <!-- Skeleton Loader (Prioridade 3) -->
+                 <div class="skeleton-loader animate-pulse space-y-3">
+                    <div class="h-24 bg-slate-100 rounded-lg"></div>
+                    <div class="h-24 bg-slate-100 rounded-lg"></div>
+                </div>
             </div>
         </section>
     </main>

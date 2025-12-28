@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.2 (Gamificação & UX) ---
+    { 
+        version: '1.2.2', 
+        date: 'Hoje', 
+        changes: [
+            '🔥 <strong>Gamificação (Streak):</strong> Novo contador de constância no topo da tela! Uma chama acesa indica quantos dias consecutivos você estudou. O sistema verifica automaticamente seu histórico para manter a chama viva.',
+            '✨ <strong>Smart Empty States:</strong> Adeus telas vazias inúteis. As colunas do Kanban agora exibem <strong>Botões de Ação Rápida (CTAs)</strong> quando vazias, permitindo planejar o futuro ou visualizar conquistas com um clique.',
+            '🏆 <strong>Feedback de Vitória:</strong> Reforço positivo imediato! Ao completar sua meta diária (zerar a coluna "Hoje"), o sistema exibe uma confirmação visual de sucesso para consolidar a sensação de dever cumprido.'
+        ] 
+    },
     // --- VERSÃO 1.2.1 (Atualização de Usabilidade) ---
     { 
         version: '1.2.1', 
-        date: 'Hoje', 
+        date: 'Anterior', 
         changes: [
             '📂 <strong>Organização por Abas:</strong> O menu de Configurações Gerais foi reestruturado. Agora, "Matérias" e "Estratégia" ficam em abas separadas, limpando a visualização e facilitando o acesso rápido ao que importa.',
             '✨ <strong>Feedback Visual no Radar:</strong> A experiência de Drag & Drop ficou mais intuitiva. Ao arrastar um estudo, os dias no gráfico agora "acendem" (iluminam-se) ao passar o mouse, confirmando visualmente o destino antes de soltar.',

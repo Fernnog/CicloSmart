@@ -1,7 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer)
+ * UI RENDERER (View Layer) - v1.2.2 Modified
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
+ * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática.
  */
 
 const ui = {
@@ -63,7 +64,7 @@ const ui = {
         if (window.lucide) lucide.createIcons();
     },
 
-    // --- NOVA FUNÇÃO: Gerenciamento Visual da Autenticação ---
+    // --- Gerenciamento Visual da Autenticação ---
     updateAuthUI: (user) => {
         const btnUser = document.getElementById('user-menu-btn');
         const viewLogin = document.getElementById('auth-view-login');
@@ -95,11 +96,9 @@ const ui = {
             if(viewUser) viewUser.classList.add('hidden');
         }
     },
-    // ---------------------------------------------------------
 
-    // --- PRIORIDADE 1A: Atualização do Streak (Constância) ---
+    // --- Atualização do Streak (Constância) ---
     updateStreak: () => {
-        // Verifica se a função de cálculo existe no core (será implementada a seguir)
         const streakCount = (store.calculateStreak && typeof store.calculateStreak === 'function') 
             ? store.calculateStreak() 
             : 0;
@@ -109,13 +108,8 @@ const ui = {
 
         if (container && label) {
             label.innerText = streakCount;
-            // Se quiser esconder quando for 0, descomente a linha abaixo. 
-            // Por enquanto, mostraremos sempre para incentivar.
-            // if (streakCount === 0) container.classList.add('hidden');
-            // else container.classList.remove('hidden');
         }
     },
-    // ---------------------------------------------------------
 
     toggleModal: (id, show) => {
         const el = document.getElementById(id);
@@ -128,9 +122,8 @@ const ui = {
         }
     },
     
-    // NOVO: Controle de Abas de Configuração
+    // Controle de Abas de Configuração
     switchSettingsTab: (tabName) => {
-        // Resetar estilos dos botões
         const inactiveBtnClass = 'pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none';
         
         const btnSubj = document.getElementById('tab-btn-subjects');
@@ -139,14 +132,12 @@ const ui = {
         if (btnSubj) btnSubj.className = inactiveBtnClass;
         if (btnStrat) btnStrat.className = inactiveBtnClass;
         
-        // Esconder conteúdos
         const contentSubj = document.getElementById('tab-content-subjects');
         const contentStrat = document.getElementById('tab-content-strategy');
         
         if (contentSubj) contentSubj.classList.add('hidden');
         if (contentStrat) contentStrat.classList.add('hidden');
 
-        // Ativar aba selecionada
         const activeBtnClass = 'pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none';
         const activeBtn = document.getElementById(`tab-btn-${tabName}`);
         const activeContent = document.getElementById(`tab-content-${tabName}`);
@@ -155,7 +146,6 @@ const ui = {
         if (activeContent) activeContent.classList.remove('hidden');
     },
 
-    // ATUALIZAÇÃO: Reseta para a aba padrão ao abrir
     toggleSubjectModal: (show) => {
         if(show) ui.switchSettingsTab('subjects');
         ui.toggleModal('modal-subjects', show);
@@ -330,6 +320,7 @@ const ui = {
         }
     },
 
+    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADA) ---
     render: () => {
         const todayStr = getLocalISODate();
         const containers = {
@@ -340,10 +331,26 @@ const ui = {
 
         if(!containers.late || !containers.today || !containers.future) return;
 
-        // Limpa containers (isso também remove Skeletons se existirem no HTML inicial)
+        // Limpa containers
         Object.values(containers).forEach(el => el.innerHTML = '');
 
-        const sorted = store.reviews.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Ordenação Primária: Data
+        // Ordenação Secundária (Sugerida): Tipo (Defesa antes de Novo)
+        const sorted = store.reviews.sort((a, b) => {
+            // 1. Compara datas
+            if (a.date !== b.date) {
+                return a.date.localeCompare(b.date);
+            }
+            // 2. Se datas iguais, prioriza Defesa/Revisão sobre Matéria Nova (Ataque)
+            // Lógica: Se 'a' é defesa e 'b' é novo, 'a' vem primeiro (-1)
+            const typeScore = (type) => {
+                const t = type ? type.toUpperCase() : '';
+                if (['DEFESA', 'DEFENSE', 'DEF'].includes(t)) return 1; // Prioridade Alta
+                if (['NOVO', 'NEW'].includes(t)) return 3; // Prioridade Baixa
+                return 2; // Revisões normais no meio
+            };
+            return typeScore(a.type) - typeScore(b.type);
+        });
         
         let counts = { late: 0, today: 0, future: 0 };
         let todayLoad = 0;
@@ -389,9 +396,8 @@ const ui = {
             if(mobileBadge) mobileBadge.innerText = counts[key];
         });
 
-        // --- PRIORIDADE 1C & 2: EMPTY STATES & CELEBRAÇÃO ---
+        // --- EMPTY STATES & CELEBRAÇÃO ---
         
-        // 1. Coluna Atrasados: Estado "Limpo" Visual
         if(!counts.late) {
             containers.late.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-8 text-emerald-500/80">
@@ -402,13 +408,10 @@ const ui = {
                 </div>`;
         }
 
-        // 2. Coluna Hoje: Celebração (Meta Batida) vs Estado Inicial
         if(!counts.today) {
-            // Verificamos se há estudos FEITOS hoje (para diferenciar de "não comecei")
             const hasCompletedWorkToday = store.reviews.some(r => r.date === todayStr && r.status === 'DONE');
             
             if (hasCompletedWorkToday) {
-                // Estado: Meta Batida (Celebração)
                 containers.today.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full py-10 animate-fade-in opacity-80">
                         <div class="bg-emerald-100 p-4 rounded-full mb-3 shadow-sm ring-4 ring-emerald-50">
@@ -419,7 +422,6 @@ const ui = {
                     </div>
                 `;
             } else {
-                // Estado: Nada Agendado (Vazio)
                 containers.today.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-8 h-full">
                          <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group">
@@ -430,7 +432,6 @@ const ui = {
             }
         }
 
-        // 3. Coluna Futuro: Call to Action
         if(!counts.future) {
             containers.future.innerHTML = `
                 <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all group cursor-pointer my-2">
@@ -441,13 +442,13 @@ const ui = {
             `;
         }
 
-        // Atualiza UI global
         ui.updateCapacityStats(todayLoad);
-        ui.updateStreak(); // Atualiza contador de constância
+        ui.updateStreak();
 
         if(window.lucide) lucide.createIcons();
     },
 
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM HIERARQUIA VISUAL) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -458,6 +459,33 @@ const ui = {
         const textDecoration = isDone 
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
+
+        // --- NOVA LÓGICA DE ESTILOS (BADGES SEMÂNTICOS) ---
+        // Define cores e ícones baseados no tipo do estudo para leitura rápida (Scanability)
+        const getTypeStyles = (type) => {
+            const t = type ? type.toUpperCase() : '';
+            if (['NOVO', 'NEW'].includes(t)) {
+                return {
+                    class: 'bg-purple-100 text-purple-700 border border-purple-200',
+                    icon: 'sword'
+                };
+            } 
+            else if (['DEFESA', 'DEFENSE', 'DEF'].includes(t)) {
+                return {
+                    class: 'bg-amber-100 text-amber-700 border border-amber-200',
+                    icon: 'shield'
+                };
+            } 
+            else {
+                // Padrão para revisões de fluxo (8D, 30D, etc)
+                return {
+                    class: 'bg-sky-50 text-sky-600 border border-sky-100',
+                    icon: 'refresh-cw'
+                };
+            }
+        };
+
+        const styleConfig = getTypeStyles(review.type);
 
         const cycleHtml = review.batchId && review.cycleIndex 
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
@@ -480,8 +508,10 @@ const ui = {
                                 ${review.topic}
                             </h4>
 
-                            <div class="flex items-center mt-1">
-                                <span class="text-[10px] font-bold text-white bg-slate-700 px-1.5 py-0.5 rounded">
+                            <!-- Badge Semântico Atualizado -->
+                            <div class="flex items-center mt-1 gap-2">
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${styleConfig.class}">
+                                    <i data-lucide="${styleConfig.icon}" class="w-3 h-3"></i>
                                     ${review.type}
                                 </span>
                                 ${cycleHtml}

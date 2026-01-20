@@ -4,6 +4,7 @@
  * CICLOSMART CORE (v1.2.2 - Streak & Skeleton Support)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
  * ATUALIZADO: Lógica de Gamificação (Streak) e Estado de Sessão.
+ * ATUALIZADO: Suporte a Subtarefas (Micro-Quests).
  */
 
 // ==========================================
@@ -365,6 +366,35 @@ const store = {
         store.reviews = store.reviews.filter(r => r.id !== id);
         store.save();
         if (typeof ui !== 'undefined' && ui.render) ui.render();
+    },
+
+    // --- NOVOS MÉTODOS DE SUBTAREFAS (MICRO-QUESTS) ---
+    addSubtask: (reviewId, text) => {
+        const r = store.reviews.find(x => x.id === reviewId);
+        if (r) {
+            if (!r.subtasks) r.subtasks = []; // Inicializa se não existir
+            r.subtasks.push({ id: Date.now(), text, done: false });
+            store.save(); // Salva e notifica a View via Observer
+        }
+    },
+
+    toggleSubtask: (reviewId, subtaskId) => {
+        const r = store.reviews.find(x => x.id === reviewId);
+        if (r && r.subtasks) {
+            const task = r.subtasks.find(t => t.id === subtaskId);
+            if (task) {
+                task.done = !task.done;
+                store.save();
+            }
+        }
+    },
+
+    removeSubtask: (reviewId, subtaskId) => {
+        const r = store.reviews.find(x => x.id === reviewId);
+        if (r && r.subtasks) {
+            r.subtasks = r.subtasks.filter(t => t.id !== subtaskId);
+            store.save();
+        }
     },
 
     // --- Métodos de Tarefas ---

@@ -678,7 +678,7 @@ const app = {
         toast.show(`Cronograma realinhado! ${shiftCount} cartões movidos.`, 'neuro', 'SRS Preservado');
     },
 
-    // --- DRAG AND DROP HANDLERS (Prioridades 2 e 3 - HEATMAP) ---
+    // --- DRAG AND DROP HANDLERS (HEATMAP) ---
 
     handleDragStart: (e, id) => {
         e.dataTransfer.setData("text/plain", id);
@@ -752,6 +752,7 @@ const app = {
     },
 
     // --- NOVO: Lógica de Agendamento Elástico (Drag & Drop Kanban) ---
+    // --- ATUALIZADO COM MARCADORES DE DEBUG ---
 
     // 1. Verifica e devolve itens emprestados vencidos (Roda ao iniciar)
     checkTemporaryReversions: () => {
@@ -781,36 +782,52 @@ const app = {
         }
     },
 
-    // 2. Início do Arraste no Kanban
+    // 2. Início do Arraste no Kanban (COM DEBUG)
     handleKanbanDragStart: (e, id) => {
-        console.log('[Drag] Iniciou arraste do ID:', id); 
-        e.dataTransfer.setData("text/plain", id);
-        e.dataTransfer.effectAllowed = "move";
-        document.body.classList.add('is-dragging'); // Feedback visual global
+        console.warn(`[MARCADOR 2] handleKanbanDragStart acionado para ID: ${id}`);
+        try {
+            e.dataTransfer.setData("text/plain", id);
+            e.dataTransfer.effectAllowed = "move";
+            document.body.classList.add('is-dragging');
+            console.log('[MARCADOR 2.1] Classe is-dragging adicionada ao body.');
+        } catch (err) {
+            console.error('[ERRO CRÍTICO] Falha no DragStart:', err);
+        }
     },
 
-    // 3. Permissão para Soltar (ESSENCIAL - Correção)
+    // 3. Permitir soltar (Drop) - ESSENCIAL
     allowDrop: (e) => {
-        e.preventDefault(); 
+        // console.log('[MARCADOR 3] allowDrop disparado (Hover)'); 
+        e.preventDefault();
     },
 
-    // 4. Soltar o cartão na coluna
+    // 4. Soltar o cartão na coluna (COM DEBUG)
     handleKanbanDrop: (e, targetCol) => {
+        console.warn(`[MARCADOR 4] handleKanbanDrop acionado na coluna: ${targetCol}`);
         e.preventDefault();
         document.body.classList.remove('is-dragging');
 
-        const id = parseInt(e.dataTransfer.getData("text/plain"));
-        console.log(`[Drag] Tentando soltar ID ${id} na coluna: ${targetCol}`);
-
+        const idRaw = e.dataTransfer.getData("text/plain");
+        console.log(`[MARCADOR 4.1] ID recebido: "${idRaw}"`);
+        
+        const id = parseInt(idRaw);
         const review = store.reviews.find(r => r.id === id);
         
-        if (!review) return;
+        if (!review) {
+            console.error('[ERRO CRÍTICO] Review não encontrada no Store.');
+            return;
+        }
+
+        console.log('[MARCADOR 4.2] Review encontrada:', review.subject);
 
         const today = getLocalISODate();
 
         // CASO 1: Soltou na coluna "HOJE"
         if (targetCol === 'today') {
-            if (review.date === today) return; // Já é de hoje, não faz nada
+            if (review.date === today) {
+                console.log('[AVISO] Item já é de hoje.');
+                return;
+            }
 
             // Se ainda não é temporário, salva a origem para poder devolver depois
             if (!review.isTemporary) {
@@ -821,20 +838,18 @@ const app = {
             review.date = today;
             store.save();
             toast.show('Adicionado como Extra. Se não fizer hoje, volta amanhã.', 'success', '📅 Estudo Puxado');
-            console.log('[Drag] Sucesso: Movido para Hoje.');
+            console.log('[SUCESSO] Movido para hoje.');
         }
         
         // CASO 2: Devolver manualmente para a lista original (Atrasados ou Futuro)
-        // Isso permite que o usuário se arrependa e devolva o card arrastando de volta
         else if ((targetCol === 'late' || targetCol === 'future')) {
-            // Só permitimos mover para essas colunas se ele estava em "Hoje" ou se estamos devolvendo um temporário
             if (review.isTemporary) {
                 review.date = review.originalDate;
                 delete review.originalDate;
                 delete review.isTemporary;
                 store.save();
                 toast.show('Item devolvido à posição original.', 'info');
-                console.log('[Drag] Sucesso: Devolvido para origem.');
+                console.log('[SUCESSO] Devolvido para origem.');
             }
         }
     }

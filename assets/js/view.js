@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.2.3 Modified
+ * UI RENDERER (View Layer) - v1.2.2 Modified
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Suporte a Drag-and-Drop (Draggable Attributes) e Badge "Extra/Temporário".
+ * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática & Drag-and-Drop Attributes.
  */
 
 const ui = {
@@ -448,7 +448,7 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP & BADGE EXTRA) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP E MARCADOR) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -488,17 +488,16 @@ const ui = {
         const cycleHtml = review.batchId && review.cycleIndex 
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
-
-        // --- INDICADOR DE ITEM TEMPORÁRIO (EXTRA) ---
-        // Exibe um badge se o item foi emprestado de outro dia
+        
+        // 1. Identificar se é um item temporário (bônus)
         const tempIndicator = review.isTemporary 
             ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
-        
-        // Adicionamos draggable="true" e o handler ondragstart
+
+        // ATUALIZAÇÃO: Draggable Attributes + Log Marker 1
         return `
             <div draggable="true" 
-                ondragstart="app.handleKanbanDragStart(event, ${review.id})"
+                ondragstart="console.log('[MARCADOR 1: HTML ondragstart acionado para ID ${review.id}]'); app.handleKanbanDragStart(event, ${review.id})"
                 class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative cursor-grab active:cursor-grabbing" 
                 style="border-left-color: ${review.color}">
                 

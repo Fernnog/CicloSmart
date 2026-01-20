@@ -1,9 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.2.2 Modified
+ * UI RENDERER (View Layer) - v1.3.0 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática & Drag-and-Drop Attributes.
- * ATUALIZADO: Renderização de Micro-Quests (Subtarefas) e Barra de Progresso.
+ * ATUALIZADO: Micro-Quests (Subtarefas) com visualização de progresso e correções de segurança.
  */
 
 const ui = {
@@ -240,7 +239,7 @@ const ui = {
                 
                 return `
                     <div draggable="true" 
-                         ondragstart="app.handleDragStart(event, ${s.id})"
+                         ondragstart="app.handleDragStart(event, '${s.id}')"
                          ondragend="app.handleDragEnd(event)"
                          title="${tooltipText}" 
                          class="text-[9px] flex items-center justify-between px-1.5 py-1 rounded mb-1 border border-slate-100/20 truncate cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-indigo-300 transition-all" 
@@ -321,7 +320,7 @@ const ui = {
         }
     },
 
-    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADA) ---
+    // --- RENDERIZAÇÃO PRINCIPAL ---
     render: () => {
         const todayStr = getLocalISODate();
         const containers = {
@@ -335,20 +334,15 @@ const ui = {
         // Limpa containers
         Object.values(containers).forEach(el => el.innerHTML = '');
 
-        // Ordenação Primária: Data
-        // Ordenação Secundária (Sugerida): Tipo (Defesa antes de Novo)
         const sorted = store.reviews.sort((a, b) => {
-            // 1. Compara datas
             if (a.date !== b.date) {
                 return a.date.localeCompare(b.date);
             }
-            // 2. Se datas iguais, prioriza Defesa/Revisão sobre Matéria Nova (Ataque)
-            // Lógica: Se 'a' é defesa e 'b' é novo, 'a' vem primeiro (-1)
             const typeScore = (type) => {
                 const t = type ? type.toUpperCase() : '';
-                if (['DEFESA', 'DEFENSE', 'DEF'].includes(t)) return 1; // Prioridade Alta
-                if (['NOVO', 'NEW'].includes(t)) return 3; // Prioridade Baixa
-                return 2; // Revisões normais no meio
+                if (['DEFESA', 'DEFENSE', 'DEF'].includes(t)) return 1;
+                if (['NOVO', 'NEW'].includes(t)) return 3;
+                return 2;
             };
             return typeScore(a.type) - typeScore(b.type);
         });
@@ -449,8 +443,7 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP E MARCADOR) ---
-    // --- ATUALIZADO V1.2.5: SUPORTE A SUBTAREFAS (VISUAL E LÓGICA) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Subtarefas + Barra de Progresso) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -462,27 +455,6 @@ const ui = {
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
-        // Lógica de Subtarefas (Micro-Quests)
-        const subtasks = review.subtasks || [];
-        const totalSub = subtasks.length;
-        const doneSub = subtasks.filter(t => t.done).length;
-        const progressPercent = totalSub === 0 ? 0 : Math.round((doneSub / totalSub) * 100);
-        
-        // Cor da barra de progresso (Cinza se vazio, Verde se completo, Indigo se em andamento)
-        let barColor = 'bg-indigo-500';
-        if (totalSub > 0 && totalSub === doneSub) barColor = 'bg-emerald-500';
-
-        // HTML da Barra de Progresso no Cartão
-        const progressHtml = totalSub > 0 ? `
-            <div class="mt-2 flex items-center gap-2">
-                <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="${barColor} h-full transition-all duration-300" style="width: ${progressPercent}%"></div>
-                </div>
-                <span class="text-[9px] font-bold text-slate-400">${doneSub}/${totalSub}</span>
-            </div>
-        ` : '';
-
-        // Cores semânticas para os badges
         const getTypeStyles = (type) => {
             const t = type ? type.toUpperCase() : '';
             if (['NOVO', 'NEW'].includes(t)) {
@@ -511,15 +483,32 @@ const ui = {
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
         
-        // Identificar se é um item temporário (bônus)
         const tempIndicator = review.isTemporary 
             ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
 
-        // ATUALIZAÇÃO: Draggable Attributes + Log Marker 1
+        // --- LÓGICA DE SUBTAREFAS (PROGRESSO) ---
+        const subtasks = review.subtasks || [];
+        const totalSub = subtasks.length;
+        const doneSub = subtasks.filter(t => t.done).length;
+        const progressPercent = totalSub === 0 ? 0 : Math.round((doneSub / totalSub) * 100);
+        
+        let barColor = 'bg-indigo-500';
+        if (totalSub > 0 && totalSub === doneSub) barColor = 'bg-emerald-500';
+
+        const progressHtml = totalSub > 0 ? `
+            <div class="mt-2 flex items-center gap-2">
+                <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="${barColor} h-full transition-all" style="width: ${progressPercent}%"></div>
+                </div>
+                <span class="text-[9px] font-bold text-slate-400">${doneSub}/${totalSub}</span>
+            </div>
+        ` : '';
+        // ----------------------------------------
+
         return `
             <div draggable="true" 
-                ondragstart="console.log('[MARCADOR 1: HTML ondragstart acionado para ID ${review.id}]'); app.handleKanbanDragStart(event, ${review.id})"
+                ondragstart="app.handleKanbanDragStart(event, '${review.id}')"
                 class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative cursor-grab active:cursor-grabbing" 
                 style="border-left-color: ${review.color}">
                 
@@ -532,11 +521,10 @@ const ui = {
                         <div class="flex flex-col gap-1">
                             <h4 class="text-sm font-bold leading-snug cursor-pointer hover:text-indigo-600 transition-colors ${textDecoration}" 
                                 title="Clique para editar" 
-                                onclick="app.promptEdit(${review.id})">
+                                onclick="app.promptEdit('${review.id}')">
                                 ${review.topic}
                             </h4>
 
-                            <!-- Badge Semântico + Badge Extra -->
                             <div class="flex items-center mt-1 gap-2 flex-wrap">
                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${styleConfig.class}">
                                     <i data-lucide="${styleConfig.icon}" class="w-3 h-3"></i>
@@ -549,22 +537,17 @@ const ui = {
                     </div>
                     
                     <div class="flex flex-col items-end gap-2 pl-2">
-                        <!-- Checkbox -->
-                        <input type="checkbox" onclick="store.toggleStatus(${review.id})" ${isDone ? 'checked' : ''} 
+                        <input type="checkbox" onclick="store.toggleStatus('${review.id}')" ${isDone ? 'checked' : ''} 
                             class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
-                        <!-- Actions Row -->
-                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <!-- Botão Checklist (Micro-Quests) -->
-                            <button onclick="app.openSubtasks('${review.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors" title="Checklist / Subtarefas">
-                                <i data-lucide="list-todo" class="w-4 h-4"></i>
-                            </button>
+                        <!-- BOTÃO CHECKLIST (NOVO) -->
+                        <button onclick="app.openSubtasks('${review.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors" title="Checklist / Subtarefas">
+                            <i data-lucide="list-todo" class="w-4 h-4"></i>
+                        </button>
 
-                            <!-- Botão Excluir -->
-                            <button onclick="app.confirmDelete(${review.id})" class="text-slate-300 hover:text-red-500 transition-colors" title="Excluir">
-                                <i data-lucide="trash" class="w-4 h-4"></i>
-                            </button>
-                        </div>
+                        <button onclick="app.confirmDelete('${review.id}')" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir">
+                            <i data-lucide="trash" class="w-4 h-4"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -582,9 +565,17 @@ const ui = {
         `;
     },
 
-    // --- RENDERIZAÇÃO DA LISTA DE SUBTAREFAS (MODAL) ---
+    // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS (NOVO MÉTODO SEGURO) ---
     renderSubtaskList: (review) => {
         const container = document.getElementById('subtask-list');
+        if (!container) return;
+
+        // SEGURANÇA: Se review for indefinido, para aqui antes de dar erro
+        if (!review) {
+            container.innerHTML = `<div class="text-red-500 text-xs p-4">Erro: Dados do cartão não carregados. Tente reabrir.</div>`;
+            return;
+        }
+
         const tasks = review.subtasks || [];
         
         if (tasks.length === 0) {
@@ -592,9 +583,9 @@ const ui = {
         } else {
             container.innerHTML = tasks.map(t => `
                 <div class="subtask-item flex items-center gap-3 p-2 rounded border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50">
-                    <input type="checkbox" onchange="app.handleToggleSubtask(${t.id})" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-                    <span class="flex-1 text-xs text-slate-700 font-medium break-words">${t.text}</span>
-                    <button onclick="app.handleDeleteSubtask(${t.id})" class="text-slate-300 hover:text-red-500 p-1"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    <input type="checkbox" onchange="app.handleToggleSubtask(${t.id})" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0">
+                    <span class="flex-1 text-xs text-slate-700 font-medium break-words ${t.done ? 'line-through text-slate-400' : ''}">${t.text}</span>
+                    <button onclick="app.handleDeleteSubtask(${t.id})" class="text-slate-300 hover:text-red-500 p-1 shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </div>
             `).join('');
         }
@@ -604,11 +595,11 @@ const ui = {
         const done = tasks.filter(t => t.done).length;
         const pct = total === 0 ? 0 : Math.round((done/total)*100);
         
-        const progressBar = document.getElementById('modal-progress-bar');
-        const progressText = document.getElementById('modal-progress-text');
+        const bar = document.getElementById('modal-progress-bar');
+        const txt = document.getElementById('modal-progress-text');
         
-        if(progressBar) progressBar.style.width = `${pct}%`;
-        if(progressText) progressText.innerText = `${pct}% Concluído`;
+        if(bar) bar.style.width = `${pct}%`;
+        if(txt) txt.innerText = `${pct}% Concluído`;
         
         if(window.lucide) lucide.createIcons();
     },

@@ -639,6 +639,43 @@
         </div>
     </div>
 
+    <!-- Modal: Subtarefas (Micro-Quests) [NOVO] -->
+    <div id="modal-subtasks" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden flex flex-col max-h-[80vh]">
+            <!-- Cabeçalho -->
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+                <div class="min-w-0 pr-2">
+                    <h3 id="subtask-title" class="text-lg font-bold text-slate-800 truncate">Checklist</h3>
+                    <p id="subtask-subtitle" class="text-xs text-slate-500 truncate">Detalhe sua sessão de estudo</p>
+                </div>
+                <button onclick="ui.toggleModal('modal-subtasks', false)" class="text-slate-400 hover:text-red-500 shrink-0"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <!-- Input -->
+            <div class="p-4 border-b border-slate-100 bg-white shrink-0">
+                <form id="form-subtask" class="flex gap-2">
+                    <input type="text" id="input-subtask" placeholder="Adicionar passo (ex: Ler pág 10-20)..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required autocomplete="off">
+                    <button type="submit" class="bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-colors shadow-sm shrink-0">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Lista -->
+            <div id="subtask-list" class="p-4 overflow-y-auto custom-scroll flex-1 space-y-2 bg-slate-50/50 min-h-[150px]">
+                <!-- Injeção via JS -->
+            </div>
+            
+            <!-- Progresso -->
+            <div class="p-3 bg-white border-t border-slate-200 text-center shrink-0">
+                <div class="w-full bg-slate-100 rounded-full h-1.5 mb-2 overflow-hidden">
+                    <div id="modal-progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-500 ease-out"></div>
+                </div>
+                <p id="modal-progress-text" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">0% Concluído</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Container de Notificações Toast -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 

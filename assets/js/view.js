@@ -3,6 +3,7 @@
  * UI RENDERER (View Layer) - v1.2.2 Modified
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
  * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática & Drag-and-Drop Attributes.
+ * ATUALIZADO: Renderização de Micro-Quests (Subtarefas) e Barra de Progresso.
  */
 
 const ui = {
@@ -449,6 +450,7 @@ const ui = {
     },
 
     // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP E MARCADOR) ---
+    // --- ATUALIZADO V1.2.5: SUPORTE A SUBTAREFAS (VISUAL E LÓGICA) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -459,6 +461,26 @@ const ui = {
         const textDecoration = isDone 
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
+
+        // Lógica de Subtarefas (Micro-Quests)
+        const subtasks = review.subtasks || [];
+        const totalSub = subtasks.length;
+        const doneSub = subtasks.filter(t => t.done).length;
+        const progressPercent = totalSub === 0 ? 0 : Math.round((doneSub / totalSub) * 100);
+        
+        // Cor da barra de progresso (Cinza se vazio, Verde se completo, Indigo se em andamento)
+        let barColor = 'bg-indigo-500';
+        if (totalSub > 0 && totalSub === doneSub) barColor = 'bg-emerald-500';
+
+        // HTML da Barra de Progresso no Cartão
+        const progressHtml = totalSub > 0 ? `
+            <div class="mt-2 flex items-center gap-2">
+                <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="${barColor} h-full transition-all duration-300" style="width: ${progressPercent}%"></div>
+                </div>
+                <span class="text-[9px] font-bold text-slate-400">${doneSub}/${totalSub}</span>
+            </div>
+        ` : '';
 
         // Cores semânticas para os badges
         const getTypeStyles = (type) => {
@@ -489,7 +511,7 @@ const ui = {
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
         
-        // 1. Identificar se é um item temporário (bônus)
+        // Identificar se é um item temporário (bônus)
         const tempIndicator = review.isTemporary 
             ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
@@ -527,14 +549,26 @@ const ui = {
                     </div>
                     
                     <div class="flex flex-col items-end gap-2 pl-2">
+                        <!-- Checkbox -->
                         <input type="checkbox" onclick="store.toggleStatus(${review.id})" ${isDone ? 'checked' : ''} 
                             class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
-                        <button onclick="app.confirmDelete(${review.id})" class="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Excluir">
-                            <i data-lucide="trash" class="w-4 h-4"></i>
-                        </button>
+                        <!-- Actions Row -->
+                        <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <!-- Botão Checklist (Micro-Quests) -->
+                            <button onclick="app.openSubtasks('${review.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors" title="Checklist / Subtarefas">
+                                <i data-lucide="list-todo" class="w-4 h-4"></i>
+                            </button>
+
+                            <!-- Botão Excluir -->
+                            <button onclick="app.confirmDelete(${review.id})" class="text-slate-300 hover:text-red-500 transition-colors" title="Excluir">
+                                <i data-lucide="trash" class="w-4 h-4"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                ${progressHtml}
 
                 <div class="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100 mt-2">
                     <div class="flex items-center gap-1">
@@ -546,6 +580,37 @@ const ui = {
                 </div>
             </div>
         `;
+    },
+
+    // --- RENDERIZAÇÃO DA LISTA DE SUBTAREFAS (MODAL) ---
+    renderSubtaskList: (review) => {
+        const container = document.getElementById('subtask-list');
+        const tasks = review.subtasks || [];
+        
+        if (tasks.length === 0) {
+            container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs italic">Nenhuma micro-quest ativa.<br>Adicione passos acima.</div>`;
+        } else {
+            container.innerHTML = tasks.map(t => `
+                <div class="subtask-item flex items-center gap-3 p-2 rounded border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50">
+                    <input type="checkbox" onchange="app.handleToggleSubtask(${t.id})" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    <span class="flex-1 text-xs text-slate-700 font-medium break-words">${t.text}</span>
+                    <button onclick="app.handleDeleteSubtask(${t.id})" class="text-slate-300 hover:text-red-500 p-1"><i data-lucide="x" class="w-3 h-3"></i></button>
+                </div>
+            `).join('');
+        }
+        
+        // Atualiza barra do modal
+        const total = tasks.length;
+        const done = tasks.filter(t => t.done).length;
+        const pct = total === 0 ? 0 : Math.round((done/total)*100);
+        
+        const progressBar = document.getElementById('modal-progress-bar');
+        const progressText = document.getElementById('modal-progress-text');
+        
+        if(progressBar) progressBar.style.width = `${pct}%`;
+        if(progressText) progressText.innerText = `${pct}% Concluído`;
+        
+        if(window.lucide) lucide.createIcons();
     },
 
     showCycleInfo: (batchId, event) => {

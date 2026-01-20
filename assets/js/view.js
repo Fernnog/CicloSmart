@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.3.0 Updated
+ * UI RENDERER (View Layer) - v1.3.1 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Trava de Segurança em createCardHTML (Redirecionamento para Controller).
+ * ATUALIZADO: Indicador Visual de Subtarefas (Borda colorida no ícone) e Trava de Segurança no Checkbox.
  */
 
 const ui = {
@@ -443,7 +443,7 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Trava de Segurança em onclick) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Botão Checklist Inteligente + Trava de Segurança) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -487,7 +487,23 @@ const ui = {
             ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
 
-        // --- LÓGICA DE SUBTAREFAS (PROGRESSO) ---
+        // --- LÓGICA VISUAL DO BOTÃO CHECKLIST (NOVO) ---
+        // Verifica se há subtarefas para decidir o estilo do ícone
+        const hasSubtasks = review.subtasks && review.subtasks.length > 0;
+        
+        let checkBtnStyle = "";
+        let checkBtnClass = "transition-all p-1 rounded"; // Classes Base
+        
+        if (hasSubtasks) {
+            // Se tiver conteúdo: Borda colorida + Ícone colorido (Cor da Matéria) + Fundo branco
+            checkBtnStyle = `border: 1px solid ${review.color}; color: ${review.color}; background-color: rgba(255,255,255,0.8);`;
+            checkBtnClass += " font-bold shadow-sm hover:opacity-80 bg-white"; 
+        } else {
+            // Se estiver vazio: Estilo padrão (Cinza Inativo) com hover
+            checkBtnClass += " text-slate-300 hover:text-indigo-600 border border-transparent";
+        }
+
+        // --- LÓGICA DE BARRA DE PROGRESSO ---
         const subtasks = review.subtasks || [];
         const totalSub = subtasks.length;
         const doneSub = subtasks.filter(t => t.done).length;
@@ -537,11 +553,15 @@ const ui = {
                     </div>
                     
                     <div class="flex flex-col items-end gap-2 pl-2">
-                        <!-- CHECKBOX ATUALIZADO: Usa app.handleStatusToggle em vez de store.toggleStatus -->
+                        <!-- Checkbox Principal: Usa handleStatusToggle para Trava de Segurança -->
                         <input type="checkbox" onclick="app.handleStatusToggle('${review.id}', this)" ${isDone ? 'checked' : ''} 
                             class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
-                        <button onclick="app.openSubtasks('${review.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors" title="Checklist / Subtarefas">
+                        <!-- BOTÃO CHECKLIST (ATUALIZADO: Estilo Dinâmico) -->
+                        <button onclick="app.openSubtasks('${review.id}')" 
+                                class="${checkBtnClass}" 
+                                style="${checkBtnStyle}"
+                                title="${hasSubtasks ? `Ver ${review.subtasks.length} Subtarefas` : 'Adicionar Checklist'}">
                             <i data-lucide="list-todo" class="w-4 h-4"></i>
                         </button>
 

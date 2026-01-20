@@ -548,21 +548,62 @@ const app = {
         }
     },
 
+    // --- NOVA FUNÇÃO: Trava de Segurança para Conclusão ---
+    handleStatusToggle: (id, checkboxEl) => {
+        // Busca robusta
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        
+        if (!review) return;
+
+        // Verifica se a ação é "Marcar como Feito" (checkbox acabou de ser marcado)
+        const isMarkingAsDone = checkboxEl.checked;
+
+        if (isMarkingAsDone) {
+            const pendingSubtasks = (review.subtasks || []).filter(t => !t.done).length;
+            
+            if (pendingSubtasks > 0) {
+                // Alerta de segurança
+                const confirmAction = confirm(
+                    `⚠️ Atenção: Existem ${pendingSubtasks} micro-quests pendentes neste cartão.\n\nDeseja forçar a conclusão mesmo assim?`
+                );
+
+                if (!confirmAction) {
+                    // Reverte o checkbox visualmente se o usuário cancelar
+                    checkboxEl.checked = false;
+                    return;
+                }
+            }
+        }
+
+        // Se passou pela guarda ou não tinha pendências, chama o Store
+        store.toggleStatus(id);
+    },
+
+    // --- ATUALIZAÇÃO: Confirmação de Exclusão mais Segura ---
     confirmDelete: (id) => {
-        const r = store.reviews.find(x => x.id === id);
+        const r = store.reviews.find(x => x.id.toString() === id.toString()); // Busca robusta
         if(!r) return;
+        
         const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
+        
+        // Verifica pendências locais
+        const pendingSubtasks = (r.subtasks || []).filter(t => !t.done).length;
+        let warningMsg = "";
+
+        if (pendingSubtasks > 0) {
+            warningMsg = `\n\n🚨 ATENÇÃO: Há ${pendingSubtasks} tarefas não concluídas neste cartão!`;
+        }
 
         if (siblings.length > 1) {
-            if (confirm(`🗑️ Excluir CICLO COMPLETO (${siblings.length} itens)?\n[OK] Sim, apagar tudo.\n[Cancelar] Não, apagar só este.`)) {
+            if (confirm(`🗑️ Excluir CICLO COMPLETO (${siblings.length} itens)?${warningMsg}\n\n[OK] Sim, apagar tudo.\n[Cancelar] Não, apagar só este.`)) {
                 store.deleteBatch(r.batchId);
                 toast.show('Ciclo removido.', 'error');
-            } else if(confirm("Excluir apenas este card?")) {
+            } else if(confirm(`Excluir apenas este card?${warningMsg}`)) {
                 store.deleteReview(id);
                 toast.show('Card removido.', 'info');
             }
         } else {
-            if(confirm("Excluir esta revisão?")) {
+            if(confirm(`Excluir esta revisão?${warningMsg}`)) {
                 store.deleteReview(id);
                 toast.show('Removido.', 'info');
             }

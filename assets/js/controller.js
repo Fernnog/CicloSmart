@@ -1,6 +1,6 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.2.1 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.2.4 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
  */
 
@@ -272,7 +272,7 @@ const app = {
         }
     },
 
- // --- Lógica de Numeração Blindada (v1.2.0 Hotfix) ---
+    // --- Lógica de Numeração Blindada (v1.2.0 Hotfix) ---
     calculateCycleIndex: (targetDateStr) => {
         // 1. Segurança: Se não há ciclo definido, começa do 1
         if (!store.cycleStartDate) {
@@ -430,6 +430,13 @@ const app = {
         app.updateProfileUI(store.profile);
     },
 
+    // 1. Geração de IDs Robusta (UUID)
+    generateUUID: () => {
+        return typeof crypto !== 'undefined' && crypto.randomUUID 
+            ? crypto.randomUUID() 
+            : Date.now().toString(36) + Math.random().toString(36).substr(2);
+    },
+
     processStudyEntry: (data) => {
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
@@ -443,8 +450,9 @@ const app = {
         const newReviews = [];
         let blocker = null;
 
+        // ATUALIZAÇÃO: Uso de UUID para o card de Aquisição
         const acquisitionEntry = {
-            id: Date.now() + Math.random(), 
+            id: app.generateUUID(), 
             subject: subjectName, color: subjectColor, topic: topic, time: studyTime,
             date: selectedDateStr, type: 'NOVO', status: 'PENDING',
             cycleIndex: finalCycleIndex, batchId: batchId 
@@ -474,8 +482,9 @@ const app = {
             let typeLabel = interval === 1 ? '24h' : interval + 'd';
             if (store.profile === 'pendular') typeLabel = interval === 1 ? 'Defesa' : effectiveInterval + 'd+'; 
 
+            // ATUALIZAÇÃO: Uso de UUID para revisões
             newReviews.push({
-                id: Date.now() + Math.random() + effectiveInterval,
+                id: app.generateUUID(),
                 subject: subjectName, color: subjectColor, topic: topic, time: estimatedTime,
                 date: isoDate, type: typeLabel, status: 'PENDING',
                 cycleIndex: finalCycleIndex, batchId: batchId 
@@ -702,8 +711,10 @@ const app = {
         // REMOVE FEEDBACK VISUAL
         document.body.classList.remove('is-dragging');
 
-        const id = parseInt(e.dataTransfer.getData("text/plain"));
-        const review = store.reviews.find(r => r.id === id);
+        const idRaw = e.dataTransfer.getData("text/plain");
+        
+        // CORREÇÃO: Comparação Robusta (String vs String)
+        const review = store.reviews.find(r => r.id.toString() === idRaw.toString());
         
         if (!review) return;
         if (review.date === targetDateStr) return; // Cancela se for o mesmo dia
@@ -714,7 +725,8 @@ const app = {
                 .filter(r => r.batchId === review.batchId)
                 .sort((a, b) => a.date.localeCompare(b.date));
             
-            const currentIndex = siblings.findIndex(r => r.id === id);
+            // Busca por ID usando toString para segurança
+            const currentIndex = siblings.findIndex(r => r.id.toString() === review.id.toString());
             
             // Verifica revisão POSTERIOR
             const nextReview = siblings[currentIndex + 1];
@@ -731,7 +743,7 @@ const app = {
 
         // 2. Validação de Capacidade (Sobrecarga)
         const targetDayLoad = store.reviews
-            .filter(r => r.date === targetDateStr && r.id !== id)
+            .filter(r => r.date === targetDateStr && r.id.toString() !== review.id.toString())
             .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
             
         const newTotal = targetDayLoad + parseInt(review.time);
@@ -752,7 +764,7 @@ const app = {
     },
 
     // --- NOVO: Lógica de Agendamento Elástico (Drag & Drop Kanban) ---
-    // --- ATUALIZADO COM MARCADORES DE DEBUG ---
+    // --- ATUALIZADO V1.2.4: ID Robustness, UX & Undo ---
 
     // 1. Verifica e devolve itens emprestados vencidos (Roda ao iniciar)
     checkTemporaryReversions: () => {
@@ -782,52 +794,64 @@ const app = {
         }
     },
 
-    // 2. Início do Arraste no Kanban (COM DEBUG)
+    // 2. Início do Arraste no Kanban
     handleKanbanDragStart: (e, id) => {
-        console.warn(`[MARCADOR 2] handleKanbanDragStart acionado para ID: ${id}`);
         try {
             e.dataTransfer.setData("text/plain", id);
             e.dataTransfer.effectAllowed = "move";
             document.body.classList.add('is-dragging');
-            console.log('[MARCADOR 2.1] Classe is-dragging adicionada ao body.');
         } catch (err) {
-            console.error('[ERRO CRÍTICO] Falha no DragStart:', err);
+            console.error('[DragStart Error]', err);
         }
     },
 
-    // 3. Permitir soltar (Drop) - ESSENCIAL
-    allowDrop: (e) => {
-        // console.log('[MARCADOR 3] allowDrop disparado (Hover)'); 
+    // 3. Feedback Visual (Hover)
+    handleDragEnter: (e, element) => {
         e.preventDefault();
+        element.classList.add('drag-hover');
     },
 
-    // 4. Soltar o cartão na coluna (COM DEBUG)
+    handleDragLeave: (e, element) => {
+        e.preventDefault();
+        element.classList.remove('drag-hover');
+    },
+
+    // 4. Permitir soltar (Drop)
+    allowDrop: (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move"; // Corrige ícone de proibido
+    },
+
+    // 5. Soltar o cartão na coluna (Lógica Principal)
     handleKanbanDrop: (e, targetCol) => {
-        console.warn(`[MARCADOR 4] handleKanbanDrop acionado na coluna: ${targetCol}`);
         e.preventDefault();
         document.body.classList.remove('is-dragging');
+        
+        // Remove destaque visual de todas as colunas
+        document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-hover'));
 
         const idRaw = e.dataTransfer.getData("text/plain");
-        console.log(`[MARCADOR 4.1] ID recebido: "${idRaw}"`);
         
-        const id = parseInt(idRaw);
-        const review = store.reviews.find(r => r.id === id);
+        // CORREÇÃO CRÍTICA: Busca Robusta (String vs String)
+        const review = store.reviews.find(r => r.id.toString() === idRaw.toString());
         
         if (!review) {
-            console.error('[ERRO CRÍTICO] Review não encontrada no Store.');
-            return;
+            console.error('[ERRO] Review não encontrada. ID:', idRaw);
+            return toast.show('Erro ao mover: Item não localizado.', 'error');
         }
-
-        console.log('[MARCADOR 4.2] Review encontrada:', review.subject);
 
         const today = getLocalISODate();
 
         // CASO 1: Soltou na coluna "HOJE"
         if (targetCol === 'today') {
-            if (review.date === today) {
-                console.log('[AVISO] Item já é de hoje.');
-                return;
-            }
+            if (review.date === today) return;
+
+            // Snapshot para Undo
+            const previousState = {
+                date: review.date,
+                isTemporary: review.isTemporary || false,
+                originalDate: review.originalDate
+            };
 
             // Se ainda não é temporário, salva a origem para poder devolver depois
             if (!review.isTemporary) {
@@ -837,11 +861,20 @@ const app = {
             
             review.date = today;
             store.save();
-            toast.show('Adicionado como Extra. Se não fizer hoje, volta amanhã.', 'success', '📅 Estudo Puxado');
-            console.log('[SUCESSO] Movido para hoje.');
+            
+            // Toast com Ação de Desfazer
+            toast.show(
+                'Movido para hoje (Extra).', 
+                'success', 
+                '📅 Agenda Atualizada',
+                {
+                    label: 'Desfazer',
+                    onClick: `app.undoMove('${review.id}', '${previousState.date}', ${previousState.isTemporary}, '${previousState.originalDate || ''}')`
+                }
+            );
         }
         
-        // CASO 2: Devolver manualmente para a lista original (Atrasados ou Futuro)
+        // CASO 2: Devolver manualmente para a lista original
         else if ((targetCol === 'late' || targetCol === 'future')) {
             if (review.isTemporary) {
                 review.date = review.originalDate;
@@ -849,8 +882,25 @@ const app = {
                 delete review.isTemporary;
                 store.save();
                 toast.show('Item devolvido à posição original.', 'info');
-                console.log('[SUCESSO] Devolvido para origem.');
             }
+        }
+    },
+
+    // 6. Função de Desfazer (Undo)
+    undoMove: (id, prevDate, prevIsTemp, prevOriginalDate) => {
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        
+        if (review) {
+            review.date = prevDate;
+            if (prevIsTemp) {
+                review.isTemporary = true;
+                review.originalDate = prevOriginalDate;
+            } else {
+                delete review.isTemporary;
+                delete review.originalDate;
+            }
+            store.save();
+            toast.show('Ação desfeita.', 'info');
         }
     }
 };

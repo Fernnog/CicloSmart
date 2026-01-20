@@ -1,10 +1,21 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.3 (Agendamento Elástico & Drag-and-Drop) ---
+    {
+        version: '1.2.3',
+        date: 'Hoje',
+        changes: [
+            '🧲 <strong>Agendamento Elástico (Elastic Scheduling):</strong> Agora você pode arrastar estudos de "Futuro" ou "Atrasados" para "Hoje" como uma tentativa bônus.',
+            '🛡️ <strong>Proteção de Retorno Automático:</strong> Se você puxar um estudo para hoje (marcado como "⏳ Extra") e não concluí-lo, o sistema devolve ele automaticamente para a data original no dia seguinte. Sem bagunça na agenda!',
+            '🖱️ <strong>Kanban Drag-and-Drop:</strong> Interação completa de arrastar e soltar entre as colunas do quadro principal.',
+            '✨ <strong>Indicadores Visuais:</strong> Novos badges nos cartões identificam itens emprestados temporariamente.'
+        ]
+    },
     // --- VERSÃO 1.2.2 (Gamificação & UX) ---
     { 
         version: '1.2.2', 
-        date: 'Hoje', 
+        date: 'Anterior', 
         changes: [
             '🔥 <strong>Gamificação (Streak):</strong> Novo contador de constância no topo da tela! Uma chama acesa indica quantos dias consecutivos você estudou. O sistema verifica automaticamente seu histórico para manter a chama viva.',
             '✨ <strong>Smart Empty States:</strong> Adeus telas vazias inúteis. As colunas do Kanban agora exibem <strong>Botões de Ação Rápida (CTAs)</strong> quando vazias, permitindo planejar o futuro ou visualizar conquistas com um clique.',

@@ -1,8 +1,7 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.2.3 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.2.1 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
- * ATUALIZADO: Agendamento Elástico (Drag & Drop com Retorno Automático).
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -21,7 +20,6 @@ const app = {
         app.runLegacyMigration();
 
         // --- NOVO: Verifica e devolve itens emprestados não concluídos ---
-        // (Prioridade 2: Garante a integridade da agenda ao abrir o app)
         app.checkTemporaryReversions();
 
         app.initVersionControl();
@@ -754,7 +752,6 @@ const app = {
     },
 
     // --- NOVO: Lógica de Agendamento Elástico (Drag & Drop Kanban) ---
-    // Implementa Prioridades 1 e 2: Arraste com retorno automático
 
     // 1. Verifica e devolve itens emprestados vencidos (Roda ao iniciar)
     checkTemporaryReversions: () => {
@@ -786,14 +783,15 @@ const app = {
 
     // 2. Início do Arraste no Kanban
     handleKanbanDragStart: (e, id) => {
+        console.log('[Drag] Iniciou arraste do ID:', id); 
         e.dataTransfer.setData("text/plain", id);
         e.dataTransfer.effectAllowed = "move";
         document.body.classList.add('is-dragging'); // Feedback visual global
     },
 
-    // 3. Permitir soltar (Drop)
+    // 3. Permissão para Soltar (ESSENCIAL - Correção)
     allowDrop: (e) => {
-        e.preventDefault();
+        e.preventDefault(); 
     },
 
     // 4. Soltar o cartão na coluna
@@ -802,6 +800,8 @@ const app = {
         document.body.classList.remove('is-dragging');
 
         const id = parseInt(e.dataTransfer.getData("text/plain"));
+        console.log(`[Drag] Tentando soltar ID ${id} na coluna: ${targetCol}`);
+
         const review = store.reviews.find(r => r.id === id);
         
         if (!review) return;
@@ -821,6 +821,7 @@ const app = {
             review.date = today;
             store.save();
             toast.show('Adicionado como Extra. Se não fizer hoje, volta amanhã.', 'success', '📅 Estudo Puxado');
+            console.log('[Drag] Sucesso: Movido para Hoje.');
         }
         
         // CASO 2: Devolver manualmente para a lista original (Atrasados ou Futuro)
@@ -833,6 +834,7 @@ const app = {
                 delete review.isTemporary;
                 store.save();
                 toast.show('Item devolvido à posição original.', 'info');
+                console.log('[Drag] Sucesso: Devolvido para origem.');
             }
         }
     }

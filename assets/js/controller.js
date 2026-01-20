@@ -11,6 +11,9 @@ const app = {
     init: () => {
         store.load();
         
+        // --- NOVA LÓGICA: Verifica reversão de itens temporários ---
+        app.checkTemporaryReversions();
+
         // --- ARQUITETURA REATIVA (OBSERVER) ---
         store.subscribe(taskManager.checkOverdue); 
         store.subscribe(taskManager.render);       
@@ -112,6 +115,8 @@ const app = {
                     get(userRef).then((snapshot) => {
                         if (snapshot.exists()) {
                             store.load(snapshot.val());
+                            // Verifica reversões novamente após load da nuvem
+                            app.checkTemporaryReversions();
                             toast.show('Sincronizado.', 'success');
                             setTimeout(() => app.checkCycleIntegrity(), 1500);
                         } else {
@@ -119,7 +124,10 @@ const app = {
                         }
                         onValue(userRef, (snap) => {
                             const val = snap.val();
-                            if(val) store.load(val); 
+                            if(val) {
+                                store.load(val);
+                                // Nota: Não chamamos checkTemporaryReversions aqui para evitar loops visuais estranhos durante uso em tempo real
+                            }
                         });
                     });
 
@@ -492,7 +500,7 @@ const app = {
         toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada (Dia ${indexMsg})`);
     },
 
-    updateCapacitySetting: (val) => {
+    updateCapacityStats: (val) => {
         const min = parseInt(val);
         if(min > 0) {
             store.capacity = min;
@@ -675,37 +683,33 @@ const app = {
         toast.show(`Cronograma realinhado! ${shiftCount} cartões movidos.`, 'neuro', 'SRS Preservado');
     },
 
-    // --- DRAG AND DROP HANDLERS (Prioridades 2 e 3) ---
+    // --- DRAG AND DROP HANDLERS (HEATMAP) ---
 
     handleDragStart: (e, id) => {
         e.dataTransfer.setData("text/plain", id);
         e.dataTransfer.effectAllowed = "move";
-        // ATIVA FEEDBACK VISUAL NO BODY
         document.body.classList.add('is-dragging');
     },
 
-    // Handler para garantir limpeza se o usuário soltar fora ou cancelar
     handleDragEnd: (e) => {
         document.body.classList.remove('is-dragging');
     },
 
     handleDragOver: (e) => {
-        e.preventDefault(); // Necessário para permitir o drop
+        e.preventDefault(); 
         e.dataTransfer.dropEffect = "move";
     },
 
     handleDrop: (e, targetDateStr) => {
         e.preventDefault();
-        // REMOVE FEEDBACK VISUAL
         document.body.classList.remove('is-dragging');
 
         const id = parseInt(e.dataTransfer.getData("text/plain"));
         const review = store.reviews.find(r => r.id === id);
         
         if (!review) return;
-        if (review.date === targetDateStr) return; // Cancela se for o mesmo dia
+        if (review.date === targetDateStr) return; 
 
-        // 1. Validação de Cronologia (Não pode passar da próxima revisão)
         if (review.batchId) {
             const siblings = store.reviews
                 .filter(r => r.batchId === review.batchId)
@@ -713,20 +717,17 @@ const app = {
             
             const currentIndex = siblings.findIndex(r => r.id === id);
             
-            // Verifica revisão POSTERIOR
             const nextReview = siblings[currentIndex + 1];
             if (nextReview && targetDateStr >= nextReview.date) {
                 return toast.show(`Bloqueado: A próxima revisão deste ciclo é em ${formatDateDisplay(nextReview.date)}.`, 'error', '⛔ Cronologia Inválida');
             }
             
-            // Verifica revisão ANTERIOR (Opcional, para integridade)
             const prevReview = siblings[currentIndex - 1];
             if (prevReview && targetDateStr <= prevReview.date) {
                  return toast.show(`Bloqueado: A revisão anterior foi em ${formatDateDisplay(prevReview.date)}.`, 'error', '⛔ Cronologia Inválida');
             }
         }
 
-        // 2. Validação de Capacidade (Sobrecarga)
         const targetDayLoad = store.reviews
             .filter(r => r.date === targetDateStr && r.id !== id)
             .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
@@ -738,14 +739,83 @@ const app = {
             return toast.show(`Bloqueado: O dia ficaria com ${newTotal}min (Max: ${capacity}min).`, 'warning', '⚠️ Sobrecarga Detectada');
         }
 
-        // 3. Aplicação
         review.date = targetDateStr;
-        store.save(); // Salva e notifica
+        store.save(); 
         
-        ui.renderHeatmap(); // Atualiza o Radar especificamente
-        ui.render(); // Atualiza listas gerais se necessário
+        ui.renderHeatmap(); 
+        ui.render(); 
         
         toast.show('Estudo reagendado com sucesso.', 'success');
+    },
+
+    // --- NOVA FUNCIONALIDADE: AGENDAMENTO ELÁSTICO (KANBAN DRAG & DROP) ---
+    
+    // Verifica itens temporários vencidos e os reverte
+    checkTemporaryReversions: () => {
+        const today = getLocalISODate();
+        let revertedCount = 0;
+    
+        store.reviews.forEach(r => {
+            // Se é temporário, está pendente, e a data "emprestada" já passou
+            if (r.isTemporary && r.status === 'PENDING' && r.date < today) {
+                r.date = r.originalDate;
+                delete r.originalDate;
+                delete r.isTemporary;
+                revertedCount++;
+            }
+        });
+    
+        if (revertedCount > 0) {
+            store.save();
+            toast.show(`${revertedCount} estudos não concluídos retornaram à posição original.`, 'info', '↺ Agenda Restaurada');
+        }
+    },
+
+    // Início do arrasto no Kanban
+    handleKanbanDragStart: (e, id) => {
+        e.dataTransfer.setData("text/plain", id);
+        e.dataTransfer.effectAllowed = "move";
+        // Adiciona classe para feedback visual nas colunas (opcional, mas recomendado)
+        document.querySelectorAll('.kanban-column').forEach(c => c.classList.add('transition-colors'));
+    },
+
+    // Permite soltar
+    allowDrop: (e) => {
+        e.preventDefault();
+    },
+
+    // Lógica ao soltar na coluna
+    handleKanbanDrop: (e, targetCol) => {
+        e.preventDefault();
+        const id = parseInt(e.dataTransfer.getData("text/plain"));
+        const review = store.reviews.find(r => r.id === id);
+        if (!review) return;
+    
+        const today = getLocalISODate();
+    
+        // Lógica para quando soltar na coluna "HOJE"
+        if (targetCol === 'today') {
+            if (review.date === today) return; // Já é de hoje
+    
+            // Salva estado original se ainda não for temporário
+            if (!review.isTemporary) {
+                review.originalDate = review.date;
+                review.isTemporary = true;
+            }
+            
+            review.date = today;
+            toast.show('Item movido para hoje. Se não for feito, retornará amanhã.', 'success', '📅 Agendamento Elástico');
+        }
+        
+        // Lógica para devolver manualmente (soltar em Atrasados ou Futuro)
+        else if ((targetCol === 'late' || targetCol === 'future') && review.isTemporary) {
+            review.date = review.originalDate;
+            delete review.originalDate;
+            delete review.isTemporary;
+            toast.show('Item devolvido à posição original.', 'info');
+        }
+    
+        store.save(); // Salva e dispara atualização da UI
     }
 };
 

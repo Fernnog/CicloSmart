@@ -86,7 +86,8 @@ const toast = {
         error:   { icon: 'shield-alert',   classes: 'bg-red-50 border-red-500 text-red-900' }
     },
 
-    show: (message, type = 'info', title = null) => {
+    // ATUALIZAÇÃO (Prioridade 3): Adicionado suporte a botão de ação (action)
+    show: (message, type = 'info', title = null, action = null) => {
         const container = document.getElementById('toast-container');
         if(!container) return; 
 
@@ -105,6 +106,12 @@ const toast = {
             <div class="flex-1 min-w-0">
                 ${title ? `<h4 class="font-bold text-sm leading-tight">${title}</h4>` : ''}
                 <p class="text-xs font-medium leading-snug break-words">${message}</p>
+                
+                ${action ? `
+                <button onclick="${action.onClick}" class="mt-2 text-xs font-bold underline hover:text-slate-900 cursor-pointer text-current opacity-90 hover:opacity-100">
+                    ↩ ${action.label}
+                </button>
+                ` : ''}
             </div>
         `;
         
@@ -113,11 +120,14 @@ const toast = {
         
         requestAnimationFrame(() => el.classList.add('show'));
         
+        // Se houver ação, aumenta o tempo de exibição para dar tempo de clicar
+        const duration = action ? 8000 : 5000;
+
         setTimeout(() => {
             el.classList.remove('show');
             el.classList.add('opacity-0', 'translate-x-full'); 
             setTimeout(() => el.remove(), 400); 
-        }, 5000);
+        }, duration);
     }
 };
 

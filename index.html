@@ -199,14 +199,11 @@
         </button>
     </nav>
 
-    <!-- Área Principal (Kanban) - Modificado para Prioridade 1 (Scroll Fix) + AGENDAMENTO ELÁSTICO (ondrop/ondragover) -->
+    <!-- Área Principal (Kanban) - Modificado para Prioridade 1 (Scroll Fix) e Drag-and-Drop -->
     <main id="main-kanban" class="flex-1 grid grid-cols-1 gap-px bg-slate-200 overflow-hidden relative transition-all duration-500 ease-in-out min-h-0">
         
         <!-- Coluna Atrasados -->
-        <section id="col-late" 
-                 ondragover="app.allowDrop(event)" 
-                 ondrop="app.handleKanbanDrop(event, 'late')"
-                 class="kanban-column hidden md:flex flex-col bg-red-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
+        <section id="col-late" ondragover="app.allowDrop(event)" ondrop="app.handleKanbanDrop(event, 'late')" class="kanban-column hidden md:flex flex-col bg-red-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
             <div class="px-4 py-3 border-b border-slate-200 bg-red-50/50 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-red-600 flex items-center gap-2 text-sm uppercase tracking-wide">
                     <i data-lucide="alert-circle" class="w-4 h-4"></i> Atrasados
@@ -223,10 +220,7 @@
         </section>
 
         <!-- Coluna Hoje -->
-        <section id="col-today" 
-                 ondragover="app.allowDrop(event)" 
-                 ondrop="app.handleKanbanDrop(event, 'today')"
-                 class="kanban-column flex flex-col bg-white h-full min-w-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] z-10 transition-all duration-500 ease-in-out min-h-0">
+        <section id="col-today" ondragover="app.allowDrop(event)" ondrop="app.handleKanbanDrop(event, 'today')" class="kanban-column flex flex-col bg-white h-full min-w-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] z-10 transition-all duration-500 ease-in-out min-h-0">
             <div class="px-4 py-3 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
                     <i data-lucide="target" class="w-4 h-4 text-indigo-600"></i> Meta de Hoje
@@ -244,10 +238,7 @@
         </section>
 
         <!-- Coluna Futuro -->
-        <section id="col-future" 
-                 ondragover="app.allowDrop(event)" 
-                 ondrop="app.handleKanbanDrop(event, 'future')"
-                 class="kanban-column hidden md:flex flex-col bg-slate-50/80 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
+        <section id="col-future" ondragover="app.allowDrop(event)" ondrop="app.handleKanbanDrop(event, 'future')" class="kanban-column hidden md:flex flex-col bg-slate-50/80 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-slate-500 flex items-center gap-2 text-sm uppercase tracking-wide">
                     <i data-lucide="calendar-clock" class="w-4 h-4"></i> Próximos

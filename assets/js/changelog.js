@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.5 (Micro-Quests & Checklists) ---
+    {
+        version: '1.2.5',
+        date: 'Hoje',
+        changes: [
+            '📝 <strong>Micro-Quests (Checklists):</strong> Agora cada cartão de estudo é uma prancheta interativa! Adicione listas de tarefas específicas (ex: "Ler PDF", "Resolver Questões") diretamente dentro de cada estudo.',
+            '📊 <strong>Progresso Visual:</strong> Acompanhe seu avanço com novas <strong>Barras de Progresso</strong> nos cartões, que se preenchem automaticamente e mudam de cor conforme você completa os itens da lista.',
+            '✨ <strong>Modal de Detalhamento:</strong> Uma nova interface limpa e focada para gerenciar o "passo a passo" da sua sessão de estudo sem perder o contexto da matéria.'
+        ]
+    },
     // --- VERSÃO 1.2.4 (Fix: Drag-and-Drop & UX Boost) ---
     {
         version: '1.2.4',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '🐛 <strong>Correção Crítica de Drag-and-Drop:</strong> Resolvido o problema onde arrastar um cartão para a coluna "Hoje" mostrava um ícone de bloqueio e falhava. O sistema agora reconhece corretamente todos os cartões.',
             '✨ <strong>Feedback Visual (Hover):</strong> Agora, ao segurar um cartão sobre uma coluna, ela se ilumina em verde (drag-hover), confirmando visualmente que você pode soltar o item ali.',

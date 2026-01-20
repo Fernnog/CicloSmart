@@ -369,17 +369,27 @@ const store = {
     },
 
     // --- NOVOS MÉTODOS DE SUBTAREFAS (MICRO-QUESTS) ---
+    
+    // Helper Arquitetural: Busca robusta de ID (String vs Number)
+    // Centraliza a lógica para evitar o bug de 'identity mismatch'
+    _getReviewById: (id) => {
+        if (!id) return undefined;
+        return store.reviews.find(r => r.id.toString() === id.toString());
+    },
+
     addSubtask: (reviewId, text) => {
-        const r = store.reviews.find(x => x.id === reviewId);
+        const r = store._getReviewById(reviewId); // Uso do helper
         if (r) {
             if (!r.subtasks) r.subtasks = []; // Inicializa se não existir
             r.subtasks.push({ id: Date.now(), text, done: false });
             store.save(); // Salva e notifica a View via Observer
+        } else {
+            console.error(`[Core Error] Review não encontrada para ID: ${reviewId}`);
         }
     },
 
     toggleSubtask: (reviewId, subtaskId) => {
-        const r = store.reviews.find(x => x.id === reviewId);
+        const r = store._getReviewById(reviewId); // Uso do helper
         if (r && r.subtasks) {
             const task = r.subtasks.find(t => t.id === subtaskId);
             if (task) {
@@ -390,7 +400,7 @@ const store = {
     },
 
     removeSubtask: (reviewId, subtaskId) => {
-        const r = store.reviews.find(x => x.id === reviewId);
+        const r = store._getReviewById(reviewId); // Uso do helper
         if (r && r.subtasks) {
             r.subtasks = r.subtasks.filter(t => t.id !== subtaskId);
             store.save();

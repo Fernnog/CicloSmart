@@ -1,10 +1,21 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.4 (Fix: Drag-and-Drop & UX Boost) ---
+    {
+        version: '1.2.4',
+        date: 'Hoje',
+        changes: [
+            '🐛 <strong>Correção Crítica de Drag-and-Drop:</strong> Resolvido o problema onde arrastar um cartão para a coluna "Hoje" mostrava um ícone de bloqueio e falhava. O sistema agora reconhece corretamente todos os cartões.',
+            '✨ <strong>Feedback Visual (Hover):</strong> Agora, ao segurar um cartão sobre uma coluna, ela se ilumina em verde (drag-hover), confirmando visualmente que você pode soltar o item ali.',
+            '↩️ <strong>Desfazer Ação (Undo):</strong> Arrastou errado? Sem pânico. Uma nova opção "Desfazer" aparece na notificação de sucesso, permitindo reverter a mudança instantaneamente.',
+            '🛡️ <strong>Arquitetura Robusta (UUID):</strong> Atualizamos a geração de IDs de novos estudos para o padrão universal UUID, prevenindo erros matemáticos de identificação no futuro.'
+        ]
+    },
     // --- VERSÃO 1.2.3 (Agendamento Elástico & Drag-and-Drop) ---
     {
         version: '1.2.3',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '🧲 <strong>Agendamento Elástico (Elastic Scheduling):</strong> Agora você pode arrastar estudos de "Futuro" ou "Atrasados" para "Hoje" como uma tentativa bônus.',
             '🛡️ <strong>Proteção de Retorno Automático:</strong> Se você puxar um estudo para hoje (marcado como "⏳ Extra") e não concluí-lo, o sistema devolve ele automaticamente para a data original no dia seguinte. Sem bagunça na agenda!',

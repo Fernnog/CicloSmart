@@ -2,7 +2,7 @@
 /**
  * UI RENDERER (View Layer) - v1.3.0 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Micro-Quests (Subtarefas) com visualização de progresso e correções de segurança.
+ * ATUALIZADO: Trava de Segurança em createCardHTML (Redirecionamento para Controller).
  */
 
 const ui = {
@@ -443,7 +443,7 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Subtarefas + Barra de Progresso) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Trava de Segurança em onclick) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -537,10 +537,10 @@ const ui = {
                     </div>
                     
                     <div class="flex flex-col items-end gap-2 pl-2">
-                        <input type="checkbox" onclick="store.toggleStatus('${review.id}')" ${isDone ? 'checked' : ''} 
+                        <!-- CHECKBOX ATUALIZADO: Usa app.handleStatusToggle em vez de store.toggleStatus -->
+                        <input type="checkbox" onclick="app.handleStatusToggle('${review.id}', this)" ${isDone ? 'checked' : ''} 
                             class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
                         
-                        <!-- BOTÃO CHECKLIST (NOVO) -->
                         <button onclick="app.openSubtasks('${review.id}')" class="text-slate-300 hover:text-indigo-600 transition-colors" title="Checklist / Subtarefas">
                             <i data-lucide="list-todo" class="w-4 h-4"></i>
                         </button>

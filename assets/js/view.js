@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.2.2 Modified
+ * UI RENDERER (View Layer) - v1.2.3 Modified
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática & Drag-and-Drop Attributes.
+ * ATUALIZADO: Suporte a Drag-and-Drop (Draggable Attributes) e Badge "Extra/Temporário".
  */
 
 const ui = {
@@ -448,7 +448,7 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP & BADGE EXTRA) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -488,13 +488,14 @@ const ui = {
         const cycleHtml = review.batchId && review.cycleIndex 
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
-        
-        // Indicador visual se for temporário
+
+        // --- INDICADOR DE ITEM TEMPORÁRIO (EXTRA) ---
+        // Exibe um badge se o item foi emprestado de outro dia
         const tempIndicator = review.isTemporary 
             ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
-
-        // Adicionamos draggable="true" e ondragstart
+        
+        // Adicionamos draggable="true" e o handler ondragstart
         return `
             <div draggable="true" 
                 ondragstart="app.handleKanbanDragStart(event, ${review.id})"

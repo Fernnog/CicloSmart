@@ -2,7 +2,7 @@
 /**
  * UI RENDERER (View Layer) - v1.2.2 Modified
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática.
+ * ATUALIZADO: Badges Semânticos Coloridos & Ordenação Tática & Drag-and-Drop Attributes.
  */
 
 const ui = {
@@ -448,24 +448,19 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO PARA SUPORTAR DRAG & DROP E BADGE "EXTRA") ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO COM DRAG & DROP) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
         const containerClasses = isDone 
             ? 'bg-slate-50 border-slate-200 opacity-60' 
-            : 'bg-white border-slate-200 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing';
+            : 'bg-white border-slate-200 shadow-sm hover:shadow-md';
             
         const textDecoration = isDone 
             ? 'line-through text-slate-400' 
             : 'text-slate-800';
 
-        // Badge visual para itens "emprestados" (temporários)
-        const tempIndicator = review.isTemporary 
-            ? `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
-            : '';
-
-        // Define cores e ícones baseados no tipo do estudo para leitura rápida (Scanability)
+        // Cores semânticas para os badges
         const getTypeStyles = (type) => {
             const t = type ? type.toUpperCase() : '';
             if (['NOVO', 'NEW'].includes(t)) {
@@ -481,7 +476,6 @@ const ui = {
                 };
             } 
             else {
-                // Padrão para revisões de fluxo (8D, 30D, etc)
                 return {
                     class: 'bg-sky-50 text-sky-600 border border-sky-100',
                     icon: 'refresh-cw'
@@ -494,11 +488,17 @@ const ui = {
         const cycleHtml = review.batchId && review.cycleIndex 
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
+        
+        // Indicador visual se for temporário
+        const tempIndicator = review.isTemporary 
+            ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
+            : '';
 
+        // Adicionamos draggable="true" e ondragstart
         return `
             <div draggable="true" 
                 ondragstart="app.handleKanbanDragStart(event, ${review.id})"
-                class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative" 
+                class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative cursor-grab active:cursor-grabbing" 
                 style="border-left-color: ${review.color}">
                 
                 <div class="flex justify-between items-start mb-1.5">
@@ -514,7 +514,7 @@ const ui = {
                                 ${review.topic}
                             </h4>
 
-                            <!-- Badge Semântico Atualizado + Indicador Temporário -->
+                            <!-- Badge Semântico + Badge Extra -->
                             <div class="flex items-center mt-1 gap-2 flex-wrap">
                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${styleConfig.class}">
                                     <i data-lucide="${styleConfig.icon}" class="w-3 h-3"></i>

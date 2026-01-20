@@ -1,7 +1,8 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.2.1 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.2.3 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
+ * ATUALIZADO: Agendamento Elástico (Drag & Drop com Retorno Automático).
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -20,6 +21,7 @@ const app = {
         app.runLegacyMigration();
 
         // --- NOVO: Verifica e devolve itens emprestados não concluídos ---
+        // (Prioridade 2: Garante a integridade da agenda ao abrir o app)
         app.checkTemporaryReversions();
 
         app.initVersionControl();
@@ -752,6 +754,7 @@ const app = {
     },
 
     // --- NOVO: Lógica de Agendamento Elástico (Drag & Drop Kanban) ---
+    // Implementa Prioridades 1 e 2: Arraste com retorno automático
 
     // 1. Verifica e devolve itens emprestados vencidos (Roda ao iniciar)
     checkTemporaryReversions: () => {

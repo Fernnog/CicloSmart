@@ -8,6 +8,9 @@
 let pendingStudyData = null;
 
 const app = {
+    // --- Estado Local para Subtarefas ---
+    currentReviewId: null,
+
     init: () => {
         store.load();
         
@@ -53,6 +56,10 @@ const app = {
         
         const btnNew = document.getElementById('btn-new-study');
         if(btnNew) btnNew.onclick = app.handleNewStudyClick;
+
+        // --- NOVO: Listener para o formulário de Subtarefas ---
+        const formSubtask = document.getElementById('form-subtask');
+        if(formSubtask) formSubtask.addEventListener('submit', app.handleAddSubtask);
     },
 
     runLegacyMigration: () => {
@@ -901,6 +908,64 @@ const app = {
             }
             store.save();
             toast.show('Ação desfeita.', 'info');
+        }
+    },
+
+    // --- NOVO: Lógica das Micro-Quests (Subtarefas) ---
+
+    openSubtasks: (id) => {
+        app.currentReviewId = id;
+        // Busca flexível por ID (número ou string)
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        
+        if(!review) return;
+
+        // Atualiza cabeçalho do Modal
+        const titleEl = document.getElementById('subtask-title');
+        const subEl = document.getElementById('subtask-subtitle');
+        if(titleEl) titleEl.innerText = review.subject;
+        if(subEl) subEl.innerText = review.topic;
+
+        // Chama renderização da View
+        if(ui.renderSubtaskList) ui.renderSubtaskList(review);
+        ui.toggleModal('modal-subtasks', true);
+        
+        // Foca no input após animação de abertura
+        setTimeout(() => {
+            const input = document.getElementById('input-subtask');
+            if(input) input.focus();
+        }, 100);
+    },
+
+    handleAddSubtask: (e) => {
+        e.preventDefault();
+        const input = document.getElementById('input-subtask');
+        if(!input) return;
+        const text = input.value.trim();
+        
+        if (text && app.currentReviewId) {
+            store.addSubtask(app.currentReviewId, text);
+            input.value = '';
+            
+            // Força re-renderização da lista interna do modal
+            const updatedReview = store.reviews.find(r => r.id === app.currentReviewId);
+            if(ui.renderSubtaskList) ui.renderSubtaskList(updatedReview);
+        }
+    },
+
+    handleToggleSubtask: (subId) => {
+        if(app.currentReviewId) {
+            store.toggleSubtask(app.currentReviewId, subId);
+            const r = store.reviews.find(x => x.id === app.currentReviewId);
+            if(ui.renderSubtaskList) ui.renderSubtaskList(r);
+        }
+    },
+
+    handleDeleteSubtask: (subId) => {
+        if(app.currentReviewId) {
+            store.removeSubtask(app.currentReviewId, subId);
+            const r = store.reviews.find(x => x.id === app.currentReviewId);
+            if(ui.renderSubtaskList) ui.renderSubtaskList(r);
         }
     }
 };

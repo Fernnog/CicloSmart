@@ -1,16 +1,13 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.2.4 - Logic Layer)
- * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
+ * CICLOSMART APP CONTROLLER (v1.2.5 - Subtask & Robustness Fix)
+ * Contém: Lógica de Negócio, Auth, Batch Logic, Subtasks e Inicialização.
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
 let pendingStudyData = null;
 
 const app = {
-    // --- Estado Local para Subtarefas ---
-    currentReviewId: null,
-
     init: () => {
         store.load();
         
@@ -51,15 +48,15 @@ const app = {
         const form = document.getElementById('form-study');
         if(form) form.addEventListener('submit', app.handleNewEntry);
         
+        // --- Listener do Formulário de Subtarefas ---
+        const subtaskForm = document.getElementById('form-subtask');
+        if(subtaskForm) subtaskForm.addEventListener('submit', app.handleAddSubtask);
+
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
         
         const btnNew = document.getElementById('btn-new-study');
         if(btnNew) btnNew.onclick = app.handleNewStudyClick;
-
-        // --- NOVO: Listener para o formulário de Subtarefas ---
-        const formSubtask = document.getElementById('form-subtask');
-        if(formSubtask) formSubtask.addEventListener('submit', app.handleAddSubtask);
     },
 
     runLegacyMigration: () => {
@@ -911,26 +908,33 @@ const app = {
         }
     },
 
-    // --- NOVO: Lógica das Micro-Quests (Subtarefas) ---
+    // --- SUBTASK LOGIC (NOVO & ROBUSTO) ---
+
+    currentReviewId: null,
 
     openSubtasks: (id) => {
         app.currentReviewId = id;
-        // Busca flexível por ID (número ou string)
+        // CORREÇÃO: Busca robusta usando toString() para evitar erros de Tipo (String vs Number)
         const review = store.reviews.find(r => r.id.toString() === id.toString());
         
-        if(!review) return;
+        if(!review) {
+            console.error("[Controller] Erro: Review não encontrada para ID:", id);
+            return;
+        }
 
-        // Atualiza cabeçalho do Modal
+        // Atualiza Títulos
         const titleEl = document.getElementById('subtask-title');
         const subEl = document.getElementById('subtask-subtitle');
         if(titleEl) titleEl.innerText = review.subject;
         if(subEl) subEl.innerText = review.topic;
 
-        // Chama renderização da View
-        if(ui.renderSubtaskList) ui.renderSubtaskList(review);
+        // Renderiza a lista interna (Verifica se a função UI existe para segurança)
+        if (typeof ui.renderSubtaskList === 'function') {
+            ui.renderSubtaskList(review);
+        }
         ui.toggleModal('modal-subtasks', true);
         
-        // Foca no input após animação de abertura
+        // Foca no input
         setTimeout(() => {
             const input = document.getElementById('input-subtask');
             if(input) input.focus();
@@ -944,28 +948,32 @@ const app = {
         const text = input.value.trim();
         
         if (text && app.currentReviewId) {
+            // Adiciona no Store
             store.addSubtask(app.currentReviewId, text);
             input.value = '';
+
+            // CORREÇÃO: Busca robusta novamente para atualizar a tela
+            const updatedReview = store.reviews.find(r => r.id.toString() === app.currentReviewId.toString());
             
-            // Força re-renderização da lista interna do modal
-            const updatedReview = store.reviews.find(r => r.id === app.currentReviewId);
-            if(ui.renderSubtaskList) ui.renderSubtaskList(updatedReview);
+            if (updatedReview && typeof ui.renderSubtaskList === 'function') {
+                ui.renderSubtaskList(updatedReview);
+            }
         }
     },
-
+    
     handleToggleSubtask: (subId) => {
         if(app.currentReviewId) {
             store.toggleSubtask(app.currentReviewId, subId);
-            const r = store.reviews.find(x => x.id === app.currentReviewId);
-            if(ui.renderSubtaskList) ui.renderSubtaskList(r);
+            const r = store.reviews.find(x => x.id.toString() === app.currentReviewId.toString());
+            if(r && typeof ui.renderSubtaskList === 'function') ui.renderSubtaskList(r);
         }
     },
-
+    
     handleDeleteSubtask: (subId) => {
         if(app.currentReviewId) {
             store.removeSubtask(app.currentReviewId, subId);
-            const r = store.reviews.find(x => x.id === app.currentReviewId);
-            if(ui.renderSubtaskList) ui.renderSubtaskList(r);
+            const r = store.reviews.find(x => x.id.toString() === app.currentReviewId.toString());
+            if(r && typeof ui.renderSubtaskList === 'function') ui.renderSubtaskList(r);
         }
     }
 };

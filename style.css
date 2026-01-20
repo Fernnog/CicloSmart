@@ -280,3 +280,23 @@ body.is-dragging .heatmap-day-cell:hover {
 body.is-dragging .heatmap-day-cell * {
     pointer-events: none;
 }
+
+/* ==========================================================================
+   9. AGENDAMENTO ELÁSTICO (Kanban Drag & Drop) - v1.2.3
+   ========================================================================== 
+*/
+
+/* Feedback visual para zonas de Drop no Kanban */
+.kanban-column.drag-hover {
+    background-color: #f0fdf4; /* emerald-50: Um verde bem suave */
+    border-color: #4ade80;     /* emerald-400 */
+    box-shadow: inset 0 0 0 2px #4ade80;
+    transition: all 0.2s ease;
+}
+
+/* Indicador visual de item "Emprestado/Temporário" */
+.badge-temp {
+    background-color: #fffbeb; /* amber-50 */
+    color: #b45309;            /* amber-700 */
+    border: 1px dashed #f59e0b;/* amber-500 */
+}

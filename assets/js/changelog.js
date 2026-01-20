@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.6 (Trava de Segurança - Micro-Quests) ---
+    {
+        version: '1.2.6',
+        date: 'Hoje',
+        changes: [
+            '🛡️ <strong>Guardião de Integridade:</strong> Nova trava de segurança ao concluir ou excluir estudos! O sistema agora verifica se você deixou alguma "micro-quest" (subtarefa) pendente.',
+            '⚠️ <strong>Alertas Inteligentes:</strong> Caso tente marcar um estudo como "Feito" com itens não checados, um alerta perguntará se deseja prosseguir ou revisar o que faltou.',
+            '🗑️ <strong>Exclusão Segura:</strong> A proteção também se aplica ao botão de lixeira, evitando que você apague acidentalmente um estudo que ainda tinha pendências importantes não resolvidas.'
+        ]
+    },
     // --- VERSÃO 1.2.5 (Micro-Quests & Checklists) ---
     {
         version: '1.2.5',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '📝 <strong>Micro-Quests (Checklists):</strong> Agora cada cartão de estudo é uma prancheta interativa! Adicione listas de tarefas específicas (ex: "Ler PDF", "Resolver Questões") diretamente dentro de cada estudo.',
             '📊 <strong>Progresso Visual:</strong> Acompanhe seu avanço com novas <strong>Barras de Progresso</strong> nos cartões, que se preenchem automaticamente e mudam de cor conforme você completa os itens da lista.',

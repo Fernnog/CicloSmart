@@ -514,7 +514,7 @@ const app = {
         toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada (Dia ${indexMsg})`);
     },
 
-    updateCapacitySetting: (val) => {
+  updateCapacitySetting: (val) => {
         const min = parseInt(val);
         if(min > 0) {
             store.capacity = min;
@@ -522,6 +522,43 @@ const app = {
             ui.renderHeatmap(); 
             ui.render(); 
         }
+    },
+
+    // NOVA FUNÇÃO: Salvar Manualmente Estratégia (com Feedback Toast)
+    saveStrategySettingsManual: () => {
+        // 1. Captura valores atuais dos inputs
+        const capInput = document.getElementById('setting-capacity');
+        const cycleInput = document.getElementById('setting-cycle-start');
+        
+        // 2. Validação e atualização da Capacidade
+        if (capInput) {
+            const newCap = parseInt(capInput.value);
+            if (newCap > 0 && newCap !== store.capacity) {
+                store.capacity = newCap;
+            }
+        }
+
+        // 3. Validação e atualização da Data de Ciclo
+        if (cycleInput) {
+            const newDate = cycleInput.value;
+            if (newDate && newDate !== store.cycleStartDate) {
+                store.cycleStartDate = newDate;
+            }
+        }
+
+        // 4. Força o salvamento na Nuvem (Firebase) e LocalStorage
+        store.save();
+        
+        // 5. Atualiza a UI visualmente
+        ui.renderHeatmap();
+        ui.render();
+
+        // 6. Feedback Visual (Toast)
+        toast.show(
+            'Configurações de estratégia sincronizadas na nuvem.', 
+            'success', 
+            '✅ Salvo com Sucesso'
+        );
     },
 
     addSubjectUI: () => {

@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.3.3 Updated
+ * UI RENDERER (View Layer) - v1.3.4 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Suporte a IDs para Deep Linking.
+ * ATUALIZADO: Weather Forecast, Busca Rápida e Hard Dependency (Trava de Qualidade).
  */
 
 const ui = {
@@ -122,7 +122,7 @@ const ui = {
         }
     },
     
-    // Controle de Abas de Configuração (ATUALIZADO: 3 Abas)
+    // Controle de Abas de Configuração
     switchSettingsTab: (tabName) => {
         // Classes de estilo
         const inactiveBtnClass = 'pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none whitespace-nowrap';
@@ -152,7 +152,6 @@ const ui = {
 
     toggleSubjectModal: (show) => {
         if(show) {
-            // Opcional: Sempre abrir na aba 'subjects' ao abrir o modal
             ui.switchSettingsTab('subjects');
         }
         ui.toggleModal('modal-subjects', show);
@@ -327,7 +326,7 @@ const ui = {
         }
     },
 
-    // --- RENDERIZAÇÃO PRINCIPAL ---
+    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADO: Agrupamento Future & Weather) ---
     render: () => {
         const todayStr = getLocalISODate();
         const containers = {
@@ -357,22 +356,85 @@ const ui = {
         let counts = { late: 0, today: 0, future: 0 };
         let todayLoad = 0;
 
+        // --- Renderização Padrão (Late & Today) ---
         sorted.forEach(r => {
-            const cardHTML = ui.createCardHTML(r);
-            
             if (r.date < todayStr && r.status !== 'DONE') {
-                containers.late.innerHTML += cardHTML;
+                containers.late.innerHTML += ui.createCardHTML(r);
                 counts.late++;
             } else if (r.date === todayStr) {
-                containers.today.innerHTML += cardHTML;
+                containers.today.innerHTML += ui.createCardHTML(r);
                 counts.today++;
                 todayLoad += r.time;
-            } else if (r.date > todayStr) {
-                containers.future.innerHTML += cardHTML;
-                counts.future++;
             }
         });
 
+        // --- Renderização Avançada (Future: Weather + Busca) ---
+        // Acessa o termo de busca do app (assumindo que o controller o gerencia)
+        const filterTerm = window.app && window.app.futureFilterTerm ? window.app.futureFilterTerm : '';
+        
+        const futureItems = sorted.filter(r => {
+            // Filtro de Data (Futuro)
+            if (r.date <= todayStr) return false;
+            
+            // Filtro de Busca (Texto)
+            if (filterTerm) {
+                const term = filterTerm.toLowerCase();
+                const matchSubject = r.subject.toLowerCase().includes(term);
+                const matchTopic = r.topic.toLowerCase().includes(term);
+                if (!matchSubject && !matchTopic) return false;
+            }
+            return true;
+        });
+
+        // Agrupamento por Data (Weather Forecast)
+        if (futureItems.length > 0) {
+            const groupedFuture = {};
+            futureItems.forEach(r => {
+                if (!groupedFuture[r.date]) groupedFuture[r.date] = [];
+                groupedFuture[r.date].push(r);
+            });
+
+            // Geração do HTML Agrupado
+            let futureHtml = '';
+            Object.keys(groupedFuture).sort().forEach(date => {
+                const dayStudies = groupedFuture[date];
+                const dayTotalMinutes = dayStudies.reduce((acc, cur) => acc + (parseInt(cur.time) || 0), 0);
+                
+                // Lógica de Ícones do Tempo (Carga Cognitiva)
+                const capacity = store.capacity || 240;
+                let weatherIcon = 'sun'; // Leve (< 60%)
+                let weatherColor = 'text-amber-500';
+                
+                if (dayTotalMinutes > capacity) { 
+                    weatherIcon = 'cloud-lightning'; 
+                    weatherColor = 'text-purple-600'; // Sobrecarga
+                } else if (dayTotalMinutes > (capacity * 0.6)) { 
+                    weatherIcon = 'cloud'; 
+                    weatherColor = 'text-slate-500'; // Médio/Pesado
+                }
+
+                // Header do Dia
+                futureHtml += `
+                    <div class="day-weather-header">
+                        <span class="flex items-center gap-1.5" title="Previsão de Carga">
+                            <i data-lucide="${weatherIcon}" class="w-3.5 h-3.5 ${weatherColor}"></i>
+                            ${formatDateDisplay(date)}
+                        </span>
+                        <span class="${dayTotalMinutes > capacity ? 'text-red-500 font-bold' : ''}">${dayTotalMinutes} min</span>
+                    </div>
+                `;
+
+                // Cards do Dia
+                dayStudies.forEach(r => {
+                    futureHtml += ui.createCardHTML(r);
+                });
+            });
+            
+            containers.future.innerHTML = futureHtml;
+            counts.future = futureItems.length;
+        }
+
+        // --- Atualização de Layout & Contadores ---
         const mainEl = document.getElementById('main-kanban');
         const colLate = document.getElementById('col-late');
 
@@ -434,13 +496,20 @@ const ui = {
             }
         }
 
-        if(!counts.future) {
+        if(!counts.future && !filterTerm) { // Só mostra empty state se não houver filtro ativo
             containers.future.innerHTML = `
                 <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all group cursor-pointer my-2">
                     <i data-lucide="calendar-plus" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
                     <span class="text-xs font-bold">Planejar Futuro</span>
                     <span class="text-[10px] mt-1 text-center">Clique para agendar revisões<br>ou novos estudos.</span>
                 </button>
+            `;
+        } else if (counts.future === 0 && filterTerm) {
+            containers.future.innerHTML = `
+                <div class="text-center py-10 text-slate-400 text-xs italic">
+                    <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                    Nenhum estudo encontrado para "${filterTerm}".
+                </div>
             `;
         }
 
@@ -450,10 +519,22 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: ID para Deep Linking) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Hard Dependency / Trava de Qualidade) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
+        // 1. Verificação de Hard Dependency (Bloqueio)
+        const pendingSubtasks = (review.subtasks || []).filter(t => !t.done).length;
+        const isBlocked = !isDone && pendingSubtasks > 0; // Só bloqueia se não estiver feito E tiver pendências
+
+        // Estilos Condicionais para o Checkbox
+        const checkboxClass = isBlocked 
+            ? "checkbox-blocked appearance-none w-5 h-5 border-2 border-slate-300 rounded bg-slate-100 disabled:opacity-50" // Bloqueado
+            : "appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block"; // Normal
+
+        // Wrapper para Tooltip CSS (se necessário no futuro)
+        const checkboxWrapperClass = isBlocked ? "checkbox-wrapper-blocked" : "";
+
         const containerClasses = isDone 
             ? 'bg-slate-50 border-slate-200 opacity-60' 
             : 'bg-white border-slate-200 shadow-sm hover:shadow-md';
@@ -494,23 +575,19 @@ const ui = {
             ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
 
-        // --- LÓGICA VISUAL DO BOTÃO CHECKLIST (NOVO) ---
-        // Verifica se há subtarefas para decidir o estilo do ícone
+        // Botão Checklist
         const hasSubtasks = review.subtasks && review.subtasks.length > 0;
-        
         let checkBtnStyle = "";
-        let checkBtnClass = "transition-all p-1 rounded"; // Classes Base
+        let checkBtnClass = "transition-all p-1 rounded";
         
         if (hasSubtasks) {
-            // Se tiver conteúdo: Borda colorida + Ícone colorido (Cor da Matéria) + Fundo branco
             checkBtnStyle = `border: 1px solid ${review.color}; color: ${review.color}; background-color: rgba(255,255,255,0.8);`;
             checkBtnClass += " font-bold shadow-sm hover:opacity-80 bg-white"; 
         } else {
-            // Se estiver vazio: Estilo padrão (Cinza Inativo) com hover
             checkBtnClass += " text-slate-300 hover:text-indigo-600 border border-transparent";
         }
 
-        // --- LÓGICA DE BARRA DE PROGRESSO ---
+        // Barra de Progresso
         const subtasks = review.subtasks || [];
         const totalSub = subtasks.length;
         const doneSub = subtasks.filter(t => t.done).length;
@@ -527,7 +604,6 @@ const ui = {
                 <span class="text-[9px] font-bold text-slate-400">${doneSub}/${totalSub}</span>
             </div>
         ` : '';
-        // ----------------------------------------
 
         return `
             <div id="card-${review.id}" draggable="true" 
@@ -559,12 +635,14 @@ const ui = {
                         </div>
                     </div>
                     
-                    <div class="flex flex-col items-end gap-2 pl-2">
-                        <!-- Checkbox Principal: Usa handleStatusToggle para Trava de Segurança -->
-                        <input type="checkbox" onclick="app.handleStatusToggle('${review.id}', this)" ${isDone ? 'checked' : ''} 
-                            class="appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block">
+                    <div class="flex flex-col items-end gap-2 pl-2 ${checkboxWrapperClass}">
+                        <!-- Checkbox Principal com Trava de Segurança -->
+                        <input type="checkbox" 
+                            onclick="app.handleStatusToggle('${review.id}', this)" 
+                            ${isDone ? 'checked' : ''} 
+                            class="${checkboxClass}"
+                            ${isBlocked ? 'disabled' : ''}>
                         
-                        <!-- BOTÃO CHECKLIST (ATUALIZADO: Estilo Dinâmico) -->
                         <button onclick="app.openSubtasks('${review.id}')" 
                                 class="${checkBtnClass}" 
                                 style="${checkBtnStyle}"
@@ -592,12 +670,11 @@ const ui = {
         `;
     },
 
-    // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS (ATUALIZADO: Ícone de Recorrência) ---
+    // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS ---
     renderSubtaskList: (review) => {
         const container = document.getElementById('subtask-list');
         if (!container) return;
 
-        // SEGURANÇA: Se review for indefinido, para aqui antes de dar erro
         if (!review) {
             container.innerHTML = `<div class="text-red-500 text-xs p-4">Erro: Dados do cartão não carregados. Tente reabrir.</div>`;
             return;
@@ -625,7 +702,6 @@ const ui = {
             `}).join('');
         }
         
-        // Atualiza barra do modal
         const total = tasks.length;
         const done = tasks.filter(t => t.done).length;
         const pct = total === 0 ? 0 : Math.round((done/total)*100);
@@ -639,7 +715,6 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // Priority 2 (Templates): Método Helper pronto para ser usado no HTML futuramente
     renderSubtaskTemplates: (containerId) => {
         const container = document.getElementById(containerId);
         if(!container) return;

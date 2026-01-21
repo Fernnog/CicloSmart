@@ -10,8 +10,7 @@ let pendingStudyData = null;
 // Variável de Estado para Busca na Coluna Futuro
 let futureFilterTerm = '';
 
-const app = {
-    init: () => {
+init: () => {
         store.load();
         
         // --- ARQUITETURA REATIVA (OBSERVER) ---
@@ -43,8 +42,47 @@ const app = {
         ui.updateModeUI(); 
         ui.switchTab('today');
 
+        // [NOVO] Executa a varredura de pendências ao iniciar (Delay curto para garantir carga)
+        setTimeout(() => app.checkPendingTasksOnStartup(), 800);
+
         // --- VERIFICAÇÃO DE INTEGRIDADE ---
         setTimeout(() => app.checkCycleIntegrity(), 1000);
+    },
+
+    // [NOVO MÉTODO] Varredura de Início de Sessão
+    checkPendingTasksOnStartup: () => {
+        // 1. Verifica se já verificamos nesta sessão (SessionStorage sobrevive ao refresh, morre ao fechar aba)
+        const hasChecked = sessionStorage.getItem('ciclo_startup_check');
+        
+        if (!hasChecked) {
+            console.log("[CicloSmart] Executando varredura inicial de pendências...");
+            
+            const today = getLocalISODate();
+            
+            // Contagem manual para não depender de UI
+            const lateTasks = store.tasks.filter(t => t.date < today).length;
+            const lateChecklists = store.reviews.reduce((total, review) => {
+                if (!review.subtasks) return total;
+                return total + review.subtasks.filter(t => !t.done).length;
+            }, 0);
+            
+            const totalPending = lateTasks + lateChecklists;
+
+            if (totalPending > 0) {
+                // Abre o modal automaticamente
+                taskManager.openModal();
+                
+                // Feedback visual sutil
+                toast.show(
+                    `Detectamos ${totalPending} pendências anteriores.`, 
+                    'warning', 
+                    '🔔 Lembrete Automático'
+                );
+            }
+
+            // Marca como verificado para esta sessão
+            sessionStorage.setItem('ciclo_startup_check', 'true');
+        }
     },
 
     setupEventListeners: () => {

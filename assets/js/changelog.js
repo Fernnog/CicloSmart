@@ -1,7 +1,15 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
-    // --- VERSÃO 1.3.0 (Qualidade & Previsão) ---
+    {
+        version: '1.3.1',
+        date: 'Hoje',
+        changes: [
+            '📱 <strong>Modo Tablet Otimizado:</strong> Ajuste fino de responsividade! Tablets agora carregam a interface mobile (com <strong>Navegação por Abas</strong> na parte inferior) em vez de forçar o layout de desktop. Isso elimina ícones desalinhados e textos espremidos em telas médias.',
+            '🔔 <strong>Guardião de Início (Auto-Alert):</strong> O sistema agora faz uma varredura silenciosa ao abrir. Se houver tarefas gerais ou checklists de estudo atrasados, a <strong>Central de Tarefas</strong> se abre automaticamente para garantir que nada fique esquecido.',
+            '🧠 <strong>Sessão Inteligente:</strong> Para não atrapalhar seu fluxo, o alerta automático só é disparado na <strong>primeira vez</strong> que você abre o app na sessão atual. Recarregar a página não fará o alerta aparecer novamente.'
+        ]
+    },
     {
         version: '1.3.0',
         date: 'Hoje',

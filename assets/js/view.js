@@ -451,6 +451,7 @@ const ui = {
                 mainEl.classList.add('md:grid-cols-3');
             }
         }
+     
 
         ['late', 'today', 'future'].forEach(key => {
             const countEl = document.getElementById(`count-${key}`);

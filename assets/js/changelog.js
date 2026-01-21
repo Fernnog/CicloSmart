@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.3.0 (Qualidade & Previsão) ---
+    {
+        version: '1.3.0',
+        date: 'Hoje',
+        changes: [
+            '🌤️ <strong>Previsão do Tempo Cognitivo:</strong> O painel "Próximos" agora agrupa seus estudos por data. Ícones de clima (☀️ Sol / ☁️ Nuvem / ⚡ Tempestade) indicam instantaneamente se a carga do dia está leve ou pesada em relação à sua capacidade.',
+            '🔒 <strong>Trava de Qualidade (Hard Dependency):</strong> O checkbox de conclusão agora fica <strong>bloqueado visualmente</strong> se houver itens de checklist pendentes. É obrigatório resolver as micro-quests internas antes de dar o estudo como finalizado.',
+            '🔍 <strong>Busca Rápida:</strong> Adicionado um campo de pesquisa no topo da coluna "Próximos". Filtre instantaneamente revisões futuras por Matéria ou Tópico sem precisar rolar a tela infinitamente.'
+        ]
+    },
     // --- VERSÃO 1.2.9 (Organização & Nuvem) ---
     {
         version: '1.2.9',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '🗂️ <strong>Configurações Organizadas:</strong> O menu de Estratégia foi dividido! Agora existe uma aba exclusiva de <strong>"Ajustes"</strong> para ferramentas de manutenção (como a Zona de Perigo e Modo Férias), deixando a aba de Estratégia limpa para sua rotina.',
             '☁️ <strong>Sincronização Explícita:</strong> Adicionado um botão <strong>"Salvar Alterações"</strong> na aba de Estratégia. Agora você tem confirmação visual e feedback instantâneo (Toast) de que seus ajustes de capacidade e ciclo foram salvos na nuvem.',

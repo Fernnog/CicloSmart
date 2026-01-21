@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.9 (Organização & Nuvem) ---
+    {
+        version: '1.2.9',
+        date: 'Hoje',
+        changes: [
+            '🗂️ <strong>Configurações Organizadas:</strong> O menu de Estratégia foi dividido! Agora existe uma aba exclusiva de <strong>"Ajustes"</strong> para ferramentas de manutenção (como a Zona de Perigo e Modo Férias), deixando a aba de Estratégia limpa para sua rotina.',
+            '☁️ <strong>Sincronização Explícita:</strong> Adicionado um botão <strong>"Salvar Alterações"</strong> na aba de Estratégia. Agora você tem confirmação visual e feedback instantâneo (Toast) de que seus ajustes de capacidade e ciclo foram salvos na nuvem.',
+            '✨ <strong>Interface Mais Limpa:</strong> A navegação entre Matérias, Estratégia e Ajustes ficou mais fluida e intuitiva, reduzindo a carga cognitiva na hora de configurar seu plano de estudos.'
+        ]
+    },
     // --- VERSÃO 1.2.8 (Prioridades UX & Deep Linking) ---
     {
         version: '1.2.8',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '🚀 <strong>Navegação Direta (Deep Linking):</strong> Agora os títulos na aba "Checklists de Estudo" são clicáveis! Ao tocar neles, o sistema fecha o modal e te leva direto para o cartão original no quadro Kanban com um destaque visual.',
             '🔔 <strong>Notificação Real Unificada:</strong> O badge vermelho do menu agora soma TUDO: pendências administrativas + micro-quests de estudo atrasadas. Chega de falsa sensação de dever cumprido.',

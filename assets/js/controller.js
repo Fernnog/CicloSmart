@@ -7,6 +7,8 @@
 
 // Variável de Estado para o Modal de Decisão de Ciclo
 let pendingStudyData = null;
+// Variável de Estado para Busca na Coluna Futuro
+let futureFilterTerm = '';
 
 const app = {
     init: () => {
@@ -586,35 +588,36 @@ const app = {
         }
     },
 
-    // --- NOVA FUNÇÃO: Trava de Segurança para Conclusão ---
+// --- NOVA FUNÇÃO: Trava de Segurança Rígida (Hard Dependency) ---
     handleStatusToggle: (id, checkboxEl) => {
         // Busca robusta
         const review = store.reviews.find(r => r.id.toString() === id.toString());
         
         if (!review) return;
 
-        // Verifica se a ação é "Marcar como Feito" (checkbox acabou de ser marcado)
+        // Verifica se a ação é "Marcar como Feito"
         const isMarkingAsDone = checkboxEl.checked;
 
         if (isMarkingAsDone) {
             const pendingSubtasks = (review.subtasks || []).filter(t => !t.done).length;
             
+            // BLOQUEIO RÍGIDO: Se houver pendências, não permite concluir de jeito nenhum
             if (pendingSubtasks > 0) {
-                // Alerta de segurança
-                const confirmAction = confirm(
-                    `⚠️ Atenção: Existem ${pendingSubtasks} micro-quests pendentes neste cartão.\n\nDeseja forçar a conclusão mesmo assim?`
-                );
-
-                if (!confirmAction) {
-                    // Reverte o checkbox visualmente se o usuário cancelar
-                    checkboxEl.checked = false;
-                    return;
-                }
+                checkboxEl.checked = false; // Reverte visualmente na hora
+                toast.show(`🚫 Bloqueado: Finalize as ${pendingSubtasks} tarefas pendentes antes de concluir.`, 'error', 'Trava de Qualidade');
+                return; // Cancela a operação
             }
         }
 
-        // Se passou pela guarda ou não tinha pendências, chama o Store
+        // Se passou pela guarda, chama o Store
         store.toggleStatus(id);
+    },
+
+    // --- NOVA FUNÇÃO: Busca na Coluna Futuro ---
+    handleFutureSearch: (term) => {
+        futureFilterTerm = term.toLowerCase().trim();
+        // Chama o renderizador para atualizar a vista com o filtro
+        ui.render();
     },
 
     // --- ATUALIZAÇÃO: Confirmação de Exclusão mais Segura ---

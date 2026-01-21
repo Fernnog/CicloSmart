@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.3.1 Updated
+ * UI RENDERER (View Layer) - v1.3.2 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Indicador Visual de Subtarefas (Borda colorida no ícone) e Trava de Segurança no Checkbox.
+ * ATUALIZADO: Indicador de Recorrência (Loop Icon) e suporte a Templates de Subtarefas.
  */
 
 const ui = {
@@ -585,7 +585,8 @@ const ui = {
         `;
     },
 
-    // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS (NOVO MÉTODO SEGURO) ---
+    // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS (ATUALIZADO: Ícone de Recorrência) ---
+    // Priority 1: Renderização do ícone 🔁 se t.isRecurrent for true
     renderSubtaskList: (review) => {
         const container = document.getElementById('subtask-list');
         if (!container) return;
@@ -601,13 +602,22 @@ const ui = {
         if (tasks.length === 0) {
             container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs italic">Nenhuma micro-quest ativa.<br>Adicione passos acima.</div>`;
         } else {
-            container.innerHTML = tasks.map(t => `
+            container.innerHTML = tasks.map(t => {
+                // Priority 1: Ícone de Loop para tarefas recorrentes
+                const recurrentIcon = t.isRecurrent 
+                    ? `<i data-lucide="repeat" class="w-3 h-3 text-indigo-400 ml-1.5 shrink-0" title="Tarefa Recorrente (Ciclo)"></i>` 
+                    : '';
+
+                return `
                 <div class="subtask-item flex items-center gap-3 p-2 rounded border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50">
                     <input type="checkbox" onchange="app.handleToggleSubtask(${t.id})" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0">
-                    <span class="flex-1 text-xs text-slate-700 font-medium break-words ${t.done ? 'line-through text-slate-400' : ''}">${t.text}</span>
+                    <span class="flex-1 text-xs text-slate-700 font-medium break-words flex items-center ${t.done ? 'line-through text-slate-400' : ''}">
+                        ${t.text}
+                        ${recurrentIcon}
+                    </span>
                     <button onclick="app.handleDeleteSubtask(${t.id})" class="text-slate-300 hover:text-red-500 p-1 shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </div>
-            `).join('');
+            `}).join('');
         }
         
         // Atualiza barra do modal
@@ -622,6 +632,25 @@ const ui = {
         if(txt) txt.innerText = `${pct}% Concluído`;
         
         if(window.lucide) lucide.createIcons();
+    },
+
+    // Priority 2 (Templates): Método Helper pronto para ser usado no HTML futuramente
+    renderSubtaskTemplates: (containerId) => {
+        const container = document.getElementById(containerId);
+        if(!container) return;
+
+        const templates = [
+            "Ler Lei Seca",
+            "Fazer 10 Questões",
+            "Revisar Mapa Mental"
+        ];
+
+        container.innerHTML = templates.map(text => `
+            <button type="button" onclick="document.getElementById('input-subtask').value = '${text}'; document.getElementById('input-subtask').focus();" 
+                    class="px-2 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-[10px] font-bold text-slate-500 rounded border border-slate-200 transition-colors">
+                ${text}
+            </button>
+        `).join('');
     },
 
     showCycleInfo: (batchId, event) => {

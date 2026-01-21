@@ -1,10 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.2.2 - Streak & Skeleton Support)
+ * CICLOSMART CORE (v1.2.3 - Recurrence & Subtasks Update)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Lógica de Gamificação (Streak) e Estado de Sessão.
- * ATUALIZADO: Suporte a Subtarefas (Micro-Quests).
+ * ATUALIZADO: Suporte a flags de recorrência em subtarefas e métodos de edição.
  */
 
 // ==========================================
@@ -369,27 +368,49 @@ const store = {
     },
 
     // --- NOVOS MÉTODOS DE SUBTAREFAS (MICRO-QUESTS) ---
+    // ATUALIZADO: Suporte a flags (Recorrência) e Edição
     
     // Helper Arquitetural: Busca robusta de ID (String vs Number)
-    // Centraliza a lógica para evitar o bug de 'identity mismatch'
     _getReviewById: (id) => {
         if (!id) return undefined;
         return store.reviews.find(r => r.id.toString() === id.toString());
     },
 
-    addSubtask: (reviewId, text) => {
-        const r = store._getReviewById(reviewId); // Uso do helper
+    // ATUALIZADO: Adiciona suporte a parâmetro 'options' (Priority 1)
+    addSubtask: (reviewId, text, options = {}) => {
+        const r = store._getReviewById(reviewId); 
         if (r) {
-            if (!r.subtasks) r.subtasks = []; // Inicializa se não existir
-            r.subtasks.push({ id: Date.now(), text, done: false });
-            store.save(); // Salva e notifica a View via Observer
+            if (!r.subtasks) r.subtasks = []; 
+            
+            // Priority 3 (Arquitetura): Geração de ID mais robusto para evitar colisão em loops rápidos
+            const newTask = { 
+                id: Date.now() + Math.random(), 
+                text, 
+                done: false,
+                isRecurrent: options.isRecurrent || false // Flag de recorrência
+            };
+            
+            r.subtasks.push(newTask);
+            store.save(); 
         } else {
             console.error(`[Core Error] Review não encontrada para ID: ${reviewId}`);
         }
     },
 
+    // ATUALIZADO: Novo método para edição (Priority 3 - Preparation)
+    updateSubtask: (reviewId, subtaskId, newText) => {
+        const r = store._getReviewById(reviewId);
+        if (r && r.subtasks) {
+            const task = r.subtasks.find(t => t.id === subtaskId);
+            if (task) {
+                task.text = newText;
+                store.save();
+            }
+        }
+    },
+
     toggleSubtask: (reviewId, subtaskId) => {
-        const r = store._getReviewById(reviewId); // Uso do helper
+        const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
             const task = r.subtasks.find(t => t.id === subtaskId);
             if (task) {
@@ -400,7 +421,7 @@ const store = {
     },
 
     removeSubtask: (reviewId, subtaskId) => {
-        const r = store._getReviewById(reviewId); // Uso do helper
+        const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
             r.subtasks = r.subtasks.filter(t => t.id !== subtaskId);
             store.save();

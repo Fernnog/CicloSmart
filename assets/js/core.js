@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.2.3 - Recurrence & Subtasks Update)
+ * CICLOSMART CORE (v1.3.0 - Unified Logic)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Suporte a flags de recorrência em subtarefas e métodos de edição.
+ * ATUALIZADO: Cálculo unificado de Badge e Headers clicáveis na lista de checklists.
  */
 
 // ==========================================
@@ -560,30 +560,46 @@ const taskManager = {
         if(dateInput) dateInput.value = getLocalISODate();
     },
 
-    // Verificação de Atrasos (Visual) - ATUALIZADO PARA DUAL BADGE
+    // Verificação de Atrasos (Visual) - ATUALIZADO PARA DUAL BADGE COM LÓGICA UNIFICADA
     checkOverdue: () => {
         const today = getLocalISODate();
         
-        // Contagem separada
-        const lateCount = store.tasks.filter(t => t.date < today).length;
+        // 1. Tarefas Gerais Atrasadas
+        const generalLateCount = store.tasks.filter(t => t.date < today).length;
+        
+        // 2. [NOVO] Checklists de Estudo Pendentes (Soma total de subtarefas não feitas)
+        const studyPendingCount = store.reviews.reduce((total, review) => {
+            if (!review.subtasks) return total;
+            return total + review.subtasks.filter(t => !t.done).length;
+        }, 0);
+
+        // 3. Soma Unificada para o Badge Vermelho
+        const totalAlerts = generalLateCount + studyPendingCount;
+        
+        // Tarefas Gerais "Em dia" (Badge Verde)
         const okCount = store.tasks.filter(t => t.date >= today).length;
     
         const badgeLate = document.getElementById('badge-task-late');
         const badgeOk = document.getElementById('badge-task-ok');
         const icon = document.getElementById('task-icon-main');
         
-        // Lógica Visual Vermelha (Atrasados)
+        // Lógica Visual Vermelha (Atrasados + Checklists)
         if (badgeLate) {
-            if (lateCount > 0) {
-                badgeLate.innerText = lateCount > 9 ? '9+' : lateCount;
+            if (totalAlerts > 0) {
+                badgeLate.innerText = totalAlerts > 99 ? '99+' : totalAlerts;
                 badgeLate.classList.remove('hidden');
-                // Pinta o ícone principal de vermelho se houver atrasos
+                
+                // Tooltip explicativo (Quick Win)
+                badgeLate.title = `${generalLateCount} Gerais + ${studyPendingCount} Checklists`;
+
+                // Pinta o ícone principal de vermelho se houver pendências reais
                 if(icon) {
                     icon.classList.add('text-red-500');
                     icon.classList.remove('text-slate-400');
                 }
             } else {
                 badgeLate.classList.add('hidden');
+                badgeLate.title = '';
                 if(icon) {
                     icon.classList.remove('text-red-500');
                     icon.classList.add('text-slate-400');
@@ -591,7 +607,7 @@ const taskManager = {
             }
         }
     
-        // Lógica Visual Verde (Em dia)
+        // Lógica Visual Verde (Em dia - Apenas Gerais)
         if (badgeOk) {
             if (okCount > 0) {
                 badgeOk.innerText = okCount > 9 ? '9+' : okCount;
@@ -652,7 +668,7 @@ const taskManager = {
         }
     },
 
-    // --- RENDERIZADOR DA ABA "CHECKLISTS DE ESTUDO" (NOVO) ---
+    // --- RENDERIZADOR DA ABA "CHECKLISTS DE ESTUDO" (ATUALIZADO: Header Clicável) ---
     renderLinkedTasks: () => {
         const container = document.getElementById('linked-task-list');
         if (!container) return;
@@ -685,17 +701,19 @@ const taskManager = {
 
             return `
                 <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-3">
-                    <div class="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center">
+                    <!-- HEADER CLICÁVEL (Deep Linking) -->
+                    <div onclick="app.locateAndHighlight('${r.id}')" 
+                         class="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-indigo-50 transition-colors group">
+                        
                         <div class="flex items-center gap-2 overflow-hidden">
                             <div class="w-2 h-2 rounded-full shrink-0" style="background-color: ${r.color}"></div>
                             <div class="min-w-0">
-                                <p class="text-[10px] font-bold uppercase text-slate-500 truncate leading-none">${r.subject}</p>
-                                <p class="text-xs font-bold text-slate-800 truncate leading-tight mt-0.5" title="${r.topic}">${r.topic}</p>
+                                <p class="text-[10px] font-bold uppercase text-slate-500 truncate leading-none group-hover:text-indigo-600 transition-colors">${r.subject}</p>
+                                <p class="text-xs font-bold text-slate-800 truncate leading-tight mt-0.5 group-hover:text-indigo-900 transition-colors" title="${r.topic}">${r.topic}</p>
                             </div>
                         </div>
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500 whitespace-nowrap">
-                            ${formatDateDisplay(r.date)}
-                        </span>
+                        <!-- Ícone visual de link externo -->
+                        <i data-lucide="external-link" class="w-3 h-3 text-slate-300 group-hover:text-indigo-500"></i>
                     </div>
                     <div class="p-3">
                         ${tasksHtml}

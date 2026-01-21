@@ -1,10 +1,21 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.8 (Prioridades UX & Deep Linking) ---
+    {
+        version: '1.2.8',
+        date: 'Hoje',
+        changes: [
+            '🚀 <strong>Navegação Direta (Deep Linking):</strong> Agora os títulos na aba "Checklists de Estudo" são clicáveis! Ao tocar neles, o sistema fecha o modal e te leva direto para o cartão original no quadro Kanban com um destaque visual.',
+            '🔔 <strong>Notificação Real Unificada:</strong> O badge vermelho do menu agora soma TUDO: pendências administrativas + micro-quests de estudo atrasadas. Chega de falsa sensação de dever cumprido.',
+            '📱 <strong>Smart Switch (Mobile):</strong> Ao navegar para um cartão via checklist, o sistema troca automaticamente a aba (Hoje/Atrasados/Futuro) se necessário, garantindo que você encontre o estudo mesmo no celular.',
+            'ℹ️ <strong>Raio-X de Pendências:</strong> Passe o mouse sobre o contador de tarefas para ver o detalhe (ex: "X Gerais + Y Checklists").'
+        ]
+    },
     // --- VERSÃO 1.2.7 (Central de Comando & Raio-X) ---
     {
         version: '1.2.7',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '🎛️ <strong>Central de Comando:</strong> O modal de Tarefas foi reestruturado! Agora dividido em abas: <strong>"Geral"</strong> para burocracias e <strong>"Checklists de Estudo"</strong> para o conteúdo pedagógico.',
             '🔍 <strong>Raio-X de Micro-Quests:</strong> A nova aba "Checklists" varre automaticamente todo o seu quadro de estudos e reúne todas as subtarefas pendentes em uma única lista unificada.',

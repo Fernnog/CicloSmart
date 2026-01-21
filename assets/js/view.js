@@ -122,32 +122,39 @@ const ui = {
         }
     },
     
-    // Controle de Abas de Configuração
+    // Controle de Abas de Configuração (ATUALIZADO: 3 Abas)
     switchSettingsTab: (tabName) => {
-        const inactiveBtnClass = 'pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none';
-        
-        const btnSubj = document.getElementById('tab-btn-subjects');
-        const btnStrat = document.getElementById('tab-btn-strategy');
-        
-        if (btnSubj) btnSubj.className = inactiveBtnClass;
-        if (btnStrat) btnStrat.className = inactiveBtnClass;
-        
-        const contentSubj = document.getElementById('tab-content-subjects');
-        const contentStrat = document.getElementById('tab-content-strategy');
-        
-        if (contentSubj) contentSubj.classList.add('hidden');
-        if (contentStrat) contentStrat.classList.add('hidden');
+        // Classes de estilo
+        const inactiveBtnClass = 'pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none whitespace-nowrap';
+        const activeBtnClass = 'pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none whitespace-nowrap';
 
-        const activeBtnClass = 'pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none';
-        const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-        const activeContent = document.getElementById(`tab-content-${tabName}`);
-        
-        if (activeBtn) activeBtn.className = activeBtnClass;
-        if (activeContent) activeContent.classList.remove('hidden');
+        // Array com os IDs das abas
+        const tabs = ['subjects', 'strategy', 'adjustments'];
+
+        tabs.forEach(t => {
+            // Manipula os Botões
+            const btn = document.getElementById(`tab-btn-${t}`);
+            if (btn) {
+                btn.className = (t === tabName) ? activeBtnClass : inactiveBtnClass;
+            }
+
+            // Manipula o Conteúdo
+            const content = document.getElementById(`tab-content-${t}`);
+            if (content) {
+                if (t === tabName) {
+                    content.classList.remove('hidden');
+                } else {
+                    content.classList.add('hidden');
+                }
+            }
+        });
     },
 
     toggleSubjectModal: (show) => {
-        if(show) ui.switchSettingsTab('subjects');
+        if(show) {
+            // Opcional: Sempre abrir na aba 'subjects' ao abrir o modal
+            ui.switchSettingsTab('subjects');
+        }
         ui.toggleModal('modal-subjects', show);
     },
     

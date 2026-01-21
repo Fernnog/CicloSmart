@@ -1,7 +1,8 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.2.4 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.2.5 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
+ * ATUALIZADO: Deep Linking com Smart Switch (Navegação Direta de Tarefas).
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -1094,6 +1095,40 @@ const app = {
             const r = store.reviews.find(x => x.id.toString() === app.currentReviewId.toString());
             if(r) ui.renderSubtaskList(r);
         }
+    },
+
+    // --- NOVA FUNCIONALIDADE: DEEP LINKING (Navegação Direta) ---
+    locateAndHighlight: (id) => {
+        // 1. Fecha o modal de tarefas
+        ui.toggleModal('modal-tasks', false);
+
+        // 2. Lógica Smart Switch (Prioridade 3) - Garante que a aba correta esteja visível
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        if (review) {
+            const today = getLocalISODate();
+            let targetTab = 'today';
+            if (review.date < today && review.status !== 'DONE') targetTab = 'late';
+            else if (review.date > today) targetTab = 'future';
+            
+            // Troca a aba para garantir que o elemento esteja visível no DOM
+            ui.switchTab(targetTab);
+        }
+
+        // 3. Executa o Scroll e Destaque com pequeno delay para renderização e fechamento do modal
+        setTimeout(() => {
+            // O ID "card-XYZ" será adicionado via view.js conforme planejado
+            const el = document.getElementById(`card-${id}`);
+            
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('highlight-card'); 
+                
+                // Remove a classe após a animação (2s)
+                setTimeout(() => el.classList.remove('highlight-card'), 2000);
+            } else {
+                toast.show('Cartão não localizado visualmente.', 'warning');
+            }
+        }, 300);
     }
 };
 

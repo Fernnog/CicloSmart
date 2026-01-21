@@ -1,10 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    // --- VERSÃO 1.2.7 (Central de Comando & Raio-X) ---
+    {
+        version: '1.2.7',
+        date: 'Hoje',
+        changes: [
+            '🎛️ <strong>Central de Comando:</strong> O modal de Tarefas foi reestruturado! Agora dividido em abas: <strong>"Geral"</strong> para burocracias e <strong>"Checklists de Estudo"</strong> para o conteúdo pedagógico.',
+            '🔍 <strong>Raio-X de Micro-Quests:</strong> A nova aba "Checklists" varre automaticamente todo o seu quadro de estudos e reúne todas as subtarefas pendentes em uma única lista unificada.',
+            '✨ <strong>Interface Limpa (Progressive Disclosure):</strong> O formulário de nova tarefa agora fica oculto por padrão para reduzir a poluição visual, aparecendo apenas quando você clica em "Adicionar".'
+        ]
+    },
     // --- VERSÃO 1.2.6 (Trava de Segurança - Micro-Quests) ---
     {
         version: '1.2.6',
-        date: 'Hoje',
+        date: 'Anterior',
         changes: [
             '🛡️ <strong>Guardião de Integridade:</strong> Nova trava de segurança ao concluir ou excluir estudos! O sistema agora verifica se você deixou alguma "micro-quest" (subtarefa) pendente.',
             '⚠️ <strong>Alertas Inteligentes:</strong> Caso tente marcar um estudo como "Feito" com itens não checados, um alerta perguntará se deseja prosseguir ou revisar o que faltou.',

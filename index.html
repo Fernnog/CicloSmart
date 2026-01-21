@@ -61,10 +61,11 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
 
-    <!-- Header Principal -->
+    <!-- Header Principal (Ajustado para LG/Desktop) -->
     <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm z-20 shrink-0 relative">
         <div class="flex items-center gap-3">
-            <div class="bg-white p-1 rounded-full border-2 border-indigo-50 shadow-sm hidden md:flex items-center justify-center w-11 h-11 shrink-0 overflow-hidden">
+            <!-- Mudança: hidden md:flex -> hidden lg:flex -->
+            <div class="bg-white p-1 rounded-full border-2 border-indigo-50 shadow-sm hidden lg:flex items-center justify-center w-11 h-11 shrink-0 overflow-hidden">
                 <img src="assets/img/logo.webp" alt="Logo CicloSmart" class="w-full h-full object-contain">
             </div>
             <div>
@@ -73,20 +74,21 @@
                 </button>
             </div>
             
-            <!-- Streak Container (Novo) -->
-            <div id="streak-container" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-full border border-orange-100 ml-4 shadow-sm" title="Dias seguidos de estudo">
+            <!-- Streak Container (Mudança: hidden md:flex -> hidden lg:flex) -->
+            <div id="streak-container" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-full border border-orange-100 ml-4 shadow-sm" title="Dias seguidos de estudo">
                 <i data-lucide="flame" class="w-4 h-4 fill-orange-500 text-orange-600"></i>
                 <span id="streak-count" class="text-xs font-bold">0</span>
             </div>
 
-            <button id="mode-toggle" onclick="app.toggleMode()" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
+            <!-- Mode Toggle (Mudança: hidden md:flex -> hidden lg:flex) -->
+            <button id="mode-toggle" onclick="app.toggleMode()" class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
                 <i id="mode-icon" data-lucide="sword" class="w-4 h-4"></i>
                 <span id="mode-text">Modo Ataque</span>
             </button>
         </div>
 
-        <!-- Barra de Capacidade (Desktop) -->
-        <div class="flex-1 max-w-lg mx-8 hidden md:block">
+        <!-- Barra de Capacidade (Mudança: hidden md:block -> hidden lg:block) -->
+        <div class="flex-1 max-w-lg mx-8 hidden lg:block">
             <div class="flex justify-between text-xs mb-1.5 font-medium">
                 <span class="text-slate-500">Carga Horária Estimada (Hoje)</span>
                 <span id="capacity-text" class="text-slate-700">Calculando...</span>
@@ -101,38 +103,44 @@
         <!-- Botões de Ação -->
         <div class="flex gap-2 items-center relative">
             
-            <!-- Botão Tarefas Modificado (Badges Duplos) -->
+            <!-- Botão Tarefas -->
             <button onclick="taskManager.openModal()" class="relative group flex items-center justify-center p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Atividades Complementares">
                 
-                <!-- Badge Esquerdo (Atrasados - Vermelho) -->
+                <!-- Badges -->
                 <div id="badge-task-late" class="absolute -bottom-2 -left-2 min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm hidden z-10">0</div>
-                
-                <!-- Badge Direito (Em dia - Verde) -->
                 <div id="badge-task-ok" class="absolute -bottom-2 -right-2 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm hidden z-10">0</div>
 
                 <i data-lucide="clipboard-list" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600" id="task-icon-main"></i>
-                <span class="hidden md:inline ml-2">Tarefas</span>
+                <!-- Texto: hidden md:inline -> hidden lg:inline -->
+                <span class="hidden lg:inline ml-2">Tarefas</span>
             </button>
 
-            <!-- Botão Configurações Gerais (Atualizado) -->
+            <!-- Botão Configurações -->
             <button onclick="ui.toggleSubjectModal(true)" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Configurações Gerais">
                 <i data-lucide="settings-2" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                <span class="hidden md:inline">Configurações</span>
+                <!-- Texto: hidden md:inline -> hidden lg:inline -->
+                <span class="hidden lg:inline">Configurações</span>
             </button>
             
+            <!-- Botão Exportar -->
             <button onclick="app.openExportUI()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Exportar Calendário">
                 <i data-lucide="calendar-arrow-down" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                <span class="hidden md:inline">Exportar</span>
+                <!-- Texto: hidden md:inline -> hidden lg:inline -->
+                <span class="hidden lg:inline">Exportar</span>
             </button>
             
+            <!-- Botão Radar -->
             <button onclick="ui.openHeatmapModal()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Analisar Carga">
                 <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                <span class="hidden md:inline">Radar</span>
+                <!-- Texto: hidden md:inline -> hidden lg:inline -->
+                <span class="hidden lg:inline">Radar</span>
             </button>
             
+            <!-- Botão Novo Estudo -->
             <button id="btn-new-study" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                 <i id="icon-new-study" data-lucide="plus" class="w-4 h-4"></i>
-                <span class="hidden md:inline">Novo Estudo</span>
+                <!-- Texto: hidden md:inline -> hidden lg:inline -->
+                <span class="hidden lg:inline">Novo Estudo</span>
             </button>
 
             <!-- Menu de Usuário -->
@@ -187,7 +195,8 @@
     </header>
 
     <!-- Navegação Mobile (Tabs) -->
-    <nav class="md:hidden flex bg-white border-b border-slate-200 overflow-x-auto shrink-0 z-10">
+    <!-- Mudança: md:hidden -> lg:hidden (Aparece no Tablet e Mobile) -->
+    <nav class="lg:hidden flex bg-white border-b border-slate-200 overflow-x-auto shrink-0 z-10">
         <button onclick="ui.switchTab('late')" id="tab-late" class="tab-btn flex-1 py-3 text-sm font-medium text-slate-500 text-center border-b-2 border-transparent transition-colors focus:outline-none">
             Atrasados (<span id="badge-late-mobile">0</span>)
         </button>
@@ -199,16 +208,17 @@
         </button>
     </nav>
 
-    <!-- Área Principal (Kanban) - Modificado para Prioridade 1 (Scroll Fix) e Drag-and-Drop (ondragover/ondrop) -->
+    <!-- Área Principal (Kanban) -->
     <main id="main-kanban" class="flex-1 grid grid-cols-1 gap-px bg-slate-200 overflow-hidden relative transition-all duration-500 ease-in-out min-h-0">
         
-        <!-- Coluna Atrasados (ATUALIZADO: Drag Enter/Leave) -->
+        <!-- Coluna Atrasados -->
+        <!-- Mudança: hidden md:flex -> hidden lg:flex -->
         <section id="col-late" 
             ondragover="app.allowDrop(event)" 
             ondrop="app.handleKanbanDrop(event, 'late')" 
             ondragenter="app.handleDragEnter(event, this)" 
             ondragleave="app.handleDragLeave(event, this)"
-            class="kanban-column hidden md:flex flex-col bg-red-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
+            class="kanban-column hidden lg:flex flex-col bg-red-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
             <div class="px-4 py-3 border-b border-slate-200 bg-red-50/50 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-red-600 flex items-center gap-2 text-sm uppercase tracking-wide">
                     <i data-lucide="alert-circle" class="w-4 h-4"></i> Atrasados
@@ -216,7 +226,6 @@
                 <span id="count-late" class="bg-red-100 text-red-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-red-200">0</span>
             </div>
             <div id="list-late" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 bg-gradient-to-b from-transparent to-red-50/20 min-h-0">
-                <!-- Skeleton Loader (Prioridade 3) -->
                 <div class="skeleton-loader animate-pulse space-y-3">
                     <div class="h-24 bg-red-100/50 rounded-lg"></div>
                     <div class="h-24 bg-red-100/50 rounded-lg"></div>
@@ -224,7 +233,7 @@
             </div>
         </section>
 
-        <!-- Coluna Hoje (ATUALIZADO: Drag Enter/Leave) -->
+        <!-- Coluna Hoje -->
         <section id="col-today" 
             ondragover="app.allowDrop(event)" 
             ondrop="app.handleKanbanDrop(event, 'today')" 
@@ -238,7 +247,6 @@
                 <span id="count-today" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-indigo-200">0</span>
             </div>
             <div id="list-today" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 min-h-0">
-                <!-- Skeleton Loader (Prioridade 3) -->
                 <div class="skeleton-loader animate-pulse space-y-3">
                     <div class="h-28 bg-slate-100 rounded-lg"></div>
                     <div class="h-28 bg-slate-100 rounded-lg"></div>
@@ -248,14 +256,14 @@
         </section>
 
     <!-- Coluna Futuro (Com Busca) -->
+    <!-- Mudança: hidden md:flex -> hidden lg:flex -->
         <section id="col-future" 
             ondragover="app.allowDrop(event)" 
             ondrop="app.handleKanbanDrop(event, 'future')" 
             ondragenter="app.handleDragEnter(event, this)" 
             ondragleave="app.handleDragLeave(event, this)"
-            class="kanban-column hidden md:flex flex-col bg-slate-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
+            class="kanban-column hidden lg:flex flex-col bg-slate-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
             
-            <!-- Header Atualizado com Busca -->
             <div class="px-4 py-3 border-b border-slate-200 bg-slate-50/90 flex flex-col gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
                 <div class="flex justify-between items-center">
                     <h2 class="font-bold text-slate-500 flex items-center gap-2 text-xs uppercase tracking-wider">
@@ -272,7 +280,6 @@
             </div>
             
             <div id="list-future" class="p-3 overflow-y-auto custom-scroll space-y-3 flex-1 min-h-0">
-                 <!-- Skeleton Loader -->
                  <div class="skeleton-loader animate-pulse space-y-3">
                     <div class="h-24 bg-slate-100 rounded-lg"></div>
                     <div class="h-24 bg-slate-100 rounded-lg"></div>
@@ -329,7 +336,7 @@
         </div>
     </div>
 
-    <!-- Modal: Configurações Gerais (Atualizado: 3 Abas + Botão Salvar) -->
+    <!-- Modal: Configurações Gerais -->
     <div id="modal-subjects" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -337,7 +344,6 @@
                 <button onclick="ui.toggleSubjectModal(false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <!-- Navegação de Abas (Atualizada para 3 itens) -->
             <div class="flex border-b border-slate-200 px-6 pt-2 overflow-x-auto">
                 <button onclick="ui.switchSettingsTab('subjects')" id="tab-btn-subjects" class="pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none whitespace-nowrap">
                     Matérias
@@ -345,14 +351,12 @@
                 <button onclick="ui.switchSettingsTab('strategy')" id="tab-btn-strategy" class="pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none whitespace-nowrap">
                     Estratégia
                 </button>
-                <!-- NOVA ABA -->
                 <button onclick="ui.switchSettingsTab('adjustments')" id="tab-btn-adjustments" class="pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none whitespace-nowrap">
                     Ajustes
                 </button>
             </div>
             
             <div class="p-6 space-y-6 overflow-y-auto custom-scroll flex-1">
-                
                 <!-- CONTEÚDO DA ABA 1: MATÉRIAS -->
                 <div id="tab-content-subjects" class="space-y-6 animate-fade-in">
                     <div>
@@ -369,10 +373,8 @@
                     </div>
                 </div>
 
-                <!-- CONTEÚDO DA ABA 2: ESTRATÉGIA (Editada) -->
+                <!-- CONTEÚDO DA ABA 2: ESTRATÉGIA -->
                 <div id="tab-content-strategy" class="hidden space-y-6 animate-fade-in">
-                    
-                    <!-- SEÇÃO: ESTRATÉGIA & CAPACIDADE -->
                     <div>
                         <h4 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b border-slate-100 pb-1 flex items-center gap-2">
                             <i data-lucide="crosshair" class="w-3 h-3"></i> Estratégia & Capacidade
@@ -417,7 +419,6 @@
                                 <input type="date" id="setting-cycle-start" class="border border-indigo-200 rounded px-2 py-1 text-[10px] font-bold text-indigo-900 focus:ring-indigo-500" onchange="app.updateCycleStart(this.value)">
                             </div>
                             
-                            <!-- NOVO BOTÃO DE APLICAR/SALVAR -->
                             <div class="pt-2">
                                 <button onclick="app.saveStrategySettingsManual()" class="w-full py-2 bg-indigo-600 text-white text-xs font-bold uppercase rounded hover:bg-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2">
                                     <i data-lucide="save" class="w-3 h-3"></i> Salvar Alterações na Nuvem
@@ -427,7 +428,7 @@
                     </div>
                 </div>
 
-                <!-- NOVA ABA 3: AJUSTES (Conteúdo movido da antiga Estratégia) -->
+                <!-- CONTEÚDO DA ABA 3: AJUSTES -->
                 <div id="tab-content-adjustments" class="hidden space-y-6 animate-fade-in">
                     <div>
                         <h4 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b border-slate-100 pb-1 flex items-center gap-2">
@@ -466,7 +467,7 @@
         </div>
     </div>
 
-    <!-- Modal: Radar / Heatmap (LIMPO - Apenas Visualização) -->
+    <!-- Modal: Radar / Heatmap -->
     <div id="modal-heatmap" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" onclick="if(event.target === this) ui.toggleModal('modal-heatmap', false)">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl m-4 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -576,7 +577,7 @@
         </div>
     </div>
 
-    <!-- Modal: Tarefas Complementares (Side-Quests) - REESTRUTURADO PARA CENTRAL DE COMANDO -->
+    <!-- Modal: Tarefas Complementares (Central de Comando) -->
     <div id="modal-tasks" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-hidden flex flex-col max-h-[85vh]">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -586,7 +587,6 @@
                 <button onclick="ui.toggleModal('modal-tasks', false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
 
-            <!-- Navegação de Abas (Novo) -->
             <div class="flex border-b border-slate-200 px-6 pt-2 shrink-0 bg-slate-50">
                 <button onclick="taskManager.switchTab('general')" id="tab-task-general" class="pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none">
                     Geral
@@ -596,20 +596,18 @@
                 </button>
             </div>
 
-            <!-- Container: Tarefas Gerais (Com Scroll Próprio) -->
+            <!-- Container: Tarefas Gerais -->
             <div id="view-task-general" class="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div id="task-list-container" class="p-6 overflow-y-auto custom-scroll flex-1 space-y-3 bg-slate-100/50">
                     <!-- Lista injetada via JS -->
                 </div>
 
-                <!-- Área de Input (Ocultável) -->
+                <!-- Área de Input -->
                 <div class="p-4 bg-white border-t border-slate-200 shrink-0 z-10">
-                    <!-- Botão Gatilho -->
                     <button id="btn-show-task-form" onclick="taskManager.toggleForm(true)" class="w-full py-2 border-2 border-dashed border-slate-300 text-slate-500 rounded-lg hover:border-indigo-500 hover:text-indigo-600 font-bold text-xs transition-all flex items-center justify-center gap-2">
                         <i data-lucide="plus"></i> Adicionar Nova Tarefa Geral
                     </button>
 
-                    <!-- Formulário (Inicialmente Oculto) -->
                     <form id="form-task" class="space-y-3 hidden animate-fade-in" onsubmit="taskManager.handleFormSubmit(event)">
                         <input type="hidden" id="task-id-editing" value="">
                         
@@ -631,17 +629,16 @@
                              <button type="submit" id="btn-save-task" class="w-full py-2 bg-slate-800 text-white text-xs font-bold uppercase rounded-lg hover:bg-slate-700 transition-all shadow-sm">
                                 Salvar Tarefa
                             </button>
-                            <!-- Botão de Cancelar edição oculto no JS antigo, mantido para compatibilidade se necessário -->
                             <button type="button" id="btn-cancel-task" onclick="taskManager.cancelEdit(); taskManager.toggleForm(false)" class="hidden w-1/3 py-2 bg-slate-200 text-slate-600 text-xs font-bold uppercase rounded-lg hover:bg-slate-300 transition-all">
                                 Cancelar
                             </button>
-                            <span id="btn-task-text" class="hidden">Adicionar Tarefa</span> <!-- Span auxiliar para manter compatibilidade com JS antigo -->
+                            <span id="btn-task-text" class="hidden">Adicionar Tarefa</span> 
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- Container: Checklists de Estudo (Novo - Inicialmente Oculto) -->
+            <!-- Container: Checklists de Estudo -->
             <div id="view-task-linked" class="hidden flex-1 overflow-y-auto custom-scroll bg-slate-50/50 p-6">
                 <div id="linked-task-list" class="space-y-4">
                     <!-- Lista de sub-tarefas dos cards injetada via JS -->
@@ -650,7 +647,7 @@
         </div>
     </div>
 
-    <!-- Modal: Reparo de Integridade do Ciclo (ATUALIZADO PARA DUAL MODE) -->
+    <!-- Modal: Reparo de Integridade do Ciclo -->
     <div id="modal-repair" class="fixed inset-0 bg-slate-900/90 z-[70] hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg m-4 overflow-hidden flex flex-col max-h-[85vh]">
             <div class="bg-amber-50 px-6 py-4 border-b border-amber-100 flex justify-between items-center">
@@ -661,7 +658,7 @@
             
             <div class="p-6 overflow-y-auto custom-scroll">
                 <p class="text-sm text-slate-600 mb-4">
-                    Detectamos números de ciclo repetidos ou conflitos na numeração. Isso acontece quando há reagendamentos manuais ou falha na identificação do último índice.
+                    Detectamos números de ciclo repetidos ou conflitos na numeração.
                     <br><br>
                     <strong>Como você deseja corrigir?</strong>
                 </p>
@@ -691,7 +688,7 @@
         </div>
     </div>
 
-    <!-- Modal: Subtarefas (Micro-Quests) [NOVO] -->
+    <!-- Modal: Subtarefas (Micro-Quests) -->
     <div id="modal-subtasks" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden flex flex-col max-h-[80vh]">
             <!-- Cabeçalho -->
@@ -714,7 +711,7 @@
         </button>
     </div>
     
-    <!-- Linha 2: O Seletor que estava faltando (ESSENCIAL) -->
+    <!-- Linha 2: O Seletor -->
     <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
         <i data-lucide="repeat" class="w-3 h-3 text-slate-400 ml-1"></i>
         <select id="input-subtask-recurrence" class="bg-transparent text-[10px] font-bold text-slate-600 focus:outline-none w-full cursor-pointer uppercase tracking-wide">

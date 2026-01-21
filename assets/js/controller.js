@@ -2,7 +2,7 @@
 /**
  * CICLOSMART APP CONTROLLER (v1.2.5 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
- * ATUALIZADO: Deep Linking com Smart Switch (Navegação Direta de Tarefas).
+ * ATUALIZADO: Deep Linking com Smart Switch (Navegação Direta de Tarefas) e Auto-Open de Pendências.
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -10,7 +10,8 @@ let pendingStudyData = null;
 // Variável de Estado para Busca na Coluna Futuro
 let futureFilterTerm = '';
 
-init: () => {
+const app = {
+    init: () => {
         store.load();
         
         // --- ARQUITETURA REATIVA (OBSERVER) ---
@@ -42,16 +43,17 @@ init: () => {
         ui.updateModeUI(); 
         ui.switchTab('today');
 
-        // [NOVO] Executa a varredura de pendências ao iniciar (Delay curto para garantir carga)
+        // --- [NOVO] VARREDURA DE INÍCIO DE SESSÃO (PRIORIDADE 1) ---
+        // Verifica pendências silenciosamente e abre o modal se necessário
         setTimeout(() => app.checkPendingTasksOnStartup(), 800);
 
         // --- VERIFICAÇÃO DE INTEGRIDADE ---
         setTimeout(() => app.checkCycleIntegrity(), 1000);
     },
 
-    // [NOVO MÉTODO] Varredura de Início de Sessão
+    // --- [NOVO MÉTODO] Lógica de Alerta Automático de Pendências ---
     checkPendingTasksOnStartup: () => {
-        // 1. Verifica se já verificamos nesta sessão (SessionStorage sobrevive ao refresh, morre ao fechar aba)
+        // Verifica se já rodou nesta sessão (SessionStorage limpa ao fechar aba)
         const hasChecked = sessionStorage.getItem('ciclo_startup_check');
         
         if (!hasChecked) {
@@ -59,8 +61,10 @@ init: () => {
             
             const today = getLocalISODate();
             
-            // Contagem manual para não depender de UI
+            // 1. Contagem de Tarefas Gerais Atrasadas
             const lateTasks = store.tasks.filter(t => t.date < today).length;
+            
+            // 2. Contagem de Micro-Quests (Checklists) Atrasadas
             const lateChecklists = store.reviews.reduce((total, review) => {
                 if (!review.subtasks) return total;
                 return total + review.subtasks.filter(t => !t.done).length;
@@ -69,18 +73,18 @@ init: () => {
             const totalPending = lateTasks + lateChecklists;
 
             if (totalPending > 0) {
-                // Abre o modal automaticamente
+                // Abre o modal automaticamente na frente do usuário
                 taskManager.openModal();
                 
-                // Feedback visual sutil
+                // Feedback visual explicando o motivo da abertura
                 toast.show(
-                    `Detectamos ${totalPending} pendências anteriores.`, 
+                    `Detectamos ${totalPending} pendências não resolvidas.`, 
                     'warning', 
-                    '🔔 Lembrete Automático'
+                    '🔔 Lembrete de Início'
                 );
             }
 
-            // Marca como verificado para esta sessão
+            // Marca como verificado para esta sessão para não incomodar no F5
             sessionStorage.setItem('ciclo_startup_check', 'true');
         }
     },

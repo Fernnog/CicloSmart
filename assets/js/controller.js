@@ -1,6 +1,6 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.2.5 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.2.4 - Logic Layer)
  * Contém: Lógica de Negócio, Auth, Batch Logic e Inicialização.
  */
 
@@ -60,9 +60,7 @@ const app = {
             console.log("[DEBUG] Listener do FORM-SUBTASK conectado com sucesso!");
             formSubtask.addEventListener('submit', app.handleAddSubtask);
         } else {
-            // Nota: Se o modal é dinâmico, pode não estar no DOM inicial. 
-            // O ideal seria delegate ou re-bind ao abrir modal, mas mantendo estrutura original.
-            // console.error("[ERRO CRÍTICO] Formulário 'form-subtask' não encontrado no HTML! Verifique se o modal foi inserido corretamente.");
+            console.error("[ERRO CRÍTICO] Formulário 'form-subtask' não encontrado no HTML! Verifique se o modal foi inserido corretamente.");
         }
     },
 
@@ -956,7 +954,7 @@ const app = {
         }
     },
 
-    // --- SUBTAREFAS / MICRO-QUESTS (COM SUPORTE A RECORRÊNCIA E TEMPLATES) ---
+    // --- SUBTAREFAS / MICRO-QUESTS (COM DEBUG LOGS E PROPAGAÇÃO) ---
     // Variável para rastrear qual cartão está sendo editado
     currentReviewId: null,
 
@@ -991,97 +989,94 @@ const app = {
         }, 100);
     },
 
-    // Helper para Templates (Prioridade 2)
-    useSubtaskTemplate: (text) => {
-        const input = document.getElementById('input-subtask');
-        if(input) {
-            input.value = text;
-            input.focus();
-        }
-    },
-
-    // ATUALIZADO (Prioridade 1): Suporte a Recorrência e Propagação SRS
+    // --- NOVO MÉTODO COM DEBUG PARA SUBTAREFAS ---
     handleAddSubtask: (e) => {
         e.preventDefault();
-        console.log("[DEBUG] 4. Botão de adicionar clicado (Submit disparado)!");
         
+        console.log("[DEBUG] Iniciando adição de subtarefa...");
+
         const input = document.getElementById('input-subtask');
-        const recurrenceSelect = document.getElementById('input-subtask-recurrence'); // Novo elemento (HTML a ser adicionado)
+        const recurrenceSelect = document.getElementById('input-subtask-recurrence');
+        
         const text = input.value.trim();
+        // Fallback: Se o select não existir (erro de HTML), assume 'today'
         const recurrenceMode = recurrenceSelect ? recurrenceSelect.value : 'today';
         
-        console.log(`[DEBUG] 5. Texto: "${text}" | Mode: ${recurrenceMode} | ID: ${app.currentReviewId}`);
-        
+        console.log(`[DEBUG] Texto: "${text}", Modo: "${recurrenceMode}", ID Atual: ${app.currentReviewId}`);
+
         if (text && app.currentReviewId) {
             // 1. Adiciona na tarefa atual (Sempre acontece)
-            // Se o modo não for 'today', marcamos a atual como recorrente também (origem)
+            // Note que store.js precisa suportar o terceiro argumento { isRecurrent }
             const isRecurrent = recurrenceMode !== 'today';
-            
-            // Nota: store.addSubtask precisará ser atualizado no arquivo Core para aceitar options,
-            // mas o Controller já está preparado enviando o objeto.
             store.addSubtask(app.currentReviewId, text, { isRecurrent });
-            
-            // 2. Lógica de Propagação (Se aplicável)
+            console.log("[DEBUG] Tarefa adicionada no card atual.");
+
+            // 2. Lógica de Propagação
             if (isRecurrent) {
+                // Busca robusta (converte para string para garantir match)
                 const currentReview = store.reviews.find(r => r.id.toString() === app.currentReviewId.toString());
                 
-                if (currentReview && currentReview.batchId) {
-                    // Busca irmãos do mesmo ciclo que estão no futuro (ou mesmo dia, mas índice maior/diferente)
-                    const siblings = store.reviews.filter(r => 
-                        r.batchId === currentReview.batchId && 
-                        r.id.toString() !== currentReview.id.toString() && // Não duplica na atual
-                        r.date >= currentReview.date // Apenas para frente
-                    );
-
-                    let count = 0;
-                    siblings.forEach(sibling => {
-                        let shouldAdd = false;
-                        
-                        // Cálculos de tempo para inteligência de seleção
-                        const diffTime = new Date(sibling.date) - new Date(currentReview.date);
-                        const diffDays = diffTime / (1000 * 60 * 60 * 24);
-
-                        // Lógica de Filtro baseada na seleção
-                        if (recurrenceMode === 'cycle') {
-                            shouldAdd = true; // Adiciona em todos
-                        } 
-                        else if (recurrenceMode === '24h') {
-                            // Tenta identificar a revisão de 24h (Type '24h' ou intervalo próximo de 1 dia)
-                            if (sibling.type === '24h' || (diffDays >= 0.9 && diffDays <= 1.5)) shouldAdd = true;
-                        }
-                        else if (recurrenceMode === '7d') {
-                            // Inclui 24h e 7d (aproximação para evitar falha se o dia cair fds/feriado no algoritmo futuro)
-                            if (['24h', '7d'].includes(sibling.type) || diffDays <= 8) shouldAdd = true;
-                        }
-
-                        if (shouldAdd) {
-                            store.addSubtask(sibling.id, text, { isRecurrent: true });
-                            count++;
-                        }
-                    });
+                if (currentReview) {
+                    console.log(`[DEBUG] Review atual encontrada. BatchID: ${currentReview.batchId}`);
                     
-                    if(count > 0) {
-                        toast.show(`Tarefa replicada para ${count} revisões futuras!`, 'neuro', '🔁 Ciclo Sincronizado');
+                    if (currentReview.batchId) {
+                        // Busca irmãos
+                        const siblings = store.reviews.filter(r => 
+                            r.batchId === currentReview.batchId && 
+                            r.id.toString() !== currentReview.id.toString() && // Ignora o atual
+                            r.date >= currentReview.date // Apenas futuro/presente
+                        );
+
+                        console.log(`[DEBUG] Irmãos encontrados para propagação (Candidatos): ${siblings.length}`);
+                        let addedCount = 0;
+
+                        siblings.forEach(sibling => {
+                            let shouldAdd = false;
+
+                            // Lógica de Filtro
+                            if (recurrenceMode === 'cycle') {
+                                shouldAdd = true;
+                            } 
+                            else if (recurrenceMode === '24h') {
+                                // Tenta identificar a revisão de 24h
+                                const diffDays = (new Date(sibling.date) - new Date(currentReview.date)) / (1000 * 60 * 60 * 24);
+                                // Aceita type '24h' OU diferença de aprox 1 dia
+                                if (sibling.type === '24h' || (diffDays >= 0.5 && diffDays <= 1.5)) shouldAdd = true;
+                            }
+                            else if (recurrenceMode === '7d') {
+                                const diffDays = (new Date(sibling.date) - new Date(currentReview.date)) / (1000 * 60 * 60 * 24);
+                                if (['24h', '7d'].includes(sibling.type) || diffDays <= 8) shouldAdd = true;
+                            }
+
+                            if (shouldAdd) {
+                                console.log(`[DEBUG] Propagando para irmão ID: ${sibling.id} (${sibling.date})`);
+                                store.addSubtask(sibling.id, text, { isRecurrent: true });
+                                addedCount++;
+                            }
+                        });
+                        
+                        if (addedCount > 0) {
+                            toast.show(`Tarefa replicada para ${addedCount} revisões futuras!`, 'neuro', '🔁 Ciclo Sincronizado');
+                        } else {
+                             console.warn("[DEBUG] Nenhum irmão passou nos critérios de data/filtro.");
+                        }
+                    } else {
+                        console.warn("[DEBUG] Review atual NÃO TEM batchId. É um estudo órfão.");
+                        toast.show('Este estudo não tem vínculo de ciclo (BatchID ausente).', 'warning');
                     }
+                } else {
+                    console.error("[DEBUG] Erro Crítico: Review atual não encontrada no Store.");
                 }
             }
             
             // Limpeza e UI
             input.value = '';
-            // Reseta o select para 'today' por segurança UX
             if(recurrenceSelect) recurrenceSelect.value = 'today';
 
-            // Recarrega para atualizar a tela
             const updatedReview = store.reviews.find(r => r.id.toString() === app.currentReviewId.toString());
-            
-            if (updatedReview) {
-                console.log("[DEBUG] 7. Review recarregada. Subtarefas:", updatedReview.subtasks);
-                ui.renderSubtaskList(updatedReview);
-            } else {
-                console.error("[ERRO CRÍTICO] Falha ao recarregar review após adição.");
-            }
+            if (updatedReview) ui.renderSubtaskList(updatedReview);
         } else {
-            console.warn("[ALERTA] Texto vazio ou ID perdido.");
+            console.warn("[DEBUG] Texto vazio ou ID perdido.");
         }
     },
 

@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.3.2 Updated
+ * UI RENDERER (View Layer) - v1.3.3 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Indicador de Recorrência (Loop Icon) e suporte a Templates de Subtarefas.
+ * ATUALIZADO: Suporte a IDs para Deep Linking.
  */
 
 const ui = {
@@ -443,7 +443,7 @@ const ui = {
         if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Botão Checklist Inteligente + Trava de Segurança) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: ID para Deep Linking) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -523,7 +523,7 @@ const ui = {
         // ----------------------------------------
 
         return `
-            <div draggable="true" 
+            <div id="card-${review.id}" draggable="true" 
                 ondragstart="app.handleKanbanDragStart(event, '${review.id}')"
                 class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative cursor-grab active:cursor-grabbing" 
                 style="border-left-color: ${review.color}">
@@ -586,7 +586,6 @@ const ui = {
     },
 
     // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS (ATUALIZADO: Ícone de Recorrência) ---
-    // Priority 1: Renderização do ícone 🔁 se t.isRecurrent for true
     renderSubtaskList: (review) => {
         const container = document.getElementById('subtask-list');
         if (!container) return;
@@ -603,7 +602,6 @@ const ui = {
             container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs italic">Nenhuma micro-quest ativa.<br>Adicione passos acima.</div>`;
         } else {
             container.innerHTML = tasks.map(t => {
-                // Priority 1: Ícone de Loop para tarefas recorrentes
                 const recurrentIcon = t.isRecurrent 
                     ? `<i data-lucide="repeat" class="w-3 h-3 text-indigo-400 ml-1.5 shrink-0" title="Tarefa Recorrente (Ciclo)"></i>` 
                     : '';

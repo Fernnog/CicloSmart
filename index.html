@@ -318,7 +318,7 @@
         </div>
     </div>
 
-    <!-- Modal: Configurações Gerais (Atualizado: Abas) -->
+    <!-- Modal: Configurações Gerais (Atualizado: 3 Abas + Botão Salvar) -->
     <div id="modal-subjects" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
@@ -326,13 +326,17 @@
                 <button onclick="ui.toggleSubjectModal(false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <!-- Navegação de Abas -->
-            <div class="flex border-b border-slate-200 px-6 pt-2">
-                <button onclick="ui.switchSettingsTab('subjects')" id="tab-btn-subjects" class="pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none">
+            <!-- Navegação de Abas (Atualizada para 3 itens) -->
+            <div class="flex border-b border-slate-200 px-6 pt-2 overflow-x-auto">
+                <button onclick="ui.switchSettingsTab('subjects')" id="tab-btn-subjects" class="pb-2 px-4 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none whitespace-nowrap">
                     Matérias
                 </button>
-                <button onclick="ui.switchSettingsTab('strategy')" id="tab-btn-strategy" class="pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none">
+                <button onclick="ui.switchSettingsTab('strategy')" id="tab-btn-strategy" class="pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none whitespace-nowrap">
                     Estratégia
+                </button>
+                <!-- NOVA ABA -->
+                <button onclick="ui.switchSettingsTab('adjustments')" id="tab-btn-adjustments" class="pb-2 px-4 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors focus:outline-none whitespace-nowrap">
+                    Ajustes
                 </button>
             </div>
             
@@ -354,7 +358,7 @@
                     </div>
                 </div>
 
-                <!-- CONTEÚDO DA ABA 2: ESTRATÉGIA -->
+                <!-- CONTEÚDO DA ABA 2: ESTRATÉGIA (Editada) -->
                 <div id="tab-content-strategy" class="hidden space-y-6 animate-fade-in">
                     
                     <!-- SEÇÃO: ESTRATÉGIA & CAPACIDADE -->
@@ -401,10 +405,19 @@
                                 </div>
                                 <input type="date" id="setting-cycle-start" class="border border-indigo-200 rounded px-2 py-1 text-[10px] font-bold text-indigo-900 focus:ring-indigo-500" onchange="app.updateCycleStart(this.value)">
                             </div>
+                            
+                            <!-- NOVO BOTÃO DE APLICAR/SALVAR -->
+                            <div class="pt-2">
+                                <button onclick="app.saveStrategySettingsManual()" class="w-full py-2 bg-indigo-600 text-white text-xs font-bold uppercase rounded hover:bg-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2">
+                                    <i data-lucide="save" class="w-3 h-3"></i> Salvar Alterações na Nuvem
+                                </button>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- SEÇÃO: REAGENDAMENTO -->
+                <!-- NOVA ABA 3: AJUSTES (Conteúdo movido da antiga Estratégia) -->
+                <div id="tab-content-adjustments" class="hidden space-y-6 animate-fade-in">
                     <div>
                         <h4 class="text-xs font-bold text-slate-500 uppercase mb-3 border-b border-slate-100 pb-1 flex items-center gap-2">
                             <i data-lucide="alert-triangle" class="w-3 h-3"></i> Zona de Perigo / Ajustes
@@ -426,7 +439,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
 
             </div>

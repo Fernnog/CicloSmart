@@ -453,6 +453,10 @@ const taskManager = {
         taskManager.cancelEdit();
         // Render já é garantido pelo subscribe, mas forçamos aqui para garantir atualização de selects
         taskManager.render();
+
+        // NOVO: Garante estado inicial correto da central
+        taskManager.switchTab('general');
+        taskManager.toggleForm(false);
         
         if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
     },
@@ -489,6 +493,7 @@ const taskManager = {
         
         // Limpa o formulário e sai do modo de edição
         taskManager.cancelEdit();
+        taskManager.toggleForm(false); // Fecha o formulário após salvar
         
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
@@ -505,6 +510,7 @@ const taskManager = {
             // Dispara notify()
             store.save(); 
             taskManager.cancelEdit(); // Sai do modo de edição
+            taskManager.toggleForm(false);
             
             toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
         }
@@ -531,10 +537,8 @@ const taskManager = {
         const btnText = document.getElementById('btn-task-text');
         if(btnText) btnText.innerText = 'Salvar Alterações';
 
-        // Feedback visual e scroll
-        const form = document.getElementById('form-task');
-        if(form) form.scrollIntoView({ behavior: 'smooth' });
-        document.getElementById('task-date').focus();
+        // Abre o formulário se estiver fechado
+        taskManager.toggleForm(true);
     },
 
     // Cancelar/Limpar Edição
@@ -598,7 +602,110 @@ const taskManager = {
         }
     },
 
-    // --- NOVA LÓGICA DE RENDERIZAÇÃO AGRUPADA ---
+    // --- Lógica de UI do Modal de Tarefas (NOVO) ---
+    
+    toggleForm: (show) => {
+        const btn = document.getElementById('btn-show-task-form');
+        const form = document.getElementById('form-task');
+        if (show) {
+            if(btn) btn.classList.add('hidden');
+            if(form) form.classList.remove('hidden');
+            const subInput = document.getElementById('task-subcategory');
+            if(subInput) subInput.focus();
+        } else {
+            if(btn) btn.classList.remove('hidden');
+            if(form) form.classList.add('hidden');
+            taskManager.cancelEdit(); // Limpa se tiver algo
+        }
+    },
+
+    switchTab: (tabName) => {
+        // Estilos de Aba Ativa vs Inativa
+        const activeClass = ['border-indigo-600', 'text-indigo-600', 'border-b-2', 'font-bold'];
+        const inactiveClass = ['border-transparent', 'text-slate-500', 'font-medium'];
+
+        // Reset
+        ['general', 'linked'].forEach(t => {
+            const btn = document.getElementById(`tab-task-${t}`);
+            const view = document.getElementById(`view-task-${t}`);
+            
+            if(btn && view) {
+                btn.classList.remove(...activeClass);
+                btn.classList.add(...inactiveClass);
+                view.classList.add('hidden');
+                view.classList.remove('flex', 'flex-col'); // Importante para o layout flex do geral
+            }
+        });
+
+        // Activate
+        const btnActive = document.getElementById(`tab-task-${tabName}`);
+        const viewActive = document.getElementById(`view-task-${tabName}`);
+        
+        if(btnActive && viewActive) {
+            btnActive.classList.remove(...inactiveClass);
+            btnActive.classList.add(...activeClass);
+            viewActive.classList.remove('hidden');
+            if (tabName === 'general') viewActive.classList.add('flex', 'flex-col'); // Restaura flexbox
+            
+            // Se for a aba de linked, renderiza na hora para garantir dados frescos
+            if (tabName === 'linked') taskManager.renderLinkedTasks();
+        }
+    },
+
+    // --- RENDERIZADOR DA ABA "CHECKLISTS DE ESTUDO" (NOVO) ---
+    renderLinkedTasks: () => {
+        const container = document.getElementById('linked-task-list');
+        if (!container) return;
+
+        // 1. Filtrar estudos que possuem subtarefas
+        const reviewsWithTasks = store.reviews.filter(r => r.subtasks && r.subtasks.length > 0);
+        
+        if (reviewsWithTasks.length === 0) {
+            container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs italic">
+                <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                Tudo limpo! Nenhuma micro-quest pendente nos seus cards de estudo.
+            </div>`;
+            if(window.lucide) lucide.createIcons();
+            return;
+        }
+
+        // Ordenar por data (Prioridade)
+        reviewsWithTasks.sort((a, b) => a.date.localeCompare(b.date));
+
+        container.innerHTML = reviewsWithTasks.map(r => {
+            // Gera HTML das subtarefas
+            const tasksHtml = r.subtasks.map(t => `
+                <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors">
+                    <input type="checkbox" onchange="store.toggleSubtask('${r.id}', ${t.id}); taskManager.renderLinkedTasks();" 
+                           ${t.done ? 'checked' : ''} 
+                           class="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                    <span class="text-xs text-slate-600 ${t.done ? 'line-through text-slate-300' : ''}">${t.text}</span>
+                </div>
+            `).join('');
+
+            return `
+                <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-3">
+                    <div class="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <div class="w-2 h-2 rounded-full shrink-0" style="background-color: ${r.color}"></div>
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-bold uppercase text-slate-500 truncate leading-none">${r.subject}</p>
+                                <p class="text-xs font-bold text-slate-800 truncate leading-tight mt-0.5" title="${r.topic}">${r.topic}</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500 whitespace-nowrap">
+                            ${formatDateDisplay(r.date)}
+                        </span>
+                    </div>
+                    <div class="p-3">
+                        ${tasksHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    // --- NOVA LÓGICA DE RENDERIZAÇÃO AGRUPADA (ABA GERAL) ---
     render: () => {
         const container = document.getElementById('task-list-container');
         if (!container) return;

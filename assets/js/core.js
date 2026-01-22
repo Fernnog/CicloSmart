@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE (v1.3.0 - Unified Logic)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Cálculo unificado de Badge e Headers clicáveis na lista de checklists.
+ * ATUALIZADO: Correção de Persistência de Status (Toggle Fix) e Type Safety.
  */
 
 // ==========================================
@@ -315,16 +315,24 @@ const store = {
     },
 
     toggleStatus: (id) => {
-        const r = store.reviews.find(r => r.id === id);
+        // CORREÇÃO (Prioridades 1, 2 e 3): Comparação robusta (String vs String)
+        // Isso resolve o problema de IDs numéricos não serem encontrados quando vêm do HTML.
+        const r = store.reviews.find(r => r.id.toString() === id.toString());
+        
         if (r) {
             r.status = r.status === 'PENDING' ? 'DONE' : 'PENDING';
-            store.save();
+            store.save(); // Salva no LocalStorage e Firebase
+            
+            // Prioridade 2: Atualização Visual Imediata (Tick/Riscado)
             if (typeof ui !== 'undefined') {
                 ui.render();
+                // Se o Radar estiver aberto, atualiza ele também
                 if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                     ui.renderHeatmap();
                 }
             }
+        } else {
+            console.error(`[Core Error] Tentativa de alternar status falhou. ID não encontrado: ${id}`);
         }
     },
 
@@ -382,9 +390,9 @@ const store = {
         if (r) {
             if (!r.subtasks) r.subtasks = []; 
             
-            // Priority 3 (Arquitetura): Geração de ID mais robusto para evitar colisão em loops rápidos
+            // Priority 3: Padronização de ID para String (Type Safety)
             const newTask = { 
-                id: Date.now() + Math.random(), 
+                id: (Date.now() + Math.random()).toString().replace('.',''), 
                 text, 
                 done: false,
                 isRecurrent: options.isRecurrent || false // Flag de recorrência
@@ -480,8 +488,9 @@ const taskManager = {
         const date = document.getElementById('task-date').value;
         const obs = document.getElementById('task-obs').value;
 
+        // Priority 3: Padronização de ID para String (Type Safety)
         store.tasks.push({
-            id: Date.now(),
+            id: Date.now().toString(),
             subjectId,
             subCategory,
             date,

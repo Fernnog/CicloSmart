@@ -64,7 +64,6 @@
     <!-- Header Principal (Ajustado para LG/Desktop) -->
     <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between shadow-sm z-20 shrink-0 relative">
         <div class="flex items-center gap-3">
-            <!-- Mudança: hidden md:flex -> hidden lg:flex -->
             <div class="bg-white p-1 rounded-full border-2 border-indigo-50 shadow-sm hidden lg:flex items-center justify-center w-11 h-11 shrink-0 overflow-hidden">
                 <img src="assets/img/logo.webp" alt="Logo CicloSmart" class="w-full h-full object-contain">
             </div>
@@ -74,20 +73,20 @@
                 </button>
             </div>
             
-            <!-- Streak Container (Mudança: hidden md:flex -> hidden lg:flex) -->
+            <!-- Streak Container -->
             <div id="streak-container" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-full border border-orange-100 ml-4 shadow-sm" title="Dias seguidos de estudo">
                 <i data-lucide="flame" class="w-4 h-4 fill-orange-500 text-orange-600"></i>
                 <span id="streak-count" class="text-xs font-bold">0</span>
             </div>
 
-            <!-- Mode Toggle (Mudança: hidden md:flex -> hidden lg:flex) -->
+            <!-- Mode Toggle -->
             <button id="mode-toggle" onclick="app.toggleMode()" class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4">
                 <i id="mode-icon" data-lucide="sword" class="w-4 h-4"></i>
                 <span id="mode-text">Modo Ataque</span>
             </button>
         </div>
 
-        <!-- Barra de Capacidade (Mudança: hidden md:block -> hidden lg:block) -->
+        <!-- Barra de Capacidade -->
         <div class="flex-1 max-w-lg mx-8 hidden lg:block">
             <div class="flex justify-between text-xs mb-1.5 font-medium">
                 <span class="text-slate-500">Carga Horária Estimada (Hoje)</span>
@@ -111,35 +110,30 @@
                 <div id="badge-task-ok" class="absolute -bottom-2 -right-2 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm hidden z-10">0</div>
 
                 <i data-lucide="clipboard-list" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600" id="task-icon-main"></i>
-                <!-- Texto: hidden md:inline -> hidden lg:inline -->
                 <span class="hidden lg:inline ml-2">Tarefas</span>
             </button>
 
             <!-- Botão Configurações -->
             <button onclick="ui.toggleSubjectModal(true)" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Configurações Gerais">
                 <i data-lucide="settings-2" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                <!-- Texto: hidden md:inline -> hidden lg:inline -->
                 <span class="hidden lg:inline">Configurações</span>
             </button>
             
             <!-- Botão Exportar -->
             <button onclick="app.openExportUI()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Exportar Calendário">
                 <i data-lucide="calendar-arrow-down" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                <!-- Texto: hidden md:inline -> hidden lg:inline -->
                 <span class="hidden lg:inline">Exportar</span>
             </button>
             
             <!-- Botão Radar -->
             <button onclick="ui.openHeatmapModal()" class="flex group items-center gap-2 p-2 md:px-3 md:py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:text-indigo-600 transition-all focus:ring-2 focus:ring-indigo-100 outline-none" title="Analisar Carga">
                 <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-400 group-hover:text-indigo-600"></i>
-                <!-- Texto: hidden md:inline -> hidden lg:inline -->
                 <span class="hidden lg:inline">Radar</span>
             </button>
             
             <!-- Botão Novo Estudo -->
             <button id="btn-new-study" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-200 hover:shadow-lg transition-all active:scale-95 outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                 <i id="icon-new-study" data-lucide="plus" class="w-4 h-4"></i>
-                <!-- Texto: hidden md:inline -> hidden lg:inline -->
                 <span class="hidden lg:inline">Novo Estudo</span>
             </button>
 
@@ -195,7 +189,6 @@
     </header>
 
     <!-- Navegação Mobile (Tabs) -->
-    <!-- Mudança: md:hidden -> lg:hidden (Aparece no Tablet e Mobile) -->
     <nav class="lg:hidden flex bg-white border-b border-slate-200 overflow-x-auto shrink-0 z-10">
         <button onclick="ui.switchTab('late')" id="tab-late" class="tab-btn flex-1 py-3 text-sm font-medium text-slate-500 text-center border-b-2 border-transparent transition-colors focus:outline-none">
             Atrasados (<span id="badge-late-mobile">0</span>)
@@ -208,24 +201,42 @@
         </button>
     </nav>
 
-    <!-- Área Principal (Kanban) -->
-    <main id="main-kanban" class="flex-1 grid grid-cols-1 gap-px bg-slate-200 overflow-hidden relative transition-all duration-500 ease-in-out min-h-0">
+    <!-- Área Principal (Kanban - Layout FLEX para painéis recolhíveis) -->
+    <!-- Mudança: grid -> flex flex-col md:flex-row -->
+    <main id="main-kanban" class="flex-1 flex flex-col md:flex-row overflow-hidden relative transition-all duration-500 ease-in-out min-h-0 bg-slate-200">
         
-        <!-- Coluna Atrasados -->
-        <!-- Mudança: hidden md:flex -> hidden lg:flex -->
+        <!-- Coluna Atrasados (Recolhível) -->
         <section id="col-late" 
             ondragover="app.allowDrop(event)" 
             ondrop="app.handleKanbanDrop(event, 'late')" 
             ondragenter="app.handleDragEnter(event, this)" 
             ondragleave="app.handleDragLeave(event, this)"
-            class="kanban-column hidden lg:flex flex-col bg-red-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
-            <div class="px-4 py-3 border-b border-slate-200 bg-red-50/50 flex justify-between items-center sticky top-0 z-10 shadow-sm">
+            class="kanban-column kanban-col-transition group hidden lg:flex flex-col bg-red-50/50 h-full border-r border-slate-200 min-h-0 relative col-expanded w-full md:w-80">
+            
+            <!-- Header Expandido -->
+            <div id="header-late-expanded" class="px-4 py-3 border-b border-slate-200 bg-red-50/50 flex justify-between items-center sticky top-0 z-10 shadow-sm transition-opacity duration-200">
                 <h2 class="font-semibold text-red-600 flex items-center gap-2 text-sm uppercase tracking-wide">
-                    <i data-lucide="alert-circle" class="w-4 h-4"></i> Atrasados
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i> <span class="whitespace-nowrap">Atrasados</span>
                 </h2>
-                <span id="count-late" class="bg-red-100 text-red-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-red-200">0</span>
+                <div class="flex items-center gap-2">
+                    <span id="count-late" class="bg-red-100 text-red-700 text-xs px-2.5 py-0.5 rounded-full font-bold border border-red-200">0</span>
+                    <!-- Botão Recolher -->
+                    <button onclick="app.togglePanel('late')" class="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-100 transition-colors" title="Recolher Painel">
+                        <i data-lucide="chevrons-left" class="w-4 h-4"></i>
+                    </button>
+                </div>
             </div>
-            <div id="list-late" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 bg-gradient-to-b from-transparent to-red-50/20 min-h-0">
+
+            <!-- Header Recolhido (Novo) -->
+            <div id="header-late-collapsed" class="hidden absolute inset-0 flex-col items-center pt-4 w-full cursor-pointer hover:bg-red-100 transition-colors" onclick="app.togglePanel('late')" title="Expandir Atrasados">
+                <button class="mb-4 text-red-500 hover:text-red-700 p-1">
+                    <i data-lucide="chevrons-right" class="w-5 h-5"></i>
+                </button>
+                <div class="vertical-text text-xs font-bold text-red-600 uppercase tracking-widest mb-2 select-none">Atrasados</div>
+                <span id="count-late-collapsed" class="mt-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm">0</span>
+            </div>
+
+            <div id="list-late" class="p-4 overflow-y-auto custom-scroll space-y-3 flex-1 bg-gradient-to-b from-transparent to-red-50/20 min-h-0 opacity-100 transition-opacity duration-300 w-full md:w-80">
                 <div class="skeleton-loader animate-pulse space-y-3">
                     <div class="h-24 bg-red-100/50 rounded-lg"></div>
                     <div class="h-24 bg-red-100/50 rounded-lg"></div>
@@ -233,13 +244,13 @@
             </div>
         </section>
 
-        <!-- Coluna Hoje -->
+        <!-- Coluna Hoje (Flex-1 para ocupar o meio) -->
         <section id="col-today" 
             ondragover="app.allowDrop(event)" 
             ondrop="app.handleKanbanDrop(event, 'today')" 
             ondragenter="app.handleDragEnter(event, this)" 
             ondragleave="app.handleDragLeave(event, this)"
-            class="kanban-column flex flex-col bg-white h-full min-w-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] z-10 transition-all duration-500 ease-in-out min-h-0">
+            class="kanban-column flex-1 flex flex-col bg-white h-full min-w-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] z-10 transition-all duration-500 ease-in-out min-h-0 relative">
             <div class="px-4 py-3 border-b border-slate-100 bg-white flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <h2 class="font-semibold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
                     <i data-lucide="target" class="w-4 h-4 text-indigo-600"></i> Meta de Hoje
@@ -255,18 +266,23 @@
             </div>
         </section>
 
-    <!-- Coluna Futuro (Com Busca) -->
-    <!-- Mudança: hidden md:flex -> hidden lg:flex -->
+        <!-- Coluna Futuro (Recolhível) -->
         <section id="col-future" 
             ondragover="app.allowDrop(event)" 
             ondrop="app.handleKanbanDrop(event, 'future')" 
             ondragenter="app.handleDragEnter(event, this)" 
             ondragleave="app.handleDragLeave(event, this)"
-            class="kanban-column hidden lg:flex flex-col bg-slate-50/50 h-full min-w-0 transition-all duration-500 ease-in-out min-h-0">
+            class="kanban-column kanban-col-transition group hidden lg:flex flex-col bg-slate-50/50 h-full border-l border-slate-200 min-h-0 relative col-expanded w-full md:w-80">
             
-            <div class="px-4 py-3 border-b border-slate-200 bg-slate-50/90 flex flex-col gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+            <!-- Header Expandido -->
+            <div id="header-future-expanded" class="px-4 py-3 border-b border-slate-200 bg-slate-50/90 flex flex-col gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm transition-opacity duration-200">
                 <div class="flex justify-between items-center">
-                    <h2 class="font-bold text-slate-500 flex items-center gap-2 text-xs uppercase tracking-wider">
+                    <!-- Botão Recolher (Esquerda) -->
+                    <button onclick="app.togglePanel('future')" class="text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50 transition-colors mr-2" title="Recolher Painel">
+                        <i data-lucide="chevrons-right" class="w-4 h-4"></i>
+                    </button>
+
+                    <h2 class="font-bold text-slate-500 flex items-center gap-2 text-xs uppercase tracking-wider flex-1">
                         <i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i> Próximos
                     </h2>
                     <span id="count-future" class="bg-white text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold border border-slate-200 shadow-sm">0</span>
@@ -279,7 +295,16 @@
                 </div>
             </div>
             
-            <div id="list-future" class="p-3 overflow-y-auto custom-scroll space-y-3 flex-1 min-h-0">
+            <!-- Header Recolhido (Novo) -->
+            <div id="header-future-collapsed" class="hidden absolute inset-0 flex-col items-center pt-4 w-full cursor-pointer hover:bg-indigo-50 transition-colors" onclick="app.togglePanel('future')" title="Expandir Futuro">
+                <button class="mb-4 text-slate-400 hover:text-indigo-600 p-1">
+                    <i data-lucide="chevrons-left" class="w-5 h-5"></i>
+                </button>
+                <div class="vertical-text text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 select-none">Futuro</div>
+                <span id="count-future-collapsed" class="mt-2 bg-white text-slate-600 border border-slate-200 text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm">0</span>
+            </div>
+
+            <div id="list-future" class="p-3 overflow-y-auto custom-scroll space-y-3 flex-1 min-h-0 opacity-100 transition-opacity duration-300 w-full md:w-80">
                  <div class="skeleton-loader animate-pulse space-y-3">
                     <div class="h-24 bg-slate-100 rounded-lg"></div>
                     <div class="h-24 bg-slate-100 rounded-lg"></div>

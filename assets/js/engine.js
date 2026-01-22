@@ -221,7 +221,7 @@ const engine = {
         toast.show('Arquivo ICS gerado.', 'info', '📅 Agenda Sincronizada');
     },
 
-    // --- Lógica Waterfall (Reschedule) ---
+   // --- Lógica Waterfall (Reschedule) ---
     handleReschedule: () => {
         const dateInput = document.getElementById('input-reschedule-date');
         const targetDateStr = dateInput.value;
@@ -278,5 +278,50 @@ const engine = {
         store.save(); 
         ui.toggleModal('modal-heatmap', false);
         toast.show(`Cronograma realinhado! ${shiftCount} cartões movidos.`, 'neuro', 'SRS Preservado');
+    },
+
+    // --- MANUTENÇÃO AUTOMÁTICA DE DADOS (Data Sanitation) ---
+    runDataSanitation: () => {
+        // console.log("[Engine] Iniciando protocolo de limpeza de dados...");
+        
+        // Helper para calcular datas de corte
+        const getCutoffDate = (daysAgo) => {
+            const date = new Date();
+            date.setDate(date.getDate() - daysAgo);
+            return getLocalISODate(date); 
+        };
+
+        const cutoffTasks = getCutoffDate(30);   // Regra 1: 30 dias para Tarefas Gerais
+        const cutoffStudies = getCutoffDate(45); // Regra 2: 45 dias para Checklists de Estudo
+
+        let tasksRemoved = 0;
+        let checklistsCleaned = 0;
+
+        // 1. Limpeza de Tarefas Gerais (Abandonadas/Antigas)
+        const initialTaskCount = store.tasks.length;
+        // Mantém apenas tarefas cuja data seja MAIOR ou IGUAL a data de corte
+        store.tasks = store.tasks.filter(t => t.date >= cutoffTasks);
+        tasksRemoved = initialTaskCount - store.tasks.length;
+
+        // 2. Limpeza de Checklists em Estudos Concluídos (Otimização de Espaço)
+        store.reviews.forEach(r => {
+            // Se o estudo está FEITO, é antigo (>45 dias) e tem subtarefas
+            if (r.status === 'DONE' && r.date < cutoffStudies && r.subtasks && r.subtasks.length > 0) {
+                r.subtasks = []; // Esvazia o array, mantendo o card vivo
+                checklistsCleaned++;
+            }
+        });
+
+        // 3. Persistência e Feedback (Apenas se houve ação)
+        if (tasksRemoved > 0 || checklistsCleaned > 0) {
+            store.save(); 
+            
+            setTimeout(() => {
+                toast.show(
+                    `Faxina Automática: ${tasksRemoved} tarefas antigas e ${checklistsCleaned} checklists arquivados.`, 
+                    'info', 
+                    '🧹 Sistema Otimizado'
+                );
+            }, 3000); 
+        }
     }
-};

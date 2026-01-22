@@ -374,18 +374,21 @@ const app = {
         // 4. Prepara objeto temporário (Incluindo complexity)
         pendingStudyData = { subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target, complexity };
         
-        // 5. CÁLCULO DO CICLO (ATUALIZADO: Numeração Sequencial)
+        // 5. CÁLCULO DO CICLO (Com Logs de Recebimento)
         let projectedDay = 1;
+        
+        console.log("📞 CONTROLLER: Solicitando cálculo ao Engine...");
+        
         if (window.engine) {
-            // CORREÇÃO PRIORIDADE 1: Removemos a dependência de 'selectedDateStr'.
-            // A função agora varre o histórico para achar o último ID e somar 1.
             projectedDay = engine.calculateCycleIndex();
+            console.log("📨 CONTROLLER: Recebeu do Engine ->", projectedDay);
+        } else {
+            console.error("❌ CONTROLLER: window.engine não encontrado!");
         }
 
         // 6. Atualiza o Texto do Modal
         const descEl = document.getElementById('cycle-option-keep-desc');
         if(descEl) {
-            // MELHORIA UX: Feedback visual mais claro
             descEl.innerHTML = `Continuar sequência: <b>Dia #${projectedDay}</b>`;
         }
         
@@ -395,14 +398,9 @@ const app = {
 
     resolveCycle: (startNew) => {
         if (!pendingStudyData) return;
-        
         if (startNew) {
             store.cycleStartDate = pendingStudyData.selectedDateStr;
             store.save();
-            
-            // MELHORIA UX: Injeta flag para forçar o reinício da contagem no Engine
-            pendingStudyData.forceCycleReset = true;
-            
             toast.show('Ciclo reiniciado! Dia #1 definido.', 'neuro', '🚩 Novo Ciclo');
         }
         

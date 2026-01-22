@@ -449,6 +449,14 @@ const store = {
 // ==========================================
 
 const taskManager = {
+    // ESTADO PARA TOGGLE DE HISTÓRICO
+    showHistory: false,
+
+    toggleHistory: () => {
+        taskManager.showHistory = !taskManager.showHistory;
+        taskManager.renderLinkedTasks();
+    },
+
     openModal: () => {
         const select = document.getElementById('task-subject');
         if(select) {
@@ -672,23 +680,48 @@ const taskManager = {
             viewActive.classList.remove('hidden');
             if (tabName === 'general') viewActive.classList.add('flex', 'flex-col'); // Restaura flexbox
             
+            // NOVO: Controle de visibilidade do toggle de histórico
+            const toggleWrapper = document.getElementById('history-toggle-wrapper');
+            if (toggleWrapper) {
+                tabName === 'linked' ? toggleWrapper.classList.remove('hidden') : toggleWrapper.classList.add('hidden');
+            }
+
             // Se for a aba de linked, renderiza na hora para garantir dados frescos
             if (tabName === 'linked') taskManager.renderLinkedTasks();
         }
     },
 
-    // --- RENDERIZADOR DA ABA "CHECKLISTS DE ESTUDO" (ATUALIZADO: Header Clicável) ---
+    // --- RENDERIZADOR DA ABA "CHECKLISTS DE ESTUDO" (ATUALIZADO: Filtro de Limpeza e Histórico) ---
     renderLinkedTasks: () => {
         const container = document.getElementById('linked-task-list');
         if (!container) return;
+        
+        // Garante que o wrapper do toggle apareça ao renderizar
+        const toggleWrapper = document.getElementById('history-toggle-wrapper');
+        if (toggleWrapper) toggleWrapper.classList.remove('hidden');
 
-        // 1. Filtrar estudos que possuem subtarefas
-        const reviewsWithTasks = store.reviews.filter(r => r.subtasks && r.subtasks.length > 0);
+        const today = getLocalISODate();
+
+        // 1. Filtrar estudos que possuem subtarefas e aplicam a regra de Histórico
+        const reviewsWithTasks = store.reviews.filter(r => {
+            // Se não tem subtarefas, ignora
+            if (!r.subtasks || r.subtasks.length === 0) return false;
+
+            // Se "Mostrar Histórico" estiver ATIVO, mostra tudo
+            if (taskManager.showHistory) return true;
+
+            // Se estiver INATIVO (Padrão), aplica a limpeza:
+            // Regra 1: Não mostra passado. Regra 2: Não mostra concluídos.
+            const isPast = r.date < today;
+            const isDone = r.status === 'DONE';
+            
+            return !isPast && !isDone;
+        });
         
         if (reviewsWithTasks.length === 0) {
             container.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs italic">
                 <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                Tudo limpo! Nenhuma micro-quest pendente nos seus cards de estudo.
+                ${taskManager.showHistory ? 'Nenhuma checklist encontrada no histórico.' : 'Tudo limpo! Ative "Histórico" para ver itens antigos.'}
             </div>`;
             if(window.lucide) lucide.createIcons();
             return;

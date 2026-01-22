@@ -343,22 +343,27 @@ const app = {
         if(window.engine) engine.runCycleRepair(mode);
     },
 
-handleNewEntry: (e) => {
+    handleNewEntry: (e) => {
         e.preventDefault();
+        
+        // 1. Captura de Dados do Formulário
         const select = document.getElementById('input-subject');
         const subjectName = select.options[select.selectedIndex].text;
         const subjectColor = select.options[select.selectedIndex].dataset.color;
         const topic = document.getElementById('input-topic').value;
+        
         const studyTimeInput = document.getElementById('input-study-time');
         const studyTime = studyTimeInput ? parseInt(studyTimeInput.value) : 60; 
+        
         const dateInput = document.getElementById('input-study-date');
         const selectedDateStr = dateInput.value; 
         const todayStr = getLocalISODate();
 
-        // Captura da Complexidade (Novo)
+        // 2. Captura da Complexidade (Novo Recurso)
         const complexityInput = document.querySelector('input[name="complexity"]:checked');
         const complexity = complexityInput ? complexityInput.value : 'normal';
 
+        // 3. Validações de UI (Perfil Pendular)
         if (store.profile === 'pendular' && studyTime > 90) {
             return toast.show('O tempo limite para estudo neste modo é 90 minutos.', 'warning', '⚠️ Teto Cognitivo');
         }
@@ -366,17 +371,23 @@ handleNewEntry: (e) => {
             return toast.show('Hoje é consolidação. Agende novos conteúdos a partir de amanhã.', 'error', '🛡️ Escudo Ativo');
         }
 
-        // Adicionado 'complexity' ao objeto de dados pendentes
+        // 4. Prepara objeto temporário (Incluindo complexity)
         pendingStudyData = { subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target, complexity };
-        let projectedDay = 1;
         
-        // DELEGAÇÃO PARA ENGINE (Cálculo)
-        if (store.cycleStartDate && window.engine) {
+        // 5. CÁLCULO DO CICLO (Correção do Bug Visual)
+        let projectedDay = 1;
+        if (window.engine) {
+            // Chama a função blindada do Engine (sem dependência estrita de data)
             projectedDay = engine.calculateCycleIndex(selectedDateStr);
         }
 
+        // 6. Atualiza o Texto do Modal
         const descEl = document.getElementById('cycle-option-keep-desc');
-        if(descEl) descEl.innerText = `Será registrado como Dia #${projectedDay}`;
+        if(descEl) {
+            descEl.innerText = `Será registrado como Dia #${projectedDay}`;
+        }
+        
+        // 7. Abre o Modal de Confirmação
         ui.toggleModal('modal-cycle-confirm', true);
     },
 

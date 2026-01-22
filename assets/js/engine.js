@@ -28,29 +28,37 @@ const engine = {
         return maxIndex + 1;
     },
 
-  // --- Algoritmo SRS (Criação de Cards) ---
+    // --- Algoritmo SRS (Criação de Cards) ---
     processStudyEntry: (data) => {
-        // Desestruturação atualizada com 'complexity'
+        // ATUALIZAÇÃO: Desestruturação incluindo 'complexity'
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity } = data;
+        
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
         
         // Garante início de ciclo se não houver
         if (!store.cycleStartDate) { store.cycleStartDate = selectedDateStr; store.save(); }
 
-        // Lógica de Compressão Adaptativa (Neurociência)
-        // Se Alta Complexidade: compressão conservadora (min 15%)
-        // Se Normal: compressão agressiva (min 5%)
+        // --- NOVA LÓGICA DE COMPLEXIDADE (PILAR BIOLÓGICO) ---
         let COMPRESSION;
+        
         if (complexity === 'high') {
+            // Alta Complexidade: Compressão Conservadora (Revisões mais longas)
+            // 30% -> 20% -> 15%
             COMPRESSION = { 1: 0.30, 7: 0.20, 30: 0.15 };
         } else {
+            // Normal (Padrão): Compressão Agressiva
+            // 20% -> 10% -> 5%
             COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
         }
+        // -----------------------------------------------------
 
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
+        
+        // LÓGICA DO CICLO PRESERVADA (BLINDADA)
         const finalCycleIndex = engine.calculateCycleIndex(selectedDateStr);
+        
         const newReviews = [];
         let blocker = null;
 
@@ -62,8 +70,7 @@ const engine = {
             id: generateUUID(), 
             subject: subjectName, color: subjectColor, topic: topic, time: studyTime,
             date: selectedDateStr, type: 'NOVO', status: 'PENDING',
-            cycleIndex: finalCycleIndex, batchId: batchId,
-            complexity: complexity // Persistindo a flag de complexidade no objeto
+            cycleIndex: finalCycleIndex, batchId: batchId 
         };
         newReviews.push(acquisitionEntry);
 
@@ -78,7 +85,7 @@ const engine = {
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
             const isoDate = getLocalISODate(targetDate); 
             
-            // Aplicação da compressão definida acima
+            // Aplica a taxa de compressão definida acima (Normal ou Alta)
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
             const existingLoad = store.reviews
@@ -97,8 +104,7 @@ const engine = {
                 id: generateUUID(),
                 subject: subjectName, color: subjectColor, topic: topic, time: estimatedTime,
                 date: isoDate, type: typeLabel, status: 'PENDING',
-                cycleIndex: finalCycleIndex, batchId: batchId,
-                complexity: complexity
+                cycleIndex: finalCycleIndex, batchId: batchId 
             });
         }
 
@@ -111,11 +117,8 @@ const engine = {
         if (store.profile === 'pendular' && selectedDateStr <= todayStr) store.lastAttackDate = selectedDateStr;
 
         store.addReviews(newReviews);
-        
-        // Feedback visual diferenciado
-        const complexityMsg = complexity === 'high' ? '(Modo Profundo)' : '';
         const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
-        toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada ${complexityMsg} ${indexMsg}`);
+        toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada (Dia ${indexMsg})`);
     },
 
     // --- Integridade e Reparo ---

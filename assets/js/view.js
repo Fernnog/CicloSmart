@@ -326,201 +326,214 @@ const ui = {
         }
     },
 
-    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADO: Agrupamento Future & Weather) ---
+    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADO: Ordenação por Status + View Transitions) ---
     render: () => {
-        const todayStr = getLocalISODate();
-        const containers = {
-            late: document.getElementById('list-late'),
-            today: document.getElementById('list-today'),
-            future: document.getElementById('list-future')
-        };
-
-        if(!containers.late || !containers.today || !containers.future) return;
-
-        // Limpa containers
-        Object.values(containers).forEach(el => el.innerHTML = '');
-
-        const sorted = store.reviews.sort((a, b) => {
-            if (a.date !== b.date) {
-                return a.date.localeCompare(b.date);
-            }
-            const typeScore = (type) => {
-                const t = type ? type.toUpperCase() : '';
-                if (['DEFESA', 'DEFENSE', 'DEF'].includes(t)) return 1;
-                if (['NOVO', 'NEW'].includes(t)) return 3;
-                return 2;
+        const executeRender = () => {
+            const todayStr = getLocalISODate();
+            const containers = {
+                late: document.getElementById('list-late'),
+                today: document.getElementById('list-today'),
+                future: document.getElementById('list-future')
             };
-            return typeScore(a.type) - typeScore(b.type);
-        });
-        
-        let counts = { late: 0, today: 0, future: 0 };
-        let todayLoad = 0;
-
-        // --- Renderização Padrão (Late & Today) ---
-        sorted.forEach(r => {
-            if (r.date < todayStr && r.status !== 'DONE') {
-                containers.late.innerHTML += ui.createCardHTML(r);
-                counts.late++;
-            } else if (r.date === todayStr) {
-                containers.today.innerHTML += ui.createCardHTML(r);
-                counts.today++;
-                todayLoad += r.time;
-            }
-        });
-
-        // --- Renderização Avançada (Future: Weather + Busca) ---
-        // Acessa o termo de busca do app (assumindo que o controller o gerencia)
-        const filterTerm = window.app && window.app.futureFilterTerm ? window.app.futureFilterTerm : '';
-        
-        const futureItems = sorted.filter(r => {
-            // Filtro de Data (Futuro)
-            if (r.date <= todayStr) return false;
-            
-            // Filtro de Busca (Texto)
-            if (filterTerm) {
-                const term = filterTerm.toLowerCase();
-                const matchSubject = r.subject.toLowerCase().includes(term);
-                const matchTopic = r.topic.toLowerCase().includes(term);
-                if (!matchSubject && !matchTopic) return false;
-            }
-            return true;
-        });
-
-        // Agrupamento por Data (Weather Forecast)
-        if (futureItems.length > 0) {
-            const groupedFuture = {};
-            futureItems.forEach(r => {
-                if (!groupedFuture[r.date]) groupedFuture[r.date] = [];
-                groupedFuture[r.date].push(r);
-            });
-
-            // Geração do HTML Agrupado
-            let futureHtml = '';
-            Object.keys(groupedFuture).sort().forEach(date => {
-                const dayStudies = groupedFuture[date];
-                const dayTotalMinutes = dayStudies.reduce((acc, cur) => acc + (parseInt(cur.time) || 0), 0);
-                
-                // Lógica de Ícones do Tempo (Carga Cognitiva)
-                const capacity = store.capacity || 240;
-                let weatherIcon = 'sun'; // Leve (< 60%)
-                let weatherColor = 'text-amber-500';
-                
-                if (dayTotalMinutes > capacity) { 
-                    weatherIcon = 'cloud-lightning'; 
-                    weatherColor = 'text-purple-600'; // Sobrecarga
-                } else if (dayTotalMinutes > (capacity * 0.6)) { 
-                    weatherIcon = 'cloud'; 
-                    weatherColor = 'text-slate-500'; // Médio/Pesado
+    
+            if(!containers.late || !containers.today || !containers.future) return;
+    
+            // Limpa containers
+            Object.values(containers).forEach(el => el.innerHTML = '');
+    
+            const sorted = store.reviews.sort((a, b) => {
+                // 1. Data Cronológica
+                if (a.date !== b.date) {
+                    return a.date.localeCompare(b.date);
                 }
 
-                // Header do Dia
-                futureHtml += `
-                    <div class="day-weather-header">
-                        <span class="flex items-center gap-1.5" title="Previsão de Carga">
-                            <i data-lucide="${weatherIcon}" class="w-3.5 h-3.5 ${weatherColor}"></i>
-                            ${formatDateDisplay(date)}
-                        </span>
-                        <span class="${dayTotalMinutes > capacity ? 'text-red-500 font-bold' : ''}">${dayTotalMinutes} min</span>
-                    </div>
-                `;
+                // 2. Prioridade: Status (Pendentes no topo, Feitos no fundo)
+                const statusA = a.status === 'DONE' ? 1 : 0;
+                const statusB = b.status === 'DONE' ? 1 : 0;
+                if (statusA !== statusB) {
+                    return statusA - statusB;
+                }
 
-                // Cards do Dia
-                dayStudies.forEach(r => {
-                    futureHtml += ui.createCardHTML(r);
-                });
+                // 3. Tipo de Estudo
+                const typeScore = (type) => {
+                    const t = type ? type.toUpperCase() : '';
+                    if (['DEFESA', 'DEFENSE', 'DEF'].includes(t)) return 1;
+                    if (['NOVO', 'NEW'].includes(t)) return 3;
+                    return 2;
+                };
+                return typeScore(a.type) - typeScore(b.type);
             });
             
-            containers.future.innerHTML = futureHtml;
-            counts.future = futureItems.length;
-        }
-
-        // --- Atualização de Layout & Contadores ---
-        const mainEl = document.getElementById('main-kanban');
-        const colLate = document.getElementById('col-late');
-
-        if (mainEl && colLate) {
-            mainEl.classList.remove('md:grid-cols-3', 'md:grid-cols-2');
-
-            if (counts.late === 0) {
-                colLate.classList.remove('md:flex');
-                colLate.classList.add('md:hidden');
-                mainEl.classList.add('md:grid-cols-2');
-            } else {
-                colLate.classList.remove('md:hidden');
-                colLate.classList.add('md:flex');
-                mainEl.classList.add('md:grid-cols-3');
-            }
-        }
-     
-
-        ['late', 'today', 'future'].forEach(key => {
-            const countEl = document.getElementById(`count-${key}`);
-            if(countEl) countEl.innerText = counts[key];
+            let counts = { late: 0, today: 0, future: 0 };
+            let todayLoad = 0;
+    
+            // --- Renderização Padrão (Late & Today) ---
+            sorted.forEach(r => {
+                if (r.date < todayStr && r.status !== 'DONE') {
+                    containers.late.innerHTML += ui.createCardHTML(r);
+                    counts.late++;
+                } else if (r.date === todayStr) {
+                    containers.today.innerHTML += ui.createCardHTML(r);
+                    counts.today++;
+                    todayLoad += r.time;
+                }
+            });
+    
+            // --- Renderização Avançada (Future: Weather + Busca) ---
+            const filterTerm = window.app && window.app.futureFilterTerm ? window.app.futureFilterTerm : '';
             
-            const mobileBadge = document.getElementById(`badge-${key}-mobile`);
-            if(mobileBadge) mobileBadge.innerText = counts[key];
-        });
-
-        // --- EMPTY STATES & CELEBRAÇÃO ---
-        
-        if(!counts.late) {
-            containers.late.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-8 text-emerald-500/80">
-                    <div class="bg-emerald-50 p-2 rounded-full mb-2">
-                        <i data-lucide="shield-check" class="w-5 h-5"></i>
-                    </div>
-                    <span class="text-xs font-bold">Sem Atrasos</span>
-                </div>`;
-        }
-
-        if(!counts.today) {
-            const hasCompletedWorkToday = store.reviews.some(r => r.date === todayStr && r.status === 'DONE');
-            
-            if (hasCompletedWorkToday) {
-                containers.today.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full py-10 animate-fade-in opacity-80">
-                        <div class="bg-emerald-100 p-4 rounded-full mb-3 shadow-sm ring-4 ring-emerald-50">
-                            <i data-lucide="trophy" class="w-8 h-8 text-emerald-600"></i>
+            const futureItems = sorted.filter(r => {
+                if (r.date <= todayStr) return false;
+                if (filterTerm) {
+                    const term = filterTerm.toLowerCase();
+                    const matchSubject = r.subject.toLowerCase().includes(term);
+                    const matchTopic = r.topic.toLowerCase().includes(term);
+                    if (!matchSubject && !matchTopic) return false;
+                }
+                return true;
+            });
+    
+            // Agrupamento por Data (Weather Forecast)
+            if (futureItems.length > 0) {
+                const groupedFuture = {};
+                futureItems.forEach(r => {
+                    if (!groupedFuture[r.date]) groupedFuture[r.date] = [];
+                    groupedFuture[r.date].push(r);
+                });
+    
+                let futureHtml = '';
+                Object.keys(groupedFuture).sort().forEach(date => {
+                    const dayStudies = groupedFuture[date];
+                    const dayTotalMinutes = dayStudies.reduce((acc, cur) => acc + (parseInt(cur.time) || 0), 0);
+                    
+                    const capacity = store.capacity || 240;
+                    let weatherIcon = 'sun'; 
+                    let weatherColor = 'text-amber-500';
+                    
+                    if (dayTotalMinutes > capacity) { 
+                        weatherIcon = 'cloud-lightning'; 
+                        weatherColor = 'text-purple-600'; 
+                    } else if (dayTotalMinutes > (capacity * 0.6)) { 
+                        weatherIcon = 'cloud'; 
+                        weatherColor = 'text-slate-500'; 
+                    }
+    
+                    futureHtml += `
+                        <div class="day-weather-header">
+                            <span class="flex items-center gap-1.5" title="Previsão de Carga">
+                                <i data-lucide="${weatherIcon}" class="w-3.5 h-3.5 ${weatherColor}"></i>
+                                ${formatDateDisplay(date)}
+                            </span>
+                            <span class="${dayTotalMinutes > capacity ? 'text-red-500 font-bold' : ''}">${dayTotalMinutes} min</span>
                         </div>
-                        <p class="text-sm font-bold text-slate-700">Meta Batida!</p>
-                        <p class="text-[10px] text-slate-500">Aproveite o descanso.</p>
-                    </div>
-                `;
-            } else {
-                containers.today.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-8 h-full">
-                         <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group">
-                            <i data-lucide="target" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-xs font-bold">Definir Meta de Hoje</span>
-                        </button>
+                    `;
+    
+                    dayStudies.forEach(r => {
+                        futureHtml += ui.createCardHTML(r);
+                    });
+                });
+                
+                containers.future.innerHTML = futureHtml;
+                counts.future = futureItems.length;
+            }
+    
+            // --- Atualização de Layout & Contadores ---
+            const mainEl = document.getElementById('main-kanban');
+            const colLate = document.getElementById('col-late');
+    
+            if (mainEl && colLate) {
+                mainEl.classList.remove('md:grid-cols-3', 'md:grid-cols-2');
+    
+                if (counts.late === 0) {
+                    colLate.classList.remove('md:flex');
+                    colLate.classList.add('md:hidden');
+                    mainEl.classList.add('md:grid-cols-2');
+                } else {
+                    colLate.classList.remove('md:hidden');
+                    colLate.classList.add('md:flex');
+                    mainEl.classList.add('md:grid-cols-3');
+                }
+            }
+         
+            ['late', 'today', 'future'].forEach(key => {
+                const countEl = document.getElementById(`count-${key}`);
+                if(countEl) countEl.innerText = counts[key];
+                
+                const mobileBadge = document.getElementById(`badge-${key}-mobile`);
+                if(mobileBadge) mobileBadge.innerText = counts[key];
+            });
+    
+            // --- EMPTY STATES & CELEBRAÇÃO ---
+            
+            if(!counts.late) {
+                containers.late.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-8 text-emerald-500/80">
+                        <div class="bg-emerald-50 p-2 rounded-full mb-2">
+                            <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold">Sem Atrasos</span>
                     </div>`;
             }
+    
+            if(!counts.today) {
+                const hasCompletedWorkToday = store.reviews.some(r => r.date === todayStr && r.status === 'DONE');
+                
+                if (hasCompletedWorkToday) {
+                    containers.today.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-full py-10 animate-fade-in opacity-80">
+                            <div class="bg-emerald-100 p-4 rounded-full mb-3 shadow-sm ring-4 ring-emerald-50">
+                                <i data-lucide="trophy" class="w-8 h-8 text-emerald-600"></i>
+                            </div>
+                            <p class="text-sm font-bold text-slate-700">Meta Batida!</p>
+                            <p class="text-[10px] text-slate-500">Aproveite o descanso.</p>
+                        </div>
+                    `;
+                } else {
+                    containers.today.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-8 h-full">
+                             <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group">
+                                <i data-lucide="target" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
+                                <span class="text-xs font-bold">Definir Meta de Hoje</span>
+                            </button>
+                        </div>`;
+                }
+            }
+    
+            if(!counts.future && !filterTerm) { 
+                containers.future.innerHTML = `
+                    <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all group cursor-pointer my-2">
+                        <i data-lucide="calendar-plus" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-xs font-bold">Planejar Futuro</span>
+                        <span class="text-[10px] mt-1 text-center">Clique para agendar revisões<br>ou novos estudos.</span>
+                    </button>
+                `;
+            } else if (counts.future === 0 && filterTerm) {
+                containers.future.innerHTML = `
+                    <div class="text-center py-10 text-slate-400 text-xs italic">
+                        <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        Nenhum estudo encontrado para "${filterTerm}".
+                    </div>
+                `;
+            }
+    
+            ui.updateCapacityStats(todayLoad);
+            ui.updateStreak();
+        }; // fim executeRender
+
+        // Wrapper para View Transitions API
+        if (document.startViewTransition) {
+            document.startViewTransition(() => {
+                executeRender();
+                if(window.lucide) lucide.createIcons();
+            });
+        } else {
+            // Fallback
+            executeRender();
+            if(window.lucide) lucide.createIcons();
         }
-
-        if(!counts.future && !filterTerm) { // Só mostra empty state se não houver filtro ativo
-            containers.future.innerHTML = `
-                <button onclick="ui.openNewStudyModal()" class="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 transition-all group cursor-pointer my-2">
-                    <i data-lucide="calendar-plus" class="w-8 h-8 mb-2 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs font-bold">Planejar Futuro</span>
-                    <span class="text-[10px] mt-1 text-center">Clique para agendar revisões<br>ou novos estudos.</span>
-                </button>
-            `;
-        } else if (counts.future === 0 && filterTerm) {
-            containers.future.innerHTML = `
-                <div class="text-center py-10 text-slate-400 text-xs italic">
-                    <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
-                    Nenhum estudo encontrado para "${filterTerm}".
-                </div>
-            `;
-        }
-
-        ui.updateCapacityStats(todayLoad);
-        ui.updateStreak();
-
-        if(window.lucide) lucide.createIcons();
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Hard Dependency / Trava de Qualidade) ---
+    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Hard Dependency / Trava de Qualidade / View Transition ID) ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
@@ -606,11 +619,12 @@ const ui = {
             </div>
         ` : '';
 
+        // Adicionado style para View Transitions
         return `
             <div id="card-${review.id}" draggable="true" 
                 ondragstart="app.handleKanbanDragStart(event, '${review.id}')"
                 class="${containerClasses} p-3.5 rounded-lg border-l-[4px] transition-all mb-3 group relative cursor-grab active:cursor-grabbing" 
-                style="border-left-color: ${review.color}">
+                style="border-left-color: ${review.color}; view-transition-name: card-${review.id}">
                 
                 <div class="flex justify-between items-start mb-1.5">
                     <div class="flex-1 pr-2">

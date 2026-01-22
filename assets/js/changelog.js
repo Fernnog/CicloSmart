@@ -2,8 +2,17 @@
 
 const changelogData = [
     {
-        version: '1.3.2',
+        version: '1.3.3',
         date: 'Hoje',
+        changes: [
+            '🧠 <strong>Fator de Complexidade Cognitiva:</strong> Novo seletor ao criar estudos! Escolha entre <strong>"Normal"</strong> (Fatos/Lei) ou <strong>"Alta"</strong> (Conceitual). O algoritmo SRS agora ajusta a compressão do tempo: tópicos complexos mantêm revisões mais longas (mínimo de 15% do tempo original) para garantir a reconsolidação neural profunda.',
+            '🛡️ <strong>Prevenção de Ilusão de Competência:</strong> Seguindo diretrizes neurocientíficas, evitamos que revisões de assuntos difíceis se tornem curtas demais (ex: 3 min), o que gerava falsa sensação de domínio sobre o conteúdo.',
+            '✨ <strong>Interface de Decisão Rápida:</strong> Adicionado controle visual simples no formulário de registro para classificar a complexidade do tópico sem atrito.'
+        ]
+    },
+    {
+        version: '1.3.2',
+        date: 'Anterior',
         changes: [
             '🧹 <strong>Higiene Visual Automática:</strong> A Central de Tarefas agora foca no presente! Checklists de estudos passados ou já concluídos são ocultados automaticamente para reduzir a poluição visual.',
             '🕰️ <strong>Histórico sob Demanda:</strong> Precisa auditar o que já passou? Adicionamos um interruptor <strong>"Mostrar Histórico"</strong> na aba de Checklists para revelar itens antigos quando necessário.',

@@ -7,31 +7,54 @@
 
 const engine = {
     
-    // --- Lógica de Numeração Sequencial (Correção: Continuidade Absoluta) ---
-    // Agora varre todo o histórico em busca do maior índice, independente de datas.
+    // --- Lógica de Numeração com DIAGNÓSTICO ATIVO ---
+    // Varre o histórico em busca do maior índice numérico absoluto e loga o processo.
     calculateCycleIndex: () => {
+        console.group("🕵️‍♂️ DEBUG ENGINE: Calculando Índice de Ciclo");
+        
         let maxIndex = 0;
         
-        // Verifica se o store existe e tem dados carregados
-        if (typeof store !== 'undefined' && store.reviews && store.reviews.length > 0) {
-            store.reviews.forEach(r => {
-                // Converte para inteiro (Base 10) garantindo leitura correta
-                const currentIdx = parseInt(r.cycleIndex || 0, 10);
-                
-                // Só considera se for um número válido e maior que o atual máximo encontrado
-                if (!isNaN(currentIdx) && currentIdx > maxIndex) {
-                    maxIndex = currentIdx;
-                }
-            });
+        // 1. Diagnóstico do Banco de Dados
+        if (typeof store === 'undefined') {
+            console.error("❌ ERRO CRÍTICO: 'store' não está definido!");
+            console.groupEnd();
+            return 1;
         }
 
-        // Retorna sempre o maior número encontrado + 1
-        return maxIndex + 1;
+        console.log("📊 Status do Store:", {
+            reviewsLoaded: store.reviews ? store.reviews.length : 'NULO',
+            exemploItem: store.reviews && store.reviews.length > 0 ? store.reviews[0] : 'Nenhum'
+        });
+
+        // 2. Diagnóstico da Varredura
+        if (store.reviews && store.reviews.length > 0) {
+            store.reviews.forEach((r, i) => {
+                // Tenta ler cycleIndex ou cycle_index (caso haja variação de legado)
+                // Loga apenas se o item tiver cycleIndex para não poluir
+                if (r.cycleIndex) {
+                    const currentIdx = parseInt(r.cycleIndex, 10);
+                    
+                    // Loga apenas quando encontra um novo máximo (para economizar linhas)
+                    if (!isNaN(currentIdx) && currentIdx > maxIndex) {
+                        console.log(`📈 Novo Máximo Encontrado no item [${i}]:`, currentIdx, "(Anterior era:", maxIndex, ")");
+                        maxIndex = currentIdx;
+                    }
+                }
+            });
+        } else {
+            console.warn("⚠️ O Array de Reviews está vazio ou nulo.");
+        }
+
+        const nextIndex = maxIndex + 1;
+        console.log("✅ Resultado Final Engine:", nextIndex);
+        console.groupEnd();
+
+        return nextIndex;
     },
 
     // --- Algoritmo SRS (Criação de Cards) ---
     processStudyEntry: (data) => {
-        // ATUALIZADO: Recebe 'complexity' para definir o tempo das revisões
+        // Recebe 'complexity' para definir o tempo das revisões (Funcionalidade v1.3.3)
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity } = data;
         
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
@@ -40,7 +63,7 @@ const engine = {
         // Garante início de ciclo se não houver (apenas para referência de metadados)
         if (!store.cycleStartDate) { store.cycleStartDate = selectedDateStr; store.save(); }
 
-        // --- NOVA LÓGICA DE COMPLEXIDADE ---
+        // --- LÓGICA DE COMPLEXIDADE (Preservada) ---
         let COMPRESSION;
         if (complexity === 'high') {
             // Alta Complexidade: Compressão suave para conceitos difíceis (30% -> 20% -> 15%)
@@ -54,7 +77,7 @@ const engine = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
         
-        // CORREÇÃO: Chama a função sem argumentos para forçar a lógica sequencial (Max + 1)
+        // CORREÇÃO: Usa a nova função de cálculo sem depender de datas
         const finalCycleIndex = engine.calculateCycleIndex();
         
         const newReviews = [];

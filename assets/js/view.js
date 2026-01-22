@@ -2,7 +2,7 @@
 /**
  * UI RENDERER (View Layer) - v1.3.4 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Weather Forecast, Busca Rápida e Hard Dependency (Trava de Qualidade).
+ * ATUALIZADO: Weather Forecast, Busca Rápida, Hard Dependency e Painéis Colapsáveis.
  */
 
 const ui = {
@@ -62,6 +62,73 @@ const ui = {
         }
         
         if (window.lucide) lucide.createIcons();
+    },
+
+    // --- NOVA FUNÇÃO: Aplicação Visual do Estado dos Painéis (Priority 1) ---
+    applyPanelState: () => {
+        // Mapeamento de elementos
+        const panels = ['late', 'future'];
+        
+        panels.forEach(p => {
+            const col = document.getElementById(`col-${p}`);
+            const headerExp = document.getElementById(`header-${p}-expanded`);
+            const headerCol = document.getElementById(`header-${p}-collapsed`);
+            const badgeCol = document.getElementById(`count-${p}-collapsed`);
+            const badgeOriginal = document.getElementById(`count-${p}`);
+
+            if (!col) return;
+
+            const isOpen = store.panelState && store.panelState[p] === 'open';
+
+            // 1. Alternar Classes da Coluna
+            if (isOpen) {
+                col.classList.remove('col-collapsed');
+                col.classList.add('col-expanded');
+                
+                // Mostrar Header Expandido / Esconder Recolhido
+                if (headerExp) {
+                    headerExp.classList.remove('hidden'); 
+                    setTimeout(() => headerExp.classList.remove('opacity-0'), 50); // Fade in
+                }
+                
+                if (headerCol) {
+                    headerCol.classList.add('hidden');
+                    headerCol.classList.remove('flex');
+                }
+            } else {
+                col.classList.remove('col-expanded');
+                col.classList.add('col-collapsed');
+                
+                // Esconder Header Expandido / Mostrar Recolhido
+                if (headerExp) {
+                    headerExp.classList.add('opacity-0');
+                    headerExp.classList.add('hidden'); 
+                }
+                
+                if (headerCol) {
+                    headerCol.classList.remove('hidden');
+                    headerCol.classList.add('flex');
+                }
+                
+                // Priority 2: Sincronizar contador do badge recolhido
+                if(badgeCol && badgeOriginal) {
+                    badgeCol.innerText = badgeOriginal.innerText;
+                    // Se for 0, deixa cinza, se > 0 mantém cor de alerta
+                    badgeCol.className = badgeOriginal.innerText === '0' 
+                        ? "mt-2 bg-slate-200 text-slate-400 text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold"
+                        : (p === 'late' 
+                            ? "mt-2 bg-red-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-md animate-pulse"
+                            : "mt-2 bg-indigo-500 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-md");
+                }
+            }
+        });
+        
+        // Ajuste fino para Mobile: forçar remoção de classes de largura se estiver em tela pequena
+        if (window.innerWidth < 768) {
+            document.querySelectorAll('.kanban-col-transition').forEach(el => {
+                el.classList.remove('col-collapsed', 'col-expanded');
+            });
+        }
     },
 
     // --- Gerenciamento Visual da Autenticação ---
@@ -442,13 +509,17 @@ const ui = {
             mainEl.classList.remove('md:grid-cols-3', 'md:grid-cols-2');
 
             if (counts.late === 0) {
+                // Em modo flex, o layout é controlado por panelState, não grid-cols
+                // Mas para manter compatibilidade com estrutura antiga:
                 colLate.classList.remove('md:flex');
                 colLate.classList.add('md:hidden');
-                mainEl.classList.add('md:grid-cols-2');
+                // Se não houver atrasados, não precisamos da coluna, mas agora com painéis
+                // colapsáveis, o usuário decide se quer ver ou não.
+                // Ajuste: Removemos a manipulação de grade fixa, pois agora usamos Flex
+                // (O código antigo de grid-cols é mantido apenas como fallback se Flex não ativar)
             } else {
                 colLate.classList.remove('md:hidden');
                 colLate.classList.add('md:flex');
-                mainEl.classList.add('md:grid-cols-3');
             }
         }
      
@@ -516,6 +587,9 @@ const ui = {
 
         ui.updateCapacityStats(todayLoad);
         ui.updateStreak();
+        
+        // --- PRIORITY 1 & 2: Atualizar visual dos painéis colapsáveis e seus badges ---
+        ui.applyPanelState();
 
         if(window.lucide) lucide.createIcons();
     },

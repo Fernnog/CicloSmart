@@ -28,16 +28,26 @@ const engine = {
         return maxIndex + 1;
     },
 
-    // --- Algoritmo SRS (Criação de Cards) ---
+  // --- Algoritmo SRS (Criação de Cards) ---
     processStudyEntry: (data) => {
-        const { subjectName, subjectColor, topic, studyTime, selectedDateStr } = data;
+        // Desestruturação atualizada com 'complexity'
+        const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity } = data;
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
         
         // Garante início de ciclo se não houver
         if (!store.cycleStartDate) { store.cycleStartDate = selectedDateStr; store.save(); }
 
-        const COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
+        // Lógica de Compressão Adaptativa (Neurociência)
+        // Se Alta Complexidade: compressão conservadora (min 15%)
+        // Se Normal: compressão agressiva (min 5%)
+        let COMPRESSION;
+        if (complexity === 'high') {
+            COMPRESSION = { 1: 0.30, 7: 0.20, 30: 0.15 };
+        } else {
+            COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
+        }
+
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
         const finalCycleIndex = engine.calculateCycleIndex(selectedDateStr);
@@ -52,7 +62,8 @@ const engine = {
             id: generateUUID(), 
             subject: subjectName, color: subjectColor, topic: topic, time: studyTime,
             date: selectedDateStr, type: 'NOVO', status: 'PENDING',
-            cycleIndex: finalCycleIndex, batchId: batchId 
+            cycleIndex: finalCycleIndex, batchId: batchId,
+            complexity: complexity // Persistindo a flag de complexidade no objeto
         };
         newReviews.push(acquisitionEntry);
 
@@ -66,6 +77,8 @@ const engine = {
             const targetDate = new Date(baseDate);
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
             const isoDate = getLocalISODate(targetDate); 
+            
+            // Aplicação da compressão definida acima
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
             const existingLoad = store.reviews
@@ -84,7 +97,8 @@ const engine = {
                 id: generateUUID(),
                 subject: subjectName, color: subjectColor, topic: topic, time: estimatedTime,
                 date: isoDate, type: typeLabel, status: 'PENDING',
-                cycleIndex: finalCycleIndex, batchId: batchId 
+                cycleIndex: finalCycleIndex, batchId: batchId,
+                complexity: complexity
             });
         }
 
@@ -97,8 +111,11 @@ const engine = {
         if (store.profile === 'pendular' && selectedDateStr <= todayStr) store.lastAttackDate = selectedDateStr;
 
         store.addReviews(newReviews);
+        
+        // Feedback visual diferenciado
+        const complexityMsg = complexity === 'high' ? '(Modo Profundo)' : '';
         const indexMsg = finalCycleIndex > 0 ? `#${finalCycleIndex}` : `(Pré-Ciclo)`;
-        toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada (Dia ${indexMsg})`);
+        toast.show('Estudo registrado.', 'neuro', `🧠 Trilha Criada ${complexityMsg} ${indexMsg}`);
     },
 
     // --- Integridade e Reparo ---

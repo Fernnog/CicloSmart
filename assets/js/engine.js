@@ -353,7 +353,7 @@ const engine = {
             }
         });
 
-        // 3. Persistência e Feedback (Se houve limpeza)
+                // 3. Persistência e Feedback (Se houve limpeza)
         if (tasksRemoved > 0 || checklistsCleaned > 0) {
             store.save(); // Salva a versão "limpa" no LocalStorage/Firebase
             
@@ -370,3 +370,7 @@ const engine = {
         }
     }
 };
+
+// [CORREÇÃO CRÍTICA]
+// Expõe o Engine para o escopo global para que o Controller possa acessá-lo.
+window.engine = engine;

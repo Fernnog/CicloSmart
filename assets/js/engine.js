@@ -221,7 +221,7 @@ const engine = {
         toast.show('Arquivo ICS gerado.', 'info', '📅 Agenda Sincronizada');
     },
 
-   // --- Lógica Waterfall (Reschedule) ---
+    // --- Lógica Waterfall (Reschedule) ---
     handleReschedule: () => {
         const dateInput = document.getElementById('input-reschedule-date');
         const targetDateStr = dateInput.value;
@@ -280,15 +280,15 @@ const engine = {
         toast.show(`Cronograma realinhado! ${shiftCount} cartões movidos.`, 'neuro', 'SRS Preservado');
     },
 
-    // --- MANUTENÇÃO AUTOMÁTICA DE DADOS (Data Sanitation) ---
+    // --- MANUTENÇÃO AUTOMÁTICA DE DADOS ---
     runDataSanitation: () => {
-        // console.log("[Engine] Iniciando protocolo de limpeza de dados...");
+        console.log("[Engine] Iniciando protocolo de limpeza de dados...");
         
-        // Helper para calcular datas de corte
+        // Helper para calcular datas de corte (Formato YYYY-MM-DD)
         const getCutoffDate = (daysAgo) => {
             const date = new Date();
             date.setDate(date.getDate() - daysAgo);
-            return getLocalISODate(date); 
+            return getLocalISODate(date); // Usa utilitário global do core.js
         };
 
         const cutoffTasks = getCutoffDate(30);   // Regra 1: 30 dias para Tarefas Gerais
@@ -299,29 +299,33 @@ const engine = {
 
         // 1. Limpeza de Tarefas Gerais (Abandonadas/Antigas)
         const initialTaskCount = store.tasks.length;
-        // Mantém apenas tarefas cuja data seja MAIOR ou IGUAL a data de corte
+        // Mantém apenas tarefas cuja data seja MAIOR ou IGUAL a data de corte (30 dias atrás)
         store.tasks = store.tasks.filter(t => t.date >= cutoffTasks);
         tasksRemoved = initialTaskCount - store.tasks.length;
 
         // 2. Limpeza de Checklists em Estudos Concluídos (Otimização de Espaço)
         store.reviews.forEach(r => {
-            // Se o estudo está FEITO, é antigo (>45 dias) e tem subtarefas
+            // Se o estudo está FEITO, é antigo (>45 dias) e tem subtarefas pesando no banco
             if (r.status === 'DONE' && r.date < cutoffStudies && r.subtasks && r.subtasks.length > 0) {
-                r.subtasks = []; // Esvazia o array, mantendo o card vivo
+                r.subtasks = []; // Esvazia o array de micro-quests, mantendo o card vivo para estatísticas
                 checklistsCleaned++;
             }
         });
 
-        // 3. Persistência e Feedback (Apenas se houve ação)
+        // 3. Persistência e Feedback (Se houve limpeza)
         if (tasksRemoved > 0 || checklistsCleaned > 0) {
-            store.save(); 
+            store.save(); // Salva a versão "limpa" no LocalStorage/Firebase
             
+            console.log(`[Engine] Limpeza Concluída: ${tasksRemoved} tarefas removidas, ${checklistsCleaned} checklists otimizados.`);
+            
+            // Feedback discreto para o usuário saber que o sistema trabalhou
             setTimeout(() => {
                 toast.show(
-                    `Faxina Automática: ${tasksRemoved} tarefas antigas e ${checklistsCleaned} checklists arquivados.`, 
+                    `Otimização: ${tasksRemoved} tarefas antigas e ${checklistsCleaned} checklists arquivados.`, 
                     'info', 
-                    '🧹 Sistema Otimizado'
+                    '🧹 Manutenção Automática'
                 );
-            }, 3000); 
+            }, 2000); // Delay para não competir com o "Bem-vindo"
         }
     }
+};

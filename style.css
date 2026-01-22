@@ -413,3 +413,14 @@ body.is-dragging .heatmap-day-cell * {
     margin-bottom: 4px;
     pointer-events: none;
 }
+
+/* ==========================================================================
+   12. VIEW TRANSITIONS API (Animação de Reordenação)
+   ========================================================================== 
+*/
+
+/* Define a duração e a curva de animação para qualquer elemento movendo-se */
+::view-transition-group(root) {
+    animation-duration: 0.4s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

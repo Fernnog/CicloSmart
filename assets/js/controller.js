@@ -11,48 +11,44 @@ let pendingStudyData = null;
 let futureFilterTerm = '';
 
 const app = {
-   init: () => {
+    init: () => {
         store.load();
         
+        // --- ARQUITETURA REATIVA (OBSERVER) ---
         store.subscribe(taskManager.checkOverdue); 
         store.subscribe(taskManager.render);       
-        store.subscribe(ui.render); 
+        store.subscribe(ui.render); // UI agora reage a mudanças no Store
         
+        // --- AUTO-REPARO LEGADO ---
         app.runLegacyMigration();
+
+        // --- NOVO: Verifica e devolve itens emprestados não concluídos ---
         app.checkTemporaryReversions();
+
         app.initVersionControl();
         app.checkSmartCycle();
 
-        if (typeof app.initAuth === 'function') app.initAuth(); 
+        if (typeof app.initAuth === 'function') {
+            app.initAuth(); 
+        }
 
+        // Inicialização Visual Inicial
         ui.initSubjects(); 
-        // Aplica estado dos painéis ao iniciar (Persistência visual)
-        if(ui.applyPanelState) ui.applyPanelState();
-        
         ui.render();
         taskManager.checkOverdue(); 
+        
         app.setupEventListeners();
 
         app.updateProfileUI(store.profile); 
         ui.updateModeUI(); 
-        // Se estiver em mobile, garante aba Today. Se desktop, o layout flex resolve.
-        if(window.innerWidth < 1024) ui.switchTab('today');
+        ui.switchTab('today');
 
+        // --- [NOVO] VARREDURA DE INÍCIO DE SESSÃO (PRIORIDADE 1) ---
+        // Verifica pendências silenciosamente e abre o modal se necessário
         setTimeout(() => app.checkPendingTasksOnStartup(), 800);
-        setTimeout(() => app.checkCycleIntegrity(), 1000);
-    },
 
-    // --- NOVA FUNÇÃO: Toggle de Painéis Laterais (Foco Dinâmico) ---
-    togglePanel: (panelName) => {
-        const currentState = store.panelState[panelName];
-        // Inverte estado
-        store.panelState[panelName] = currentState === 'open' ? 'closed' : 'open';
-        
-        // Salva na memória
-        store.save();
-        
-        // Aplica visualmente imediatamente
-        if(ui.applyPanelState) ui.applyPanelState();
+        // --- VERIFICAÇÃO DE INTEGRIDADE ---
+        setTimeout(() => app.checkCycleIntegrity(), 1000);
     },
 
     // --- [NOVO MÉTODO] Lógica de Alerta Automático de Pendências ---

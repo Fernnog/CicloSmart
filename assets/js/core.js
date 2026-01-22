@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.3.1 - Unified Logic)
+ * CICLOSMART CORE (v1.3.0 - Unified Logic)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Estado de Painéis Colapsáveis (PanelState) e Lógica Smart Focus.
+ * ATUALIZADO: Cálculo unificado de Badge e Headers clicáveis na lista de checklists.
  */
 
 // ==========================================
@@ -150,12 +150,6 @@ const store = {
     sessionState: {
         hasCelebrated: false
     },
-
-    // NOVO (Priority 1): Estado dos Painéis Laterais (Persistente)
-    panelState: { 
-        late: 'open', 
-        future: 'open' 
-    },
     
     // --- NOVO: SISTEMA DE OBSERVER (Reatividade) ---
     listeners: [],
@@ -185,8 +179,6 @@ const store = {
             store.cycleState = data.cycleState || 'ATTACK';
             store.lastAttackDate = data.lastAttackDate || null;
             store.cycleStartDate = data.cycleStartDate || null;
-            // Carrega estado dos painéis ou usa padrão 'open'
-            store.panelState = data.panelState || { late: 'open', future: 'open' };
             console.log('[Core] Dados carregados via Firebase Cloud.');
         } else {
             const raw = localStorage.getItem(CONFIG.storageKey);
@@ -200,8 +192,7 @@ const store = {
                     store.profile = data.profile || CONFIG.profiles.STANDARD;
                     store.cycleState = data.cycleState || 'ATTACK';
                     store.lastAttackDate = data.lastAttackDate || null;
-                    store.cycleStartDate = data.cycleStartDate || null;
-                    store.panelState = data.panelState || { late: 'open', future: 'open' }; 
+                    store.cycleStartDate = data.cycleStartDate || null; 
                 } catch (e) {
                     console.error("Erro ao ler dados locais", e);
                     store.resetDefaults();
@@ -211,17 +202,6 @@ const store = {
             }
         }
         
-        // --- PRIORITY 3: Lógica Smart Focus (Auto-Collapse se vazio) ---
-        // Verifica se há atrasados. Se não houver, força o fechamento para economizar espaço.
-        const today = getLocalISODate();
-        const lateCount = store.reviews.filter(r => r.date < today && r.status === 'PENDING').length;
-        
-        if (lateCount === 0) {
-            store.panelState.late = 'closed';
-            // Nota: Não salvamos aqui para não sobrescrever preferência do usuário permanentemente sem interação,
-            // mas o estado em memória inicia fechado para esta sessão.
-        }
-
         // Renderização inicial
         if (typeof ui !== 'undefined' && ui.render) {
             ui.initSubjects(); 
@@ -242,10 +222,9 @@ const store = {
         store.cycleState = 'ATTACK';
         store.lastAttackDate = null;
         store.cycleStartDate = null; 
-        store.panelState = { late: 'open', future: 'open' };
     },
 
-    // Lógica de Save Atualizada (Chama Notify e salva PanelState)
+    // Lógica de Save Atualizada (Chama Notify)
     save: () => {
         const dataToSave = {
             reviews: store.reviews,
@@ -256,7 +235,6 @@ const store = {
             cycleState: store.cycleState,
             lastAttackDate: store.lastAttackDate,
             cycleStartDate: store.cycleStartDate,
-            panelState: store.panelState, // Priority 1: Persistência
             lastUpdate: new Date().toISOString()
         };
 

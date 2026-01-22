@@ -7,56 +7,51 @@
 
 const engine = {
     
-    // --- Lógica de Numeração Blindada ---
+    // --- Lógica de Numeração Blindada (CORRIGIDO v3) ---
+    // Agora varre todo o histórico em busca do maior índice, independente de datas.
     calculateCycleIndex: (targetDateStr) => {
-        if (!store.cycleStartDate) {
-            console.log('[Engine] Sem data de início definida. Retornando índice 1.');
-            return 1;
+        let maxIndex = 0;
+        
+        // Verifica se há revisões e busca o maior cycleIndex registrado
+        if (store.reviews && store.reviews.length > 0) {
+            store.reviews.forEach(r => {
+                const currentIdx = parseInt(r.cycleIndex || 0);
+                if (!isNaN(currentIdx) && currentIdx > maxIndex) {
+                    maxIndex = currentIdx;
+                }
+            });
         }
 
-        const relevantItems = store.reviews.filter(r => 
-            r.date >= store.cycleStartDate && 
-            r.cycleIndex !== undefined && 
-            r.cycleIndex !== null
-        );
-
-        if (relevantItems.length === 0) return 1;
-
-        const indices = relevantItems.map(r => parseInt(r.cycleIndex));
-        const maxIndex = Math.max(...indices);
-        
+        // Retorna o próximo número da sequência
         return maxIndex + 1;
     },
 
     // --- Algoritmo SRS (Criação de Cards) ---
     processStudyEntry: (data) => {
-        // ATUALIZAÇÃO: Desestruturação incluindo 'complexity'
+        // ATUALIZADO: Recebe 'complexity' para definir o tempo das revisões
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity } = data;
         
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
         
-        // Garante início de ciclo se não houver
+        // Garante início de ciclo se não houver (apenas para referência de metadados)
         if (!store.cycleStartDate) { store.cycleStartDate = selectedDateStr; store.save(); }
 
-        // --- NOVA LÓGICA DE COMPLEXIDADE (PILAR BIOLÓGICO) ---
+        // --- NOVA LÓGICA DE COMPLEXIDADE ---
         let COMPRESSION;
-        
         if (complexity === 'high') {
-            // Alta Complexidade: Compressão Conservadora (Revisões mais longas)
-            // 30% -> 20% -> 15%
+            // Alta Complexidade: Compressão suave para conceitos difíceis (30% -> 20% -> 15%)
             COMPRESSION = { 1: 0.30, 7: 0.20, 30: 0.15 };
         } else {
-            // Normal (Padrão): Compressão Agressiva
-            // 20% -> 10% -> 5%
+            // Normal: Compressão padrão agressiva para fatos/lei (20% -> 10% -> 5%)
             COMPRESSION = { 1: 0.20, 7: 0.10, 30: 0.05 };
         }
-        // -----------------------------------------------------
+        // -----------------------------------
 
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
         
-        // LÓGICA DO CICLO PRESERVADA (BLINDADA)
+        // Calcula o índice usando a nova lógica blindada
         const finalCycleIndex = engine.calculateCycleIndex(selectedDateStr);
         
         const newReviews = [];
@@ -85,7 +80,7 @@ const engine = {
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
             const isoDate = getLocalISODate(targetDate); 
             
-            // Aplica a taxa de compressão definida acima (Normal ou Alta)
+            // Aplica a compressão selecionada (Normal ou Alta)
             const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
 
             const existingLoad = store.reviews

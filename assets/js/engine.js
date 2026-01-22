@@ -7,22 +7,25 @@
 
 const engine = {
     
-    // --- Lógica de Numeração Blindada (CORRIGIDO v3) ---
+    // --- Lógica de Numeração Sequencial (Correção: Continuidade Absoluta) ---
     // Agora varre todo o histórico em busca do maior índice, independente de datas.
-    calculateCycleIndex: (targetDateStr) => {
+    calculateCycleIndex: () => {
         let maxIndex = 0;
         
-        // Verifica se há revisões e busca o maior cycleIndex registrado
-        if (store.reviews && store.reviews.length > 0) {
+        // Verifica se o store existe e tem dados carregados
+        if (typeof store !== 'undefined' && store.reviews && store.reviews.length > 0) {
             store.reviews.forEach(r => {
-                const currentIdx = parseInt(r.cycleIndex || 0);
+                // Converte para inteiro (Base 10) garantindo leitura correta
+                const currentIdx = parseInt(r.cycleIndex || 0, 10);
+                
+                // Só considera se for um número válido e maior que o atual máximo encontrado
                 if (!isNaN(currentIdx) && currentIdx > maxIndex) {
                     maxIndex = currentIdx;
                 }
             });
         }
 
-        // Retorna o próximo número da sequência
+        // Retorna sempre o maior número encontrado + 1
         return maxIndex + 1;
     },
 
@@ -51,8 +54,8 @@ const engine = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
         
-        // Calcula o índice usando a nova lógica blindada
-        const finalCycleIndex = engine.calculateCycleIndex(selectedDateStr);
+        // CORREÇÃO: Chama a função sem argumentos para forçar a lógica sequencial (Max + 1)
+        const finalCycleIndex = engine.calculateCycleIndex();
         
         const newReviews = [];
         let blocker = null;

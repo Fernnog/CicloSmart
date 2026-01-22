@@ -73,7 +73,7 @@ input[type="color"]::-webkit-color-swatch {
     font-weight: 700;
 }
 
-/* 5. Lógica de Navegação: Mobile (Abas) vs Desktop (Grid) */
+/* 5. Lógica de Layout Flexível (Painéis Colapsáveis) */
 
 /* Estilo do Botão de Aba Ativo (Mobile) */
 .tab-btn.active {
@@ -82,6 +82,65 @@ input[type="color"]::-webkit-color-swatch {
     background-color: #eef2ff; /* indigo-50 */
 }
 
+/* Transições Suaves de Largura */
+.kanban-col-transition {
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.4s ease;
+    overflow: hidden; /* Esconde conteúdo ao encolher */
+    position: relative;
+}
+
+/* Desktop: Estado Expandido (Largura Fixa Confortável) */
+@media (min-width: 1024px) {
+    .col-expanded {
+        width: 340px; 
+        min-width: 340px;
+    }
+
+    .col-collapsed {
+        width: 48px;
+        min-width: 48px;
+        background-color: #f8fafc;
+        cursor: pointer;
+    }
+    
+    .col-collapsed:hover {
+        background-color: #f1f5f9;
+    }
+
+    /* Esconde conteúdo interno suavemente quando fechado */
+    .col-collapsed .hide-on-collapse {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        width: 340px; /* Mantém largura física para não quebrar layout durante anim */
+    }
+    
+    /* Mostra elementos verticais quando fechado */
+    .col-collapsed .show-on-collapse {
+        display: flex !important;
+        opacity: 1;
+        transition: opacity 0.3s ease 0.2s; /* Delay para aparecer depois de fechar */
+    }
+}
+
+/* Mobile/Tablet Portrait: Ignora colapso (Usa Abas/Grid nativo) */
+@media (max-width: 1023px) {
+    .col-collapsed, .col-expanded {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    .show-on-collapse {
+        display: none !important;
+    }
+}
+
+/* Texto Vertical para Barra Lateral */
+.vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    white-space: nowrap;
+}
 /* --- Estados do Modo Pendular (Ataque/Defesa) --- */
 
 /* Modo Ataque: Tema Vermelho (Alerta/Ação) */

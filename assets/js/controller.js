@@ -50,8 +50,13 @@ const app = {
         // --- VERIFICAÇÃO DE INTEGRIDADE ---
         // Delegado para o Engine
         setTimeout(() => app.checkCycleIntegrity(), 1000);
-    },
 
+        // --- MANUTENÇÃO AUTOMÁTICA DE DADOS (Data Sanitation) ---
+        // Executa limpeza silenciosa de tarefas antigas e checklists obsoletos
+        if (window.engine && engine.runDataSanitation) {
+            setTimeout(() => engine.runDataSanitation(), 2500);
+        }
+    },
     // --- [NOVO MÉTODO] Lógica de Alerta Automático de Pendências ---
     checkPendingTasksOnStartup: () => {
         // Verifica se já rodou nesta sessão (SessionStorage limpa ao fechar aba)

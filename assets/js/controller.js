@@ -343,7 +343,7 @@ const app = {
         if(window.engine) engine.runCycleRepair(mode);
     },
 
-    handleNewEntry: (e) => {
+handleNewEntry: (e) => {
         e.preventDefault();
         const select = document.getElementById('input-subject');
         const subjectName = select.options[select.selectedIndex].text;
@@ -355,6 +355,10 @@ const app = {
         const selectedDateStr = dateInput.value; 
         const todayStr = getLocalISODate();
 
+        // Captura da Complexidade (Novo)
+        const complexityInput = document.querySelector('input[name="complexity"]:checked');
+        const complexity = complexityInput ? complexityInput.value : 'normal';
+
         if (store.profile === 'pendular' && studyTime > 90) {
             return toast.show('O tempo limite para estudo neste modo é 90 minutos.', 'warning', '⚠️ Teto Cognitivo');
         }
@@ -362,7 +366,8 @@ const app = {
             return toast.show('Hoje é consolidação. Agende novos conteúdos a partir de amanhã.', 'error', '🛡️ Escudo Ativo');
         }
 
-        pendingStudyData = { subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target };
+        // Adicionado 'complexity' ao objeto de dados pendentes
+        pendingStudyData = { subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target, complexity };
         let projectedDay = 1;
         
         // DELEGAÇÃO PARA ENGINE (Cálculo)

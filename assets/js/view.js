@@ -573,12 +573,17 @@ const ui = {
 
         const styleConfig = getTypeStyles(review.type);
 
-        const cycleHtml = review.batchId && review.cycleIndex 
+       const cycleHtml = review.batchId && review.cycleIndex 
         ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
         : '';
         
+        // UX Aprimorada: Tooltip com contexto de origem
+        const originText = review.originalDate 
+            ? `Original: ${formatDateDisplay(review.originalDate)}` 
+            : 'Item emprestado';
+
         const tempIndicator = review.isTemporary 
-            ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2" title="Item emprestado. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
+            ? `<span class="text-[9px] bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded font-bold ml-2 cursor-help" title="${originText}. Voltará à origem amanhã se não for feito.">⏳ Extra</span>` 
             : '';
 
         // Botão Checklist

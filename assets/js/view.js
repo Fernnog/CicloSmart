@@ -2,7 +2,7 @@
 /**
  * UI RENDERER (View Layer) - v1.3.4 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Weather Forecast, Busca Rápida e Hard Dependency (Trava de Qualidade).
+ * ATUALIZADO: Correção de Layout Grid (Desktop Fix) + UX Improvements.
  */
 
 const ui = {
@@ -326,7 +326,7 @@ const ui = {
         }
     },
 
-    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADO: Ordenação por Status + View Transitions) ---
+    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADO: Correção de Layout Grid) ---
     render: () => {
         const executeRender = () => {
             const todayStr = getLocalISODate();
@@ -438,22 +438,9 @@ const ui = {
             }
     
             // --- Atualização de Layout & Contadores ---
-            const mainEl = document.getElementById('main-kanban');
-            const colLate = document.getElementById('col-late');
-    
-            if (mainEl && colLate) {
-                mainEl.classList.remove('md:grid-cols-3', 'md:grid-cols-2');
-    
-                if (counts.late === 0) {
-                    colLate.classList.remove('md:flex');
-                    colLate.classList.add('md:hidden');
-                    mainEl.classList.add('md:grid-cols-2');
-                } else {
-                    colLate.classList.remove('md:hidden');
-                    colLate.classList.add('md:flex');
-                    mainEl.classList.add('md:grid-cols-3');
-                }
-            }
+            
+            // CORREÇÃO: Removemos a lógica antiga que alterava classes do "mainEl" via JS.
+            // O layout agora é controlado exclusivamente pelo HTML (lg:grid-cols-3).
          
             ['late', 'today', 'future'].forEach(key => {
                 const countEl = document.getElementById(`count-${key}`);
@@ -466,12 +453,17 @@ const ui = {
             // --- EMPTY STATES & CELEBRAÇÃO ---
             
             if(!counts.late) {
+                // UX Improvement: Botão de ação útil
                 containers.late.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-8 text-emerald-500/80">
                         <div class="bg-emerald-50 p-2 rounded-full mb-2">
                             <i data-lucide="shield-check" class="w-5 h-5"></i>
                         </div>
-                        <span class="text-xs font-bold">Sem Atrasos</span>
+                        <span class="text-xs font-bold mb-2">Sem Atrasos</span>
+                        
+                        <button onclick="ui.openHeatmapModal()" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 hover:bg-emerald-100 transition-colors">
+                            Ver Histórico no Radar
+                        </button>
                     </div>`;
             }
     
@@ -651,7 +643,6 @@ const ui = {
                     </div>
                     
                     <div class="flex flex-col items-end gap-2 pl-2 ${checkboxWrapperClass}">
-                        <!-- Checkbox Principal com Trava de Segurança -->
                         <input type="checkbox" 
                             onclick="app.handleStatusToggle('${review.id}', this)" 
                             ${isDone ? 'checked' : ''} 

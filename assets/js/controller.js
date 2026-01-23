@@ -666,33 +666,55 @@ const app = {
     // --- NOVO: Lógica de Agendamento Elástico (Drag & Drop Kanban) ---
     // --- ATUALIZADO V1.2.4: ID Robustness, UX & Undo ---
 
+    
     // 1. Verifica e devolve itens emprestados não concluídos (Roda ao iniciar)
+    // ATUALIZADO v1.3.5: Inclui sanitização, defesa contra dados corrompidos e limpeza de UI
     checkTemporaryReversions: () => {
         const today = getLocalISODate();
-        let revertedCount = 0;
+        let changeCount = 0;
 
         store.reviews.forEach(r => {
-            // Se é temporário, está pendente, e a data "emprestada" já passou
+            // CENÁRIO 1: Reversão Padrão (Estudo "Extra" que venceu ontem)
             if (r.isTemporary && r.status === 'PENDING' && r.date < today) {
-                // Restaura a data original e remove as marcas
-                r.date = r.originalDate;
+                // DEFESA (Arquitetura): Verifica se originalDate existe antes de mover
+                if (r.originalDate) {
+                    r.date = r.originalDate; 
+                } else {
+                    // Fallback: Se perdeu a origem, mantém onde está (vira atrasado comum) para não sumir
+                    console.warn(`[CicloSmart] Data original perdida para o card ${r.id}. Mantendo como atrasado.`);
+                }
+                
+                // Limpa as marcas (agora é um card comum, seja na origem ou como atrasado)
                 delete r.originalDate;
                 delete r.isTemporary;
-                revertedCount++;
+                changeCount++;
             }
-            // Se o item foi concluído (DONE), limpamos as marcas para ele ficar onde está permanentemente
+            
+            // CENÁRIO 2: Limpeza pós-conclusão
             else if (r.isTemporary && r.status === 'DONE') {
                 delete r.originalDate;
                 delete r.isTemporary;
+                store.save(); // Salva silenciosamente
+            }
+            
+            // CENÁRIO 3: Higiene Visual (Bug Fix)
+            // Se diz ser temporário, mas NÃO é hoje (e não caiu no cenário 1), é um erro visual.
+            else if (r.isTemporary && r.date !== today) {
+                delete r.originalDate;
+                delete r.isTemporary;
+                changeCount++;
             }
         });
 
-        if (revertedCount > 0) {
+        if (changeCount > 0) {
             store.save();
-            // Pequeno delay para garantir que o Toast apareça após renderizar
-            setTimeout(() => toast.show(`${revertedCount} estudos extras retornaram à data original.`, 'info', '↺ Agenda Restaurada'), 1000);
+            setTimeout(() => {
+                ui.render(); // Atualiza a tela para remover os selos imediatamente
+                toast.show(`${changeCount} estudos reorganizados.`, 'info', '✨ Agenda Higienizada');
+            }, 500);
         }
     },
+ 
 
     // 2. Início do Arraste no Kanban
     handleKanbanDragStart: (e, id) => {

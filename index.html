@@ -255,12 +255,12 @@
     </main>
 
     <div id="modal-new" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-all" aria-hidden="true">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all">
-            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <h3 class="text-lg font-bold text-slate-800">Registrar Estudo</h3>
                 <button onclick="ui.toggleModal('modal-new', false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form id="form-study" class="p-6 space-y-5">
+            <form id="form-study" class="p-6 space-y-5 overflow-y-auto custom-scroll">
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Matéria / Disciplina</label>
                     <div class="relative">
@@ -309,6 +309,17 @@
                     <p class="text-[10px] text-slate-400 mt-1">
                         *O tempo das revisões será ajustado conforme a complexidade escolhida.
                     </p>
+                </div>
+
+                <!-- NOVO INPUT: Link do Material -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">
+                        Link do Material (Drive/Notion) <span class="text-[10px] text-slate-400 font-normal normal-case">(Opcional)</span>
+                    </label>
+                    <div class="relative">
+                        <input type="url" id="input-study-link" placeholder="https://..." class="w-full border border-slate-300 rounded-lg p-3 pr-10 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+                        <i data-lucide="link" class="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                    </div>
                 </div>
 
                 <div class="pt-2 flex gap-3">

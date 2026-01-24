@@ -346,6 +346,25 @@ const store = {
         }
     },
 
+    // --- NOVO: Atualização de Links Externos (Drive/Notion) ---
+    updateReviewLink: (id, link) => {
+        const r = store.reviews.find(item => item.id === id);
+        if (r) {
+            if (r.batchId) {
+                // Atualiza em lote para manter consistência no ciclo
+                store.reviews.forEach(item => {
+                    if (item.batchId === r.batchId) item.link = link;
+                });
+                toast.show('Link atualizado para todo o ciclo!', 'success');
+            } else {
+                r.link = link;
+                toast.show('Link salvo.', 'success');
+            }
+            store.save();
+            if (typeof ui !== 'undefined') ui.render();
+        }
+    },
+
     updateBatchTopic: (batchId, newTopic) => {
         let count = 0;
         store.reviews.forEach(r => {

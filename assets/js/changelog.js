@@ -1,9 +1,20 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
 const changelogData = [
+    const changelogData = [
+    {
+        version: '1.3.4',
+        date: '27/01/2025',
+        changes: [
+            '✨ <b>Hub de Conhecimento:</b> Novo campo para vincular links (Google Drive, Notion, PDF) diretamente no formulário de novos estudos.',
+            '🔄 <b>Sincronização de Links:</b> Lógica inteligente que replica o link do material para todas as revisões do mesmo ciclo (Batch Update).',
+            '📱 <b>UX Mobile:</b> O modal de cadastro agora possui rolagem interna automática para acomodar novos campos sem quebrar o layout em telas menores.',
+            '🛠️ <b>Infraestrutura:</b> Atualização no Core para persistência e validação de URLs externas.'
+        ]
+    },
     {
         version: '1.3.3',
-        date: 'Hoje',
+        date: '20/01/2025',
         changes: [
             '🧠 <strong>Fator de Complexidade Cognitiva:</strong> Novo seletor ao criar estudos! Escolha entre <strong>"Normal"</strong> (Fatos/Lei) ou <strong>"Alta"</strong> (Conceitual). O algoritmo SRS agora ajusta a compressão do tempo: tópicos complexos mantêm revisões mais longas (mínimo de 15% do tempo original) para garantir a reconsolidação neural profunda.',
             '🛡️ <strong>Prevenção de Ilusão de Competência:</strong> Seguindo diretrizes neurocientíficas, evitamos que revisões de assuntos difíceis se tornem curtas demais (ex: 3 min), o que gerava falsa sensação de domínio sobre o conteúdo.',

@@ -2,7 +2,7 @@
 /**
  * UI RENDERER (View Layer) - v1.3.4 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Correção de Layout Grid (Desktop Fix) + UX Improvements.
+ * ATUALIZADO: Correção de Layout Grid (Desktop Fix) + UX Improvements + Smart Copy & Links.
  */
 
 const ui = {
@@ -598,13 +598,6 @@ const ui = {
             checkBtnClass += " text-slate-300 hover:text-indigo-600 border border-transparent";
         }
 
-        // Lógica de Link/Drive
-        const hasLink = review.link && review.link.length > 5;
-        const driveIconClass = hasLink 
-            ? "text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100" 
-            : "text-slate-300 bg-slate-50 border-transparent hover:text-blue-500 hover:border-blue-200";
-        const driveTitle = hasLink ? 'Abrir Material' : 'Vincular Material (Drive)';
-
         // Barra de Progresso
         const subtasks = review.subtasks || [];
         const totalSub = subtasks.length;
@@ -622,6 +615,16 @@ const ui = {
                 <span class="text-[9px] font-bold text-slate-400">${doneSub}/${totalSub}</span>
             </div>
         ` : '';
+
+        // --- NOVA LÓGICA DE BOTÃO LINK/DRIVE ---
+        const hasLink = review.link && review.link.length > 5;
+        const driveIconClass = hasLink 
+            ? "text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100" // Tem link (Ativo)
+            : "text-slate-300 bg-slate-50 border-transparent hover:text-blue-500 hover:border-blue-200"; // Sem link (Inativo/Add)
+        
+        const driveIcon = hasLink ? 'hard-drive' : 'plus-circle'; // Ícone muda visualmente (embora ambos usem lucide icons)
+        // Nota: O ícone é definido no data-lucide abaixo
+        const driveTitle = hasLink ? 'Abrir Material' : 'Vincular Material (Drive)';
 
         // Adicionado style para View Transitions
         return `
@@ -650,7 +653,8 @@ const ui = {
                                 </span>
                                 ${cycleHtml}
                                 ${tempIndicator}
-                                
+
+                                <!-- BOTÃO DRIVE/LINK -->
                                 <button onclick="app.handleLinkAction('${review.id}', '${review.link || ''}')"
                                         class="w-6 h-6 flex items-center justify-center rounded-full border text-[10px] transition-all ${driveIconClass}" 
                                         title="${driveTitle}">
@@ -805,23 +809,26 @@ const ui = {
             `;
         }).join('');
 
-        // ATUALIZAÇÃO v1.4.0: Adicionado botão de Cópia Inteligente ao lado do fechar
+        // --- ATUALIZAÇÃO: CABEÇALHO COM BOTÃO DE COPIAR ---
         popover.innerHTML = `
             <div class="mb-3 border-b border-slate-100 pb-2">
                 <div class="flex justify-between items-start">
                     <div>
                         <div class="text-[10px] uppercase font-bold text-slate-400">Ciclo #${family[0].cycleIndex}</div>
-                        <div class="text-sm font-bold text-indigo-700 leading-tight">${subjectName}</div>
+                        <div class="text-sm font-bold text-indigo-700 leading-tight pr-2">${subjectName}</div>
                     </div>
-                    <div class="flex gap-2">
-                        <!-- Botão de Copiar (Smart Copy) -->
+                    
+                    <div class="flex items-center gap-1">
+                        <!-- BOTÃO DE COPIAR (NOVO) -->
                         <button onclick="app.copyStudyInfo('${family[0].cycleIndex}', '${family[0].topic.replace(/'/g, "\\'")}')" 
-                                class="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-indigo-100 hover:text-indigo-600 transition-colors" title="Copiar ID e Tópico">
+                                class="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-indigo-100 hover:text-indigo-600 transition-colors flex items-center justify-center h-8 w-8" 
+                                title="Copiar: #${family[0].cycleIndex} - Tópico">
                             <i data-lucide="copy" class="w-4 h-4"></i>
                         </button>
-
+                        
+                        <!-- BOTÃO FECHAR -->
                         <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
-                            class="text-slate-400 hover:text-slate-600 font-bold p-1">✕</button>
+                            class="text-slate-300 hover:text-red-500 font-bold p-1.5 h-8 w-8 flex items-center justify-center transition-colors">✕</button>
                     </div>
                 </div>
                 <div class="text-xs text-slate-500 truncate mt-1 italic">"${family[0].topic}"</div>
@@ -839,6 +846,9 @@ const ui = {
 
         backdrop.classList.add('visible');
         popover.classList.add('visible');
+        
+        // Garante que o ícone de copiar (lucide) seja renderizado
+        if(window.lucide) lucide.createIcons();
     },
 
     updateCapacityStats: (todayMinutes) => {

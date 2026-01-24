@@ -1,6 +1,6 @@
 # 🧠 CicloSmart | Plataforma de Estratégia de Estudos (Neuro-SRS)
 
-![Version](https://img.shields.io/badge/Versão-1.2.0-blue?style=for-the-badge&logo=git)
+![Version](https://img.shields.io/badge/Versão-1.3.4-blue?style=for-the-badge&logo=git)
 ![Status](https://img.shields.io/badge/Status-Produção-success?style=for-the-badge)
 ![Tech](https://img.shields.io/badge/Stack-VanillaJS%20%7C%20Tailwind%20%7C%20Firebase-orange?style=for-the-badge)
 ![Methodology](https://img.shields.io/badge/Método-Fluxo%20Anti--Bola%20de%20Neve-purple?style=for-the-badge)

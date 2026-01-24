@@ -363,6 +363,9 @@ const app = {
         const complexityInput = document.querySelector('input[name="complexity"]:checked');
         const complexity = complexityInput ? complexityInput.value : 'normal';
 
+        // [NOVO] 2.1 Captura do Link de Material
+        const link = document.getElementById('input-study-link')?.value || '';
+
         // 3. Validações de UI (Perfil Pendular)
         if (store.profile === 'pendular' && studyTime > 90) {
             return toast.show('O tempo limite para estudo neste modo é 90 minutos.', 'warning', '⚠️ Teto Cognitivo');
@@ -371,8 +374,8 @@ const app = {
             return toast.show('Hoje é consolidação. Agende novos conteúdos a partir de amanhã.', 'error', '🛡️ Escudo Ativo');
         }
 
-        // 4. Prepara objeto temporário (Incluindo complexity)
-        pendingStudyData = { subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target, complexity };
+        // 4. Prepara objeto temporário (Incluindo complexity e link)
+        pendingStudyData = { subjectName, subjectColor, topic, studyTime, selectedDateStr, eTarget: e.target, complexity, link };
         
         // 5. CÁLCULO DO CICLO (Com Logs de Recebimento)
         let projectedDay = 1;

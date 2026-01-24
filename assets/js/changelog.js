@@ -1,6 +1,6 @@
 /* --- START OF FILE assets/js/changelog.js --- */
 
-const changelogData = [
+
     const changelogData = [
     {
         version: '1.3.4',

@@ -55,7 +55,8 @@ const engine = {
     // --- Algoritmo SRS (Criação de Cards) ---
     processStudyEntry: (data) => {
         // Recebe 'complexity' para definir o tempo das revisões (Funcionalidade v1.3.3)
-        const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity } = data;
+        // Recebe 'link' para Integração com Drive/Notion (Funcionalidade v1.4.0)
+        const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity, link } = data;
         
         const baseDate = new Date(selectedDateStr + 'T12:00:00'); 
         const batchId = Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -91,7 +92,8 @@ const engine = {
             id: generateUUID(), 
             subject: subjectName, color: subjectColor, topic: topic, time: studyTime,
             date: selectedDateStr, type: 'NOVO', status: 'PENDING',
-            cycleIndex: finalCycleIndex, batchId: batchId 
+            cycleIndex: finalCycleIndex, batchId: batchId,
+            link: link || null // Persistência do Link Externo
         };
         newReviews.push(acquisitionEntry);
 
@@ -125,7 +127,8 @@ const engine = {
                 id: generateUUID(),
                 subject: subjectName, color: subjectColor, topic: topic, time: estimatedTime,
                 date: isoDate, type: typeLabel, status: 'PENDING',
-                cycleIndex: finalCycleIndex, batchId: batchId 
+                cycleIndex: finalCycleIndex, batchId: batchId,
+                link: link || null // Persistência do Link Externo nas revisões
             });
         }
 

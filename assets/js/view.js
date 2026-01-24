@@ -598,6 +598,13 @@ const ui = {
             checkBtnClass += " text-slate-300 hover:text-indigo-600 border border-transparent";
         }
 
+        // Lógica de Link/Drive
+        const hasLink = review.link && review.link.length > 5;
+        const driveIconClass = hasLink 
+            ? "text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100" 
+            : "text-slate-300 bg-slate-50 border-transparent hover:text-blue-500 hover:border-blue-200";
+        const driveTitle = hasLink ? 'Abrir Material' : 'Vincular Material (Drive)';
+
         // Barra de Progresso
         const subtasks = review.subtasks || [];
         const totalSub = subtasks.length;
@@ -643,6 +650,12 @@ const ui = {
                                 </span>
                                 ${cycleHtml}
                                 ${tempIndicator}
+                                
+                                <button onclick="app.handleLinkAction('${review.id}', '${review.link || ''}')"
+                                        class="w-6 h-6 flex items-center justify-center rounded-full border text-[10px] transition-all ${driveIconClass}" 
+                                        title="${driveTitle}">
+                                    <i data-lucide="${hasLink ? 'hard-drive' : 'link'}" class="w-3 h-3"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -792,6 +805,7 @@ const ui = {
             `;
         }).join('');
 
+        // ATUALIZAÇÃO v1.4.0: Adicionado botão de Cópia Inteligente ao lado do fechar
         popover.innerHTML = `
             <div class="mb-3 border-b border-slate-100 pb-2">
                 <div class="flex justify-between items-start">
@@ -799,9 +813,17 @@ const ui = {
                         <div class="text-[10px] uppercase font-bold text-slate-400">Ciclo #${family[0].cycleIndex}</div>
                         <div class="text-sm font-bold text-indigo-700 leading-tight">${subjectName}</div>
                     </div>
-                    <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
-                        class="text-slate-400 hover:text-slate-600 font-bold p-1">✕</button>
+                    <div class="flex gap-2">
+                        <!-- Botão de Copiar (Smart Copy) -->
+                        <button onclick="app.copyStudyInfo('${family[0].cycleIndex}', '${family[0].topic.replace(/'/g, "\\'")}')" 
+                                class="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-indigo-100 hover:text-indigo-600 transition-colors" title="Copiar ID e Tópico">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+
+                        <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
+                            class="text-slate-400 hover:text-slate-600 font-bold p-1">✕</button>
                     </div>
+                </div>
                 <div class="text-xs text-slate-500 truncate mt-1 italic">"${family[0].topic}"</div>
             </div>
             

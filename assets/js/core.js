@@ -484,16 +484,8 @@ const store = {
 // 3. TASK MANAGER (ATUALIZADO: Reatividade & Agrupamento Inteligente)
 // ==========================================
 
-const taskManager = {
-    // ESTADO PARA TOGGLE DE HISTÓRICO
-    showHistory: false,
-
-    toggleHistory: () => {
-        taskManager.showHistory = !taskManager.showHistory;
-        taskManager.renderLinkedTasks();
-    },
-
-    openModal: () => {
+openModal: () => {
+        // 1. Prepara o conteúdo do Select (Dados)
         const select = document.getElementById('task-subject');
         if(select) {
             select.innerHTML = store.subjects.map(s => 
@@ -501,16 +493,22 @@ const taskManager = {
             ).join('');
         }
         
-        // Garante estado limpo ao abrir
+        // 2. Limpa o estado da UI ANTES de tudo (Previne o Flash)
         taskManager.cancelEdit();
-        // Render já é garantido pelo subscribe, mas forçamos aqui para garantir atualização de selects
-        taskManager.render();
-
-        // NOVO: Garante estado inicial correto da central
         taskManager.switchTab('general');
         taskManager.toggleForm(false);
         
-        if (typeof ui !== 'undefined') ui.toggleModal('modal-tasks', true);
+        // 3. Força a renderização "limpa" dos dados internos
+        taskManager.render();
+
+        // 4. Exibe o modal visualmente apenas após a limpeza
+        if (typeof ui !== 'undefined') {
+            // requestAnimationFrame garante que o navegador processou a limpeza acima
+            // antes de pintar o modal na tela, eliminando o "flicker".
+            requestAnimationFrame(() => {
+                ui.toggleModal('modal-tasks', true);
+            });
+        }
     },
 
     // Gerencia o Submit (Criar ou Editar)

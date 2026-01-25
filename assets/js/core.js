@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE (v1.3.0 - Unified Logic)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Correção de Persistência de Status (Toggle Fix) e Type Safety.
+ * ATUALIZADO: Correção de IDs (Aspas), Feedback Visual de Tarefas e Type Safety.
  */
 
 // ==========================================
@@ -439,7 +439,8 @@ const store = {
     toggleSubtask: (reviewId, subtaskId) => {
         const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
-            const task = r.subtasks.find(t => t.id === subtaskId);
+            // Priority 1: Garantir que a comparação de ID da subtarefa seja robusta
+            const task = r.subtasks.find(t => t.id.toString() === subtaskId.toString());
             if (task) {
                 task.done = !task.done;
                 store.save();
@@ -450,16 +451,32 @@ const store = {
     removeSubtask: (reviewId, subtaskId) => {
         const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
-            r.subtasks = r.subtasks.filter(t => t.id !== subtaskId);
+            r.subtasks = r.subtasks.filter(t => t.id.toString() !== subtaskId.toString());
             store.save();
         }
     },
 
-    // --- Métodos de Tarefas ---
+    // --- Métodos de Tarefas Gerais (Refatorado para Priority 3) ---
+    
+    // NOVO: Alterna o status 'done' sem excluir
+    toggleTaskStatus: (id) => {
+        const task = store.tasks.find(t => t.id.toString() === id.toString());
+        if (task) {
+            // Inicializa a propriedade se não existir (Legacy support)
+            if (typeof task.done === 'undefined') task.done = false;
+            
+            task.done = !task.done;
+            store.save();
+        }
+    },
+
+    // Exclusão Definitiva
     removeTask: (id) => {
-        store.tasks = store.tasks.filter(t => t.id !== id);
-        // O store.save() agora dispara o notify(), que chamará taskManager.render() automaticamente.
-        store.save();
+        if (confirm("Tem certeza que deseja excluir esta tarefa permanentemente?")) {
+            store.tasks = store.tasks.filter(t => t.id.toString() !== id.toString());
+            // O store.save() agora dispara o notify(), que chamará taskManager.render() automaticamente.
+            store.save();
+        }
     }
 };
 
@@ -502,7 +519,8 @@ const taskManager = {
         const idEditing = document.getElementById('task-id-editing')?.value;
         
         if (idEditing) {
-            taskManager.updateTask(parseInt(idEditing));
+            // Priority 2: Type Safety - ID já vem como string do input hidden
+            taskManager.updateTask(idEditing);
         } else {
             taskManager.addTask();
         }
@@ -515,13 +533,14 @@ const taskManager = {
         const date = document.getElementById('task-date').value;
         const obs = document.getElementById('task-obs').value;
 
-        // Priority 3: Padronização de ID para String (Type Safety)
+        // Priority 2 & 3: Padronização de ID para String e Estado Inicial 'done: false'
         store.tasks.push({
             id: Date.now().toString(),
             subjectId,
             subCategory,
             date,
-            obs
+            obs,
+            done: false // Novo campo para suporte a soft delete (Priority 3)
         });
         
         // Dispara notify(), que atualizará a lista e badges
@@ -536,7 +555,8 @@ const taskManager = {
 
     // Atualizar Tarefa Existente
     updateTask: (id) => {
-        const taskIndex = store.tasks.findIndex(t => t.id === id);
+        // Priority 2: Comparação segura de Strings
+        const taskIndex = store.tasks.findIndex(t => t.id.toString() === id.toString());
         if (taskIndex > -1) {
             store.tasks[taskIndex].subjectId = document.getElementById('task-subject').value;
             store.tasks[taskIndex].subCategory = document.getElementById('task-subcategory').value;
@@ -554,7 +574,7 @@ const taskManager = {
 
     // Iniciar Edição
     startEdit: (id) => {
-        const task = store.tasks.find(t => t.id === id);
+        const task = store.tasks.find(t => t.id.toString() === id.toString());
         if (!task) return;
 
         // Preenche campos
@@ -600,8 +620,8 @@ const taskManager = {
     checkOverdue: () => {
         const today = getLocalISODate();
         
-        // 1. Tarefas Gerais Atrasadas
-        const generalLateCount = store.tasks.filter(t => t.date < today).length;
+        // 1. Tarefas Gerais Atrasadas e NÃO Concluídas
+        const generalLateCount = store.tasks.filter(t => t.date < today && !t.done).length;
         
         // 2. [NOVO] Checklists de Estudo Pendentes (Soma total de subtarefas não feitas)
         const studyPendingCount = store.reviews.reduce((total, review) => {
@@ -613,7 +633,7 @@ const taskManager = {
         const totalAlerts = generalLateCount + studyPendingCount;
         
         // Tarefas Gerais "Em dia" (Badge Verde)
-        const okCount = store.tasks.filter(t => t.date >= today).length;
+        const okCount = store.tasks.filter(t => t.date >= today && !t.done).length;
     
         const badgeLate = document.getElementById('badge-task-late');
         const badgeOk = document.getElementById('badge-task-ok');
@@ -753,7 +773,8 @@ const taskManager = {
             // Gera HTML das subtarefas
             const tasksHtml = r.subtasks.map(t => `
                 <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors">
-                    <input type="checkbox" onchange="store.toggleSubtask('${r.id}', ${t.id}); taskManager.renderLinkedTasks();" 
+                    <!-- CORREÇÃO PRIORIDADE 1: Aspas adicionadas em '${t.id}' para proteger o ID numérico grande -->
+                    <input type="checkbox" onchange="store.toggleSubtask('${r.id}', '${t.id}'); taskManager.renderLinkedTasks();" 
                            ${t.done ? 'checked' : ''} 
                            class="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                     <span class="text-xs text-slate-600 ${t.done ? 'line-through text-slate-300' : ''}">${t.text}</span>
@@ -789,6 +810,10 @@ const taskManager = {
         const container = document.getElementById('task-list-container');
         if (!container) return;
 
+        // Filtra apenas as pendentes, a menos que tenhamos uma flag para mostrar concluídas (Futuro)
+        // Por hora, Priority 3 pede para NÃO excluir imediatamente.
+        // Vamos mostrar todas, mas jogar as 'done' para o fim ou estilizá-las diferente.
+        
         if (store.tasks.length === 0) {
             container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">Nenhuma tarefa pendente.</div>`;
             return;
@@ -796,7 +821,10 @@ const taskManager = {
 
         const today = getLocalISODate();
 
-        // 1. Separação dos Grupos
+        // 1. Separação dos Grupos (Considerando o estado 'done')
+        // Tarefas concluídas não entram em "Atrasados" ou "Foco Hoje", podem ir para um grupo separado ou ficar no fundo.
+        // Decisão de Design: Manter nos grupos originais para contexto, mas com visual riscado.
+        
         const late = store.tasks.filter(t => t.date < today).sort((a,b) => a.date.localeCompare(b.date));
         const present = store.tasks.filter(t => t.date === today);
         const future = store.tasks.filter(t => t.date > today).sort((a,b) => a.date.localeCompare(b.date));
@@ -809,13 +837,21 @@ const taskManager = {
                 const subject = store.subjects.find(s => s.id === t.subjectId) || { name: 'Geral', color: '#cbd5e1' };
                 const textColor = getContrastYIQ(subject.color);
                 const isLate = t.date < today;
+                const isDone = t.done || false;
+                
+                // Estilização baseada em conclusão (Priority 3)
+                const opacityClass = isDone ? 'opacity-50 grayscale' : '';
+                const textDecoration = isDone ? 'line-through' : '';
                 
                 return `
-                <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2" 
+                <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2 ${opacityClass}" 
                      style="background-color: ${subject.color}; color: ${textColor}">
                     
                     <div class="mt-1">
-                        <input type="checkbox" onclick="store.removeTask(${t.id})" 
+                        <!-- PRIORITY 3: Checkbox agora alterna status, não exclui -->
+                        <!-- PRIORITY 1: Aspas adicionadas em '${t.id}' -->
+                        <input type="checkbox" onclick="store.toggleTaskStatus('${t.id}')" 
+                               ${isDone ? 'checked' : ''}
                                class="cursor-pointer w-4 h-4 rounded border-2 border-current opacity-60 hover:opacity-100 accent-current">
                     </div>
                     
@@ -824,20 +860,29 @@ const taskManager = {
                             <span class="text-[10px] uppercase font-bold opacity-80 tracking-wider border border-current px-1 rounded">
                                 ${subject.name}
                             </span>
-                            <button onclick="taskManager.startEdit(${t.id})" class="opacity-70 hover:opacity-100 transition-all ml-2" title="Editar">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                            </button>
+                            
+                            <div class="flex gap-2">
+                                <!-- PRIORITY 1: Aspas adicionadas em '${t.id}' -->
+                                <button onclick="taskManager.startEdit('${t.id}')" class="opacity-70 hover:opacity-100 transition-all" title="Editar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                                </button>
+
+                                <!-- PRIORITY 3: Botão de Exclusão Definitiva (Lixeira) -->
+                                <button onclick="store.removeTask('${t.id}')" class="opacity-70 hover:opacity-100 hover:text-red-800 transition-all" title="Excluir Definitivamente">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="flex items-center gap-1 mt-1">
-                            <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate ? 'text-red-600' : ''}">
+                            <span class="text-[10px] font-bold opacity-90 flex items-center gap-1 ${isLate && !isDone ? 'text-red-600' : ''}">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                                 ${getFriendlyDate(t.date)}
                             </span>
                         </div>
                         
-                        <h4 class="font-bold text-sm leading-tight mt-1 truncate">${t.subCategory}</h4>
-                        ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words">${t.obs}</p>` : ''}
+                        <h4 class="font-bold text-sm leading-tight mt-1 truncate ${textDecoration}">${t.subCategory}</h4>
+                        ${t.obs ? `<p class="text-[11px] opacity-80 mt-1 leading-snug break-words ${textDecoration}">${t.obs}</p>` : ''}
                     </div>
                 </div>`;
             }).join('');

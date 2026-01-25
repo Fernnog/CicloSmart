@@ -436,10 +436,12 @@ const store = {
         }
     },
 
+    // --- CORREÇÃO DE TIPOS: String vs Number ---
     toggleSubtask: (reviewId, subtaskId) => {
         const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
-            const task = r.subtasks.find(t => t.id === subtaskId);
+            // Conversão robusta para String para garantir que IDs numéricos e strings sejam comparáveis
+            const task = r.subtasks.find(t => t.id.toString() === subtaskId.toString());
             if (task) {
                 task.done = !task.done;
                 store.save();
@@ -447,10 +449,12 @@ const store = {
         }
     },
 
+    // --- CORREÇÃO DE TIPOS: String vs Number ---
     removeSubtask: (reviewId, subtaskId) => {
         const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
-            r.subtasks = r.subtasks.filter(t => t.id !== subtaskId);
+            // Conversão robusta para String no filtro
+            r.subtasks = r.subtasks.filter(t => t.id.toString() !== subtaskId.toString());
             store.save();
         }
     },
@@ -476,6 +480,7 @@ const taskManager = {
         taskManager.renderLinkedTasks();
     },
 
+    // --- CORREÇÃO: "Flicker" (Flash) Visual ---
     openModal: () => {
         // 1. Prepara o conteúdo do Select (Dados)
         const select = document.getElementById('task-subject');
@@ -758,7 +763,7 @@ const taskManager = {
 
         container.innerHTML = reviewsWithTasks.map(r => {
             // Gera HTML das subtarefas
-            // CORREÇÃO APLICADA: Aspas adicionadas em '${t.id}'
+            // CORREÇÃO: Aspas adicionadas em '${t.id}'
             const tasksHtml = r.subtasks.map(t => `
                 <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors">
                     <input type="checkbox" onchange="store.toggleSubtask('${r.id}', '${t.id}'); taskManager.renderLinkedTasks();" 
@@ -818,7 +823,7 @@ const taskManager = {
                 const textColor = getContrastYIQ(subject.color);
                 const isLate = t.date < today;
                 
-                // CORREÇÃO APLICADA: Aspas adicionadas em '${t.id}' nos onclicks
+                // CORREÇÃO: Aspas adicionadas em '${t.id}' nos onclicks
                 return `
                 <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2" 
                      style="background-color: ${subject.color}; color: ${textColor}">

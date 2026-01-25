@@ -971,6 +971,48 @@ const app = {
         }
     },
 
+    // --- [NOVO] Lógica Dual do Link (Cenário A/B) com Proteção Mobile ---
+    handleLinkAction: (id, currentLink) => {
+        // [Crítico para Mobile] Impede que o toque inicie o "arrastar" do cartão
+        // O 'event' é global no contexto do onclick inline
+        if (typeof event !== 'undefined') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        // Cenário B: Link já existe -> Abrir
+        // Verificamos se não é nulo, undefined ou string "null"
+        if (currentLink && currentLink !== 'null' && currentLink !== 'undefined' && currentLink.length > 5) {
+            window.open(currentLink, '_blank', 'noopener,noreferrer');
+        } 
+        // Cenário A: Link vazio -> Cadastrar (Prompt)
+        else {
+            const newLink = prompt("Insira o link do material (Drive/Notion/PDF):");
+            if (newLink && newLink.trim().length > 0) {
+                // Chama o Core para atualizar todos os cards do ciclo
+                store.updateReviewLink(id, newLink.trim());
+            }
+        }
+    },
+
+    // --- [NOVO] Funcionalidade de Cópia Inteligente ---
+    copyStudyInfo: (cycleIndex, topic) => {
+        if (typeof event !== 'undefined') {
+            event.preventDefault(); 
+            event.stopPropagation();
+        }
+
+        const textToCopy = `#${cycleIndex} - ${topic}`;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => toast.show(`Copiado: ${textToCopy}`, 'success', '📋 Área de Transferência'))
+                .catch(err => toast.show('Erro ao copiar automaticamente.', 'error'));
+        } else {
+            prompt("Copie o texto abaixo:", textToCopy);
+        }
+    },
+
     // --- NOVA FUNCIONALIDADE: DEEP LINKING (Navegação Direta) ---
     locateAndHighlight: (id) => {
         // 1. Fecha o modal de tarefas

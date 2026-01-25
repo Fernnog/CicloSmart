@@ -720,12 +720,17 @@ const ui = {
 
                 return `
                 <div class="subtask-item flex items-center gap-3 p-2 rounded border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50">
-                    <input type="checkbox" onchange="app.handleToggleSubtask(${t.id})" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0">
+                    <!-- CORREÇÃO PRIORIDADE 1: Aspas adicionadas em '${t.id}' para proteger o ID numérico grande -->
+                    <input type="checkbox" onchange="app.handleToggleSubtask('${t.id}')" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0">
+                    
                     <span class="flex-1 text-xs text-slate-700 font-medium break-words flex items-center ${t.done ? 'line-through text-slate-400' : ''}">
                         ${t.text}
                         ${recurrentIcon}
                     </span>
-                    <button onclick="app.handleDeleteSubtask(${t.id})" class="text-slate-300 hover:text-red-500 p-1 shrink-0"><i data-lucide="x" class="w-3 h-3"></i></button>
+                    
+                    <!-- CORREÇÃO PRIORIDADE 1: Aspas adicionadas em '${t.id}' -->
+                    <!-- MELHORIA UX: Atributo title adicionado -->
+                    <button onclick="app.handleDeleteSubtask('${t.id}')" class="text-slate-300 hover:text-red-500 p-1 shrink-0" title="Excluir item"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </div>
             `}).join('');
         }

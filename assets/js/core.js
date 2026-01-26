@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE (v1.3.0 - Unified Logic)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Correção de Persistência de Status (Toggle Fix) e Type Safety.
+ * ATUALIZADO: Implementação de Edição Avançada (Update Full) e Arquivamento de Matérias.
  */
 
 // ==========================================
@@ -294,7 +294,7 @@ const store = {
 
     // --- Métodos de Matérias ---
     addSubject: (name, color) => {
-        store.subjects.push({ id: 'sub-' + Date.now(), name, color });
+        store.subjects.push({ id: 'sub-' + Date.now(), name, color, archived: false });
         store.save();
         if (typeof ui !== 'undefined' && ui.initSubjects) ui.initSubjects(); 
     },
@@ -302,6 +302,17 @@ const store = {
     removeSubject: (id) => {
         if(confirm("Deseja remover esta matéria? (Cards existentes manterão a cor antiga)")) {
             store.subjects = store.subjects.filter(s => s.id !== id);
+            store.save();
+            if (typeof ui !== 'undefined' && ui.initSubjects) ui.initSubjects();
+        }
+    },
+
+    // [NOVO] Método para Arquivar/Desarquivar Matéria (Prioridade 2)
+    toggleSubjectArchived: (id) => {
+        const sub = store.subjects.find(s => s.id === id);
+        if (sub) {
+            // Se 'archived' não existe, assume false (ativo). Inverte o valor.
+            sub.archived = !sub.archived;
             store.save();
             if (typeof ui !== 'undefined' && ui.initSubjects) ui.initSubjects();
         }
@@ -336,13 +347,48 @@ const store = {
         }
     },
 
-    updateReview: (id, newTopic, newTime) => {
-        const r = store.reviews.find(r => r.id === id);
-        if (r) {
+    // [ATUALIZADO] Método Completo de Edição (Prioridade 1)
+    // Substitui o antigo updateReview simples para suportar troca de matéria, cor e link
+    updateReviewFull: (id, data) => {
+        const { newSubjectId, newTopic, newTime, newLink } = data;
+        
+        // Encontra a matéria nova para pegar o nome e a cor
+        const subjectObj = store.subjects.find(s => s.id === newSubjectId);
+        if (!subjectObj) return;
+
+        // Função auxiliar para atualizar um review individual
+        const applyChanges = (r) => {
             r.topic = newTopic;
             r.time = parseInt(newTime);
-            store.save();
-            if (typeof ui !== 'undefined' && ui.render) ui.render();
+            r.subject = subjectObj.name; // Atualiza Nome da Matéria
+            r.color = subjectObj.color;  // Atualiza Cor do Cartão
+            if(newLink !== undefined) r.link = newLink;
+        };
+
+        const targetReview = store.reviews.find(r => r.id === id);
+        if (!targetReview) return;
+
+        // Se fizer parte de um ciclo (Batch), atualiza todos para manter coerência
+        if (targetReview.batchId) {
+            store.reviews.forEach(r => {
+                if (r.batchId === targetReview.batchId) {
+                    applyChanges(r);
+                }
+            });
+            toast.show('Ciclo completo atualizado (Matéria/Tópico).', 'success');
+        } else {
+            // Se for um estudo isolado
+            applyChanges(targetReview);
+            toast.show('Estudo atualizado.', 'success');
+        }
+
+        store.save();
+        if (typeof ui !== 'undefined') {
+            ui.render();
+            // Se o Radar estiver aberto, atualiza ele também para refletir a nova cor
+            if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
+                ui.renderHeatmap();
+            }
         }
     },
 

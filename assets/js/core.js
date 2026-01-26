@@ -763,10 +763,10 @@ const taskManager = {
 
         container.innerHTML = reviewsWithTasks.map(r => {
             // Gera HTML das subtarefas
-            // CORREÇÃO: Aspas adicionadas em '${t.id}'
+            // CORREÇÃO: Aspas adicionadas em '${t.id}' e uso da nova função handleLinkedTaskToggle
             const tasksHtml = r.subtasks.map(t => `
                 <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors">
-                    <input type="checkbox" onchange="store.toggleSubtask('${r.id}', '${t.id}'); taskManager.renderLinkedTasks();" 
+                    <input type="checkbox" onchange="app.handleLinkedTaskToggle('${r.id}', '${t.id}')" 
                            ${t.done ? 'checked' : ''} 
                            class="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                     <span class="text-xs text-slate-600 ${t.done ? 'line-through text-slate-300' : ''}">${t.text}</span>
@@ -796,7 +796,7 @@ const taskManager = {
             `;
         }).join('');
     },
-
+    
     // --- NOVA LÓGICA DE RENDERIZAÇÃO AGRUPADA (ABA GERAL) ---
     render: () => {
         const container = document.getElementById('task-list-container');

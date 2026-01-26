@@ -424,3 +424,20 @@ body.is-dragging .heatmap-day-cell * {
     animation-duration: 0.4s;
     animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ==========================================================================
+   13. ESTILOS DE ARQUIVAMENTO (MATÉRIAS) - v1.4.0
+   ========================================================================== 
+*/
+
+/* Estilo para itens arquivados na lista de configurações */
+.subject-item-archived {
+    opacity: 0.6;
+    background-color: #f1f5f9; /* slate-100 */
+    border-style: dashed;
+}
+
+.subject-item-archived .subject-name {
+    text-decoration: line-through;
+    color: #94a3b8; /* slate-400 */
+}

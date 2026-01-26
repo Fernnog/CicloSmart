@@ -1,7 +1,15 @@
-/* --- START OF FILE assets/js/changelog.js --- */
+/* --- START OF FILE changelog.js --- */
 
-
-    const changelogData = [
+const changelogData = [
+    {
+        version: '1.3.5',
+        date: '31/01/2025',
+        changes: [
+            '✨ <b>Feedback Visual Suave:</b> Implementado um "respiro" intencional (delay de 300ms) ao concluir checklists de estudo. Agora você consegue ver a marcação de "feito" antes que a lista se reorganize, proporcionando uma sensação de conclusão mais satisfatória e natural.',
+            '🧹 <b>Padronização Automática de Dados:</b> O motor de limpeza do sistema (Engine) agora normaliza silenciosamente IDs antigos para o novo padrão de texto. Isso garante que todo o histórico de tarefas "fale a mesma língua", prevenindo erros futuros e mantendo o banco de dados robusto.',
+            '🛠️ <b>Refinamento de Código:</b> Atualização nos métodos de renderização para suportar interações assíncronas, melhorando a estabilidade da interface durante ações rápidas.'
+        ]
+    },
     {
         version: '1.3.4',
         date: '27/01/2025',
@@ -193,59 +201,5 @@
             '🔗 <strong>Integridade SRS (Macro Shift):</strong> Agora, ao reagendar um estudo atrasado, o sistema move junto <strong>todas as revisões futuras</strong> conectadas a ele. Isso preserva a distância matemática entre as revisões (Curva de Esquecimento), garantindo que a metodologia não seja quebrada pelo atraso.',
             '🛡️ <strong>Drift Protection:</strong> A lógica foi refinada para tratar grupos de estudo como "vagões de trem": se a locomotiva (estudo base) atrasa, todos os vagões (revisões) mantêm a distância relativa original.'
         ] 
-    },
-    { 
-        version: '1.1.5', 
-        date: 'Anterior', 
-        changes: [
-            '🗓️ <strong>Reagendamento Inteligente (Modo Férias):</strong> Nova ferramenta localizada no menu Radar/Configurações. Ideal para retomar os estudos após dias parados ou imprevistos.',
-            '⏩ <strong>Cálculo de Delta (Ajuste em Lote):</strong> O sistema detecta automaticamente seu estudo mais atrasado e empurra todas as pendências passadas para a data de retomada escolhida, preservando matematicamente os intervalos originais entre as revisões.',
-            '🛡️ <strong>Proteção de Escopo:</strong> A lógica foi refinada para afetar <strong>apenas o passivo (atrasados)</strong>. Seus estudos agendados para "Hoje" e para o futuro permanecem intocados, evitando bagunçar seu planejamento atual.'
-        ] 
-    },
-    { 
-        version: '1.1.4', 
-        date: 'Anterior', 
-        changes: [
-            '🧠 <strong>Arquitetura Reativa (Observer):</strong> O núcleo do sistema agora é "autociente". Qualquer alteração nos dados atualiza automaticamente a interface (ícones e listas) sem recarregamentos manuais.',
-            '📂 <strong>Ordenação Inteligente:</strong> O painel de Tarefas agora agrupa itens em <strong>🚨 Atrasados</strong>, <strong>⭐ Foco Hoje</strong> e <strong>📅 Futuro</strong>, facilitando a priorização.',
-            '🗣️ <strong>Datas em Linguagem Natural:</strong> O sistema agora exibe "Hoje", "Amanhã" ou "Ontem" nas datas das tarefas para reduzir a carga cognitiva.'
-        ] 
-    },
-    { 
-        version: '1.1.3', 
-        date: 'Anterior', 
-        changes: [
-            '🔴 <strong>Feedback Visual em Tempo Real (Observer):</strong> O ícone de alerta de tarefas (ponto vermelho) foi reescrito usando arquitetura reativa. Agora ele apaga ou acende instantaneamente ao editar uma tarefa, sem precisar recarregar.',
-            '🗓️ <strong>Datas Humanizadas:</strong> A lista de tarefas ficou mais inteligente. Em vez de apenas datas numéricas, o sistema agora exibe <strong>"Hoje"</strong>, <strong>"Amanhã"</strong> ou <strong>"Ontem"</strong> para facilitar seu planejamento.',
-            '🧹 <strong>Limpeza de Interface (Legacy):</strong> A seção de Backup/Restore manual foi removida do menu de Matérias. Com a sincronização automática em Nuvem (Firebase) operando 100%, esses botões antigos tornaram-se desnecessários.'
-        ] 
-    },
-    { 
-        version: '1.1.2', 
-        date: 'Anterior', 
-        changes: [
-            '👤 <strong>Menu de Usuário Unificado:</strong> O formulário de login antigo foi substituído por um <strong>Botão de Perfil Inteligente</strong>. Ele economiza espaço no cabeçalho e resolve definitivamente os problemas de clique em dispositivos móveis.',
-            '🎨 <strong>Feedback Visual de Status:</strong> Agora o ícone do usuário muda de cor! <strong>Borda Verde</strong> indica que você está conectado e sincronizando; <strong>Cinza</strong> indica que você está offline/deslogado.',
-            '🔥 <strong>Correção Crítica de Nuvem:</strong> Solução definitiva para o erro de conexão com o <strong>Firebase Realtime Database</strong>. A persistência dos seus estudos na nuvem agora está 100% operacional.'
-        ] 
-    },
-    { 
-        version: '1.1.1', 
-        date: 'Anterior', 
-        changes: [
-            '☁️ <strong>Cloud Sync (Sincronização em Nuvem):</strong> Adeus, perda de dados! Integração completa com <strong>Firebase Realtime Database</strong>. Seus estudos agora ficam salvos na nuvem, permitindo acesso simultâneo via celular e computador.',
-            '🔐 <strong>Autenticação Integrada:</strong> Novo painel de login minimalista no cabeçalho. Crie sua conta com e-mail e senha para garantir que seu progresso sobreviva à limpeza de cache do navegador.',
-            '⚡ <strong>Arquitetura Híbrida & Event-Driven:</strong> O núcleo do sistema foi reescrito para eliminar "Race Conditions" (erros de carregamento). O App agora gerencia inteligentemente o estado offline (Local Storage) e online (Firebase) sem travamentos.'
-        ] 
-    },
-    { 
-        version: '1.1.0', 
-        date: 'Anterior', 
-        changes: [
-            '🔓 <strong>Planejamento no Modo Defesa:</strong> A "trava" evoluiu. Agora você pode abrir o menu de Novo Estudo em dias de Defesa para <strong>agendar datas futuras</strong>. A proteção continua ativa: o sistema bloqueia apenas registros para "Hoje", garantindo o foco na revisão.',
-            '⚡ <strong>Refatoração de Arquitetura:</strong> O código principal (`logic.js`) foi desacoplado em camadas de Dados (`core.js`) e Aplicação (`app.js`). Isso aumenta a robustez do sistema e facilita a manutenção futura.',
-            '📅 <strong>UX Inteligente:</strong> Ao abrir um novo estudo em dia de Defesa, o sistema sugere automaticamente a data de amanhã para agilizar seu fluxo de exportação de calendário.'
-        ] 
-    }   
+    }     
 ];

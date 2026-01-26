@@ -971,6 +971,18 @@ const app = {
         }
     },
 
+    // --- [NOVO] UX IMPROVEMENT: Delay para Feedback Visual ---
+    handleLinkedTaskToggle: (reviewId, subtaskId) => {
+        // 1. Atualiza o estado dos dados imediatamente (o checkbox visual muda nativamente)
+        store.toggleSubtask(reviewId, subtaskId);
+
+        // 2. Aguarda 300ms para o usuário perceber a animação de "check"
+        // antes de forçar a re-renderização que pode mover/ocultar o item.
+        setTimeout(() => {
+            taskManager.renderLinkedTasks();
+        }, 300);
+    },
+
     // --- [NOVO] Lógica Dual do Link (Cenário A/B) com Proteção Mobile ---
     handleLinkAction: (id, currentLink) => {
         // [Crítico para Mobile] Impede que o toque inicie o "arrastar" do cartão

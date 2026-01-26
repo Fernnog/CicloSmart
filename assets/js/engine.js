@@ -356,23 +356,44 @@ const engine = {
             }
         });
 
-                // 3. Persistência e Feedback (Se houve limpeza)
-        if (tasksRemoved > 0 || checklistsCleaned > 0) {
-            store.save(); // Salva a versão "limpa" no LocalStorage/Firebase
+        // [NOVO] 3. Normalização de IDs (Type Safety)
+        // Converte IDs numéricos antigos para String para evitar erros de comparação estrita
+        let idFixedCount = 0;
+        
+        // Normaliza Tarefas Gerais
+        store.tasks.forEach(t => {
+            if (typeof t.id === 'number') { t.id = String(t.id); idFixedCount++; }
+        });
+
+        // Normaliza Checklists de Estudo
+        store.reviews.forEach(r => {
+            if (r.subtasks && r.subtasks.length > 0) {
+                r.subtasks.forEach(t => {
+                    if (typeof t.id === 'number') { t.id = String(t.id); idFixedCount++; }
+                });
+            }
+        });
+
+        if (idFixedCount > 0) {
+            console.log(`[Engine] Normalização: ${idFixedCount} IDs convertidos para String.`);
+        }
+
+        // 4. Persistência e Feedback (Se houve limpeza ou normalização)
+        if (tasksRemoved > 0 || checklistsCleaned > 0 || idFixedCount > 0) {
+            store.save(); // Salva a versão "limpa/normalizada" no LocalStorage/Firebase
             
-            console.log(`[Engine] Limpeza Concluída: ${tasksRemoved} tarefas removidas, ${checklistsCleaned} checklists otimizados.`);
+            console.log(`[Engine] Manutenção Concluída: ${tasksRemoved} tarefas removidas, ${checklistsCleaned} checklists otimizados.`);
             
             // Feedback discreto para o usuário saber que o sistema trabalhou
             setTimeout(() => {
                 toast.show(
-                    `Otimização: ${tasksRemoved} tarefas antigas e ${checklistsCleaned} checklists arquivados.`, 
+                    `Otimização: ${tasksRemoved} tarefas antigas, ${checklistsCleaned} checklists arquivados e dados padronizados.`, 
                     'info', 
                     '🧹 Manutenção Automática'
                 );
             }, 2000); // Delay para não competir com o "Bem-vindo"
         }
     }
-};
 
 // [CORREÇÃO CRÍTICA]
 // Expõe o Engine para o escopo global para que o Controller possa acessá-lo.

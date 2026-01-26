@@ -394,6 +394,7 @@ const engine = {
             }, 2000); // Delay para não competir com o "Bem-vindo"
         }
     }
+}; 
 
 // [CORREÇÃO CRÍTICA]
 // Expõe o Engine para o escopo global para que o Controller possa acessá-lo.

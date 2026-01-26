@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.3.0 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.3.6 - Logic Layer)
  * Contém: Orquestração de UI, Auth e Eventos.
- * ATUALIZADO: Lógica pesada delegada para 'engine.js'.
+ * ATUALIZADO: Implementação de Modal de Edição Avançada (Substituindo Prompts).
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -98,6 +98,10 @@ const app = {
     setupEventListeners: () => {
         const form = document.getElementById('form-study');
         if(form) form.addEventListener('submit', app.handleNewEntry);
+        
+        // --- NOVO: Listener para o Modal de Edição Completa ---
+        const formEdit = document.getElementById('form-edit-study');
+        if(formEdit) formEdit.addEventListener('submit', app.handleEditSubmit);
         
         const activeRadio = document.querySelector(`input[name="profile"][value="${store.profile}"]`);
         if(activeRadio) activeRadio.checked = true;
@@ -473,23 +477,54 @@ const app = {
         } else alert("Digite o nome da matéria.");
     },
 
+    // --- ATUALIZAÇÃO v1.3.6: MODAL DE EDIÇÃO AVANÇADA (Substitui Prompt) ---
     promptEdit: (id) => {
-        const r = store.reviews.find(x => x.id === id);
-        if(!r) return;
-        const newTopic = prompt("Editar Tópico (Nome):", r.topic);
-        
-        if (newTopic !== null && newTopic !== r.topic) {
-            const siblings = r.batchId ? store.reviews.filter(item => item.batchId === r.batchId) : [r];
-            const updateAll = siblings.length > 1 && confirm(`Deseja renomear todos os ${siblings.length} cards conectados?`);
-            if (updateAll) { store.updateBatchTopic(r.batchId, newTopic); toast.show('Tópico corrigido em lote.', 'success'); } 
-            else store.updateReview(id, newTopic, r.time);
-        } else if (newTopic === r.topic) {
-            const newTime = prompt("Editar Tempo (min):", r.time);
-            if (newTime !== null && !isNaN(newTime) && newTime !== r.time) store.updateReview(id, r.topic, newTime);
+        // 1. Busca dados do estudo
+        const review = store.reviews.find(r => r.id === id);
+        if (!review) return;
+
+        // 2. Popula o Modal com dados existentes
+        const idInput = document.getElementById('edit-study-id');
+        const topicInput = document.getElementById('edit-input-topic');
+        const timeInput = document.getElementById('edit-input-time');
+        const linkInput = document.getElementById('edit-input-link');
+        const subjSelect = document.getElementById('edit-input-subject');
+
+        if(idInput) idInput.value = review.id;
+        if(topicInput) topicInput.value = review.topic;
+        if(timeInput) timeInput.value = review.time;
+        if(linkInput) linkInput.value = review.link || '';
+
+        // 3. Tenta selecionar a matéria correta no dropdown
+        // Baseado no NOME que está salvo no review, achamos o ID para o select
+        const subjectObj = store.subjects.find(s => s.name === review.subject);
+        if (subjectObj && subjSelect) {
+            subjSelect.value = subjectObj.id;
         }
+
+        // 4. Abre o modal
+        ui.toggleModal('modal-edit-study', true);
     },
 
-// --- NOVA FUNÇÃO: Trava de Segurança Rígida (Hard Dependency) ---
+    // --- NOVO HANDLER: Salvar Edição Avançada ---
+    handleEditSubmit: (e) => {
+        e.preventDefault();
+        
+        const id = document.getElementById('edit-study-id').value;
+        const newSubjectId = document.getElementById('edit-input-subject').value;
+        const newTopic = document.getElementById('edit-input-topic').value;
+        const newTime = document.getElementById('edit-input-time').value;
+        const newLink = document.getElementById('edit-input-link').value;
+
+        if (!newTopic || !newSubjectId) return toast.show("Preencha os campos obrigatórios.", "warning");
+
+        // Chama o método robusto de atualização no Core
+        store.updateReviewFull(id, { newSubjectId, newTopic, newTime, newLink });
+        
+        ui.toggleModal('modal-edit-study', false);
+    },
+
+    // --- NOVA FUNÇÃO: Trava de Segurança Rígida (Hard Dependency) ---
     handleStatusToggle: (id, checkboxEl) => {
         // Busca robusta
         const review = store.reviews.find(r => r.id.toString() === id.toString());

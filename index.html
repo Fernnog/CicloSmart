@@ -718,6 +718,51 @@
             </div>
         </div>
     </div>
+    
+    <!-- NOVO MODAL DE EDIÇÃO DE ESTUDO (Abaixo de modal-subtasks) -->
+    <div id="modal-edit-study" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                    <i data-lucide="edit-3" class="w-5 h-5"></i> Editar Estudo
+                </h3>
+                <button onclick="ui.toggleModal('modal-edit-study', false)" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <form id="form-edit-study" class="p-6 space-y-5 overflow-y-auto custom-scroll">
+                <input type="hidden" id="edit-study-id">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Matéria / Disciplina</label>
+                    <div class="relative">
+                        <select id="edit-input-subject" class="w-full appearance-none bg-white border border-slate-300 text-slate-700 rounded-lg p-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"></select>
+                        <i data-lucide="chevron-down" class="absolute right-3 top-3.5 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Tópico</label>
+                    <input type="text" id="edit-input-topic" required class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Tempo (min)</label>
+                    <input type="number" id="edit-input-time" min="5" max="300" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                
+                <!-- Link Field (Optional) -->
+                <div>
+                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Link Material</label>
+                     <input type="url" id="edit-input-link" class="w-full border border-slate-300 rounded-lg p-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="ui.toggleModal('modal-edit-study', false)" class="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-md">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 

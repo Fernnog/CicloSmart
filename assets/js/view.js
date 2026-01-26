@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.3.4 Updated
+ * UI RENDERER (View Layer) - v1.3.5 Updated
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Correção de Layout Grid (Desktop Fix) + UX Improvements + Smart Copy & Links.
+ * ATUALIZADO: Suporte a Edição Avançada e Arquivamento de Matérias.
  */
 
 const ui = {
@@ -301,27 +301,61 @@ const ui = {
         ui.toggleModal('modal-changelog', show);
     },
 
+    // --- ATUALIZAÇÃO (PRIORIDADES 1 E 2): LISTA DE MATÉRIAS E FILTROS ---
     initSubjects: () => {
-        const select = document.getElementById('input-subject');
-        if(select) {
-            select.innerHTML = store.subjects.map(s => 
-                `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
-            ).join('');
-        }
+        // 1. Popula SELECT de Novo Estudo (Filtrando Arquivados)
+        // Mostra apenas os ativos (ou seja, archived !== true)
+        const activeSubjects = store.subjects.filter(s => !s.archived);
+        const optionsHtml = activeSubjects.map(s => 
+            `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
+        ).join('');
 
+        const selectNew = document.getElementById('input-subject');
+        if(selectNew) selectNew.innerHTML = optionsHtml;
+        
+        // 2. Popula SELECT do Modal de Edição (Prioridade 1)
+        const selectEdit = document.getElementById('edit-input-subject');
+        if(selectEdit) selectEdit.innerHTML = optionsHtml;
+
+        // 3. Popula LISTA de Configurações (Mostra TODOS + Botão de Olho)
         const list = document.getElementById('subject-list');
         if(list) {
-            list.innerHTML = store.subjects.map(s => `
-                <li class="flex items-center justify-between p-2 bg-slate-50 border border-slate-100 rounded-lg">
+            list.innerHTML = store.subjects.map(s => {
+                // Lógica de Estado (Prioridade 2)
+                const isArchived = s.archived === true;
+                const eyeIcon = isArchived ? 'eye-off' : 'eye';
+                const eyeTitle = isArchived ? 'Desarquivar (Tornar visível)' : 'Arquivar (Ocultar da lista)';
+                
+                // Estilos Visuais para Arquivado (Opacidade e Riscado)
+                // Usando Tailwind classes padrão para evitar dependência excessiva de CSS externo
+                const containerClass = isArchived 
+                    ? 'bg-slate-100 border-dashed border-slate-300 opacity-70' 
+                    : 'bg-slate-50 border-slate-100';
+                
+                const textClass = isArchived 
+                    ? 'line-through text-slate-400' 
+                    : 'text-slate-700';
+
+                return `
+                <li class="flex items-center justify-between p-2 border rounded-lg ${containerClass} transition-all">
                     <div class="flex items-center gap-3">
                         <div class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${s.color}"></div>
-                        <span class="text-sm font-medium text-slate-700">${s.name}</span>
+                        <span class="text-sm font-medium ${textClass}">${s.name}</span>
                     </div>
-                    <button onclick="store.removeSubject('${s.id}')" class="text-slate-400 hover:text-red-500 transition-colors" title="Excluir">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <!-- Botão Arquivar/Desarquivar -->
+                        <button onclick="store.toggleSubjectArchived('${s.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="${eyeTitle}">
+                            <i data-lucide="${eyeIcon}" class="w-4 h-4"></i>
+                        </button>
+                        <!-- Botão Excluir -->
+                        <button onclick="store.removeSubject('${s.id}')" class="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Excluir Permanentemente">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                 </li>
-            `).join('');
+            `}).join('');
+            
+            // Garante que os novos ícones (eye, eye-off) sejam renderizados
             if(window.lucide) lucide.createIcons();
         }
     },
@@ -627,6 +661,7 @@ const ui = {
         const driveTitle = hasLink ? 'Abrir Material' : 'Vincular Material (Drive)';
 
         // Adicionado style para View Transitions
+        // NOTA: 'app.promptEdit' agora deve abrir o modal de edição (controlado pelo controller.js)
         return `
             <div id="card-${review.id}" draggable="true" 
                 ondragstart="app.handleKanbanDragStart(event, '${review.id}')"

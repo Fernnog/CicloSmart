@@ -2,6 +2,15 @@
 
 const changelogData = [
     {
+        version: '1.3.6',
+        date: '03/02/2025',
+        changes: [
+            '✏️ <b>Edição Completa de Estudos:</b> Adeus janelinhas simples! Agora, ao clicar para editar um estudo, um <b>novo painel completo</b> se abre. Você pode corrigir o tópico, ajustar o tempo e, finalmente, <b>trocar a matéria</b> do card. A cor e os metadados se atualizam automaticamente para todo o ciclo.',
+            '📦 <b>Arquivamento de Matérias:</b> Limpe sua lista de seleção sem perder dados! Nas configurações, agora você pode clicar no ícone de "olho" para <b>arquivar disciplinas</b> que não está estudando no momento. Elas somem do menu de criação, mas seu histórico permanece intacto.',
+            '🎨 <b>Feedback Visual:</b> Matérias arquivadas aparecem com visual diferenciado (riscado/opaco) na lista de configurações para fácil identificação.'
+        ]
+    },
+    {
         version: '1.3.5',
         date: '31/01/2025',
         changes: [

@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.3.0 - Unified Logic)
+ * CICLOSMART CORE (v1.3.5 - Unified Logic)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Implementação de Edição Avançada (Update Full) e Arquivamento de Matérias.
+ * ATUALIZADO: Lógica Avançada de Edição SRS e Arquivamento de Matérias.
  */
 
 // ==========================================
@@ -294,7 +294,7 @@ const store = {
 
     // --- Métodos de Matérias ---
     addSubject: (name, color) => {
-        store.subjects.push({ id: 'sub-' + Date.now(), name, color, archived: false });
+        store.subjects.push({ id: 'sub-' + Date.now(), name, color });
         store.save();
         if (typeof ui !== 'undefined' && ui.initSubjects) ui.initSubjects(); 
     },
@@ -307,14 +307,15 @@ const store = {
         }
     },
 
-    // [NOVO] Método para Arquivar/Desarquivar Matéria (Prioridade 2)
+    // [NOVO] Método para Arquivar/Desarquivar Matérias
     toggleSubjectArchived: (id) => {
         const sub = store.subjects.find(s => s.id === id);
         if (sub) {
             // Se 'archived' não existe, assume false (ativo). Inverte o valor.
             sub.archived = !sub.archived;
             store.save();
-            if (typeof ui !== 'undefined' && ui.initSubjects) ui.initSubjects();
+            // Atualiza a UI para refletir a mudança visual
+            if (typeof ui !== 'undefined') ui.initSubjects();
         }
     },
 
@@ -347,37 +348,83 @@ const store = {
         }
     },
 
-    // [ATUALIZADO] Método Completo de Edição (Prioridade 1)
-    // Substitui o antigo updateReview simples para suportar troca de matéria, cor e link
+    // Atualização Simples (Legado/Quick)
+    updateReview: (id, newTopic, newTime) => {
+        const r = store.reviews.find(r => r.id === id);
+        if (r) {
+            r.topic = newTopic;
+            r.time = parseInt(newTime);
+            store.save();
+            if (typeof ui !== 'undefined' && ui.render) ui.render();
+        }
+    },
+
+    // [NOVO] Atualização Completa Inteligente (Hierarquia Pai/Filho + SRS)
     updateReviewFull: (id, data) => {
         const { newSubjectId, newTopic, newTime, newLink } = data;
         
-        // Encontra a matéria nova para pegar o nome e a cor
+        // 1. Definição das Taxas de Compressão (Baseado no Engine.js 'Normal')
+        const COMPRESSION_RATIOS = {
+            '24h': 0.20, 'Defesa': 0.20, // 20% do tempo original
+            '7d': 0.10,  '8d': 0.10,     // 10% do tempo original
+            '30d': 0.05, '31d': 0.05     // 5% do tempo original
+        };
+
+        // 2. Busca Referências
         const subjectObj = store.subjects.find(s => s.id === newSubjectId);
         if (!subjectObj) return;
-
-        // Função auxiliar para atualizar um review individual
-        const applyChanges = (r) => {
-            r.topic = newTopic;
-            r.time = parseInt(newTime);
-            r.subject = subjectObj.name; // Atualiza Nome da Matéria
-            r.color = subjectObj.color;  // Atualiza Cor do Cartão
-            if(newLink !== undefined) r.link = newLink;
-        };
 
         const targetReview = store.reviews.find(r => r.id === id);
         if (!targetReview) return;
 
-        // Se fizer parte de um ciclo (Batch), atualiza todos para manter coerência
+        // Verifica se estamos editando o "Pai" (Estudo Original)
+        // Verifica pelos tipos comuns de estudo novo
+        const isEditingParent = (targetReview.type === 'NOVO' || targetReview.type === 'NEW');
+
+        // 3. Função de Aplicação Inteligente
+        const applyChanges = (r) => {
+            // A. Atualizações Textuais/Visuais (Sempre aplicadas a todos do ciclo)
+            r.topic = newTopic;
+            r.subject = subjectObj.name; // Atualiza Nome da Matéria
+            r.color = subjectObj.color;  // Atualiza Cor da Matéria
+            if (newLink !== undefined) r.link = newLink;
+
+            // B. Lógica de Tempo (SRS Inteligente)
+            if (isEditingParent) {
+                // Se editamos o PAI, recalculamos os FILHOS proporcionalmente
+                if (r.type === 'NOVO' || r.type === 'NEW') {
+                    r.time = parseInt(newTime); // O pai recebe o valor cheio
+                } else {
+                    // Os filhos recebem o percentual do novo tempo do pai
+                    // Fallback: Se o tipo não estiver na lista, usa 10% padrão
+                    const ratio = COMPRESSION_RATIOS[r.type] || 0.10;
+                    // Garante mínimo de 5 minutos para não ficar irrelevante (Ilusão de Competência)
+                    r.time = Math.max(5, Math.ceil(parseInt(newTime) * ratio));
+                }
+            } else {
+                // Se estamos editando uma revisão específica (filho), altera SÓ ELA
+                // Isso permite "override" manual (ex: essa revisão demorou mais que o esperado)
+                if (r.id === id) {
+                    r.time = parseInt(newTime);
+                }
+            }
+        };
+
+        // 4. Execução em Lote ou Individual
         if (targetReview.batchId) {
             store.reviews.forEach(r => {
                 if (r.batchId === targetReview.batchId) {
                     applyChanges(r);
                 }
             });
-            toast.show('Ciclo completo atualizado (Matéria/Tópico).', 'success');
+            
+            const msg = isEditingParent 
+                ? 'Estudo e revisões recalculados com sucesso.' 
+                : 'Revisão específica ajustada manualmente.';
+                
+            toast.show(msg, 'success', 'Ciclo Atualizado');
         } else {
-            // Se for um estudo isolado
+            // Estudo órfão (sem ciclo)
             applyChanges(targetReview);
             toast.show('Estudo atualizado.', 'success');
         }
@@ -385,10 +432,7 @@ const store = {
         store.save();
         if (typeof ui !== 'undefined') {
             ui.render();
-            // Se o Radar estiver aberto, atualiza ele também para refletir a nova cor
-            if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
-                ui.renderHeatmap();
-            }
+            ui.renderHeatmap();
         }
     },
 

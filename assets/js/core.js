@@ -410,7 +410,7 @@ const store = {
             }
         };
 
-        // 4. Execução em Lote ou Individual
+      // 4. Execução em Lote ou Individual
         if (targetReview.batchId) {
             store.reviews.forEach(r => {
                 if (r.batchId === targetReview.batchId) {
@@ -419,10 +419,10 @@ const store = {
             });
             
             const msg = isEditingParent 
-                ? 'Estudo e revisões recalculados com sucesso.' 
+                ? 'Tempos das revisões futuras foram recalculados automaticamente.' 
                 : 'Revisão específica ajustada manualmente.';
                 
-            toast.show(msg, 'success', 'Ciclo Atualizado');
+            toast.show(msg, 'success', 'Ciclo Sincronizado');
         } else {
             // Estudo órfão (sem ciclo)
             applyChanges(targetReview);

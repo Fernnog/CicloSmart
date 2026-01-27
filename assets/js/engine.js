@@ -108,8 +108,9 @@ const engine = {
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
             const isoDate = getLocalISODate(targetDate); 
             
-            // Aplica a compressão selecionada (Normal ou Alta)
-            const estimatedTime = Math.max(2, Math.ceil(studyTime * COMPRESSION[interval]));
+           // Aplica a compressão selecionada (Normal ou Alta)
+            // ATUALIZADO v1.3.7: Piso mínimo de 5 min para evitar "ilusão de competência"
+            const estimatedTime = Math.max(5, Math.ceil(studyTime * COMPRESSION[interval]));
 
             const existingLoad = store.reviews
                 .filter(r => r.date === isoDate) 

@@ -598,13 +598,14 @@ const taskManager = {
         }
     },
 
-    // Gerencia o Submit (Criar ou Editar)
+  // Gerencia o Submit (Criar ou Editar)
     handleFormSubmit: (e) => {
         e.preventDefault();
         const idEditing = document.getElementById('task-id-editing')?.value;
         
         if (idEditing) {
-            taskManager.updateTask(parseInt(idEditing));
+            // CORREÇÃO: Passamos o ID como string pura, sem parseInt
+            taskManager.updateTask(idEditing);
         } else {
             taskManager.addTask();
         }
@@ -636,9 +637,11 @@ const taskManager = {
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
 
-    // Atualizar Tarefa Existente
+   // Atualizar Tarefa Existente
     updateTask: (id) => {
-        const taskIndex = store.tasks.findIndex(t => t.id === id);
+        // CORREÇÃO: Comparação robusta (String vs String)
+        const taskIndex = store.tasks.findIndex(t => t.id.toString() === id.toString());
+        
         if (taskIndex > -1) {
             store.tasks[taskIndex].subjectId = document.getElementById('task-subject').value;
             store.tasks[taskIndex].subCategory = document.getElementById('task-subcategory').value;
@@ -651,12 +654,15 @@ const taskManager = {
             taskManager.toggleForm(false);
             
             toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
+        } else {
+            console.error("[TaskManager] Erro: ID não encontrado para atualização:", id);
         }
     },
 
-    // Iniciar Edição
+   // Iniciar Edição
     startEdit: (id) => {
-        const task = store.tasks.find(t => t.id === id);
+        // CORREÇÃO: Comparação robusta (String vs String)
+        const task = store.tasks.find(t => t.id.toString() === id.toString());
         if (!task) return;
 
         // Preenche campos

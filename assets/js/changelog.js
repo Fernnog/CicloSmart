@@ -2,6 +2,14 @@
 
 const changelogData = [
     {
+        version: '1.3.7',
+        date: '04/02/2025',
+        changes: [
+            '🛡️ <b>Trava de Qualidade Pedagógica:</b> Adeus revisões de 1 minuto! O sistema agora impõe um tempo mínimo de <b>5 minutos</b> para qualquer revisão. Isso evita a "ilusão de competência" e garante tempo hábil para uma leitura real.',
+            '🤖 <b>Feedback Transparente:</b> Ao editar um estudo principal, o sistema agora confirma explicitamente: <i>"Tempos das revisões futuras foram recalculados automaticamente"</i>. Mais segurança para você saber que a matemática foi feita.'
+        ]
+    },
+    {
         version: '1.3.6',
         date: '03/02/2025',
         changes: [

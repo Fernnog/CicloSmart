@@ -1,6 +1,6 @@
 /**
- * CICLOSMART FILE MANAGER (Novo Módulo)
- * Responsabilidade: Upload, Leitura e Exibição de Resumos HTML
+ * CICLOSMART FILE MANAGER
+ * Responsabilidade: Upload seguro e Leitura de Resumos HTML
  */
 const fileManager = {
     // Ação 1: Gatilho para selecionar e ler o arquivo
@@ -14,9 +14,10 @@ const fileManager = {
             const file = e.target.files[0];
             if (!file) return;
 
-            // Validação simples de tamanho (evitar travar o banco, ex: max 2MB)
+            // Validação de Segurança: Limite de 2MB
+            // Isso evita travamento do LocalStorage ou estouro de cota do Firebase no modo JSON
             if (file.size > 2 * 1024 * 1024) {
-                alert('O arquivo é muito grande para sincronização (Max: 2MB).');
+                alert('O arquivo é muito grande para sincronização (Max: 2MB). Tente um resumo menor ou use Link Externo.');
                 return;
             }
 
@@ -24,9 +25,8 @@ const fileManager = {
             
             // Quando terminar de ler o texto do arquivo
             reader.onload = (event) => {
-                const content = event.target.result;
-                // Chama o Core para salvar na nuvem/store
-                store.attachSummary(reviewId, content);
+                // Chama o Core atualizado para salvar e propagar em lote
+                store.attachSummary(reviewId, event.target.result);
             };
 
             reader.readAsText(file); // Lê como string pura
@@ -38,15 +38,15 @@ const fileManager = {
     // Ação 2: Reconstrói o arquivo e abre em nova aba
     openSummary: (reviewId) => {
         // Busca o conteúdo no Store
-        const review = store.reviews.find(r => r.id.toString() === reviewId.toString());
+        const htmlContent = store.getSummary(reviewId);
         
-        if (!review || !review.htmlSummary) {
-            alert("Resumo não encontrado.");
+        if (!htmlContent) {
+            alert("Resumo não encontrado ou corrompido.");
             return;
         }
 
         // Cria um Blob (arquivo virtual na memória do navegador)
-        const blob = new Blob([review.htmlSummary], { type: 'text/html' });
+        const blob = new Blob([htmlContent], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         
         // Abre em nova aba
@@ -58,7 +58,7 @@ const fileManager = {
         }
     },
     
-    // Ação 3: Decidir qual ação tomar ao clicar no botão (Roteador)
+    // Ação 3: Roteador de Ação
     handleAction: (reviewId, hasSummary) => {
         if (hasSummary) {
             fileManager.openSummary(reviewId);

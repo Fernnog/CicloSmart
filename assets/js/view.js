@@ -615,25 +615,28 @@ const ui = {
         const driveTitle = hasLink ? 'Abrir Material (Link)' : 'Vincular Material (Drive)';
 
         // ----------------------------------------------------
-        // LÓGICA DO NOVO ANEXO INTELIGENTE (Prioridade 1/2)
+        // LÓGICA DO ANEXO INTELIGENTE (Upload / Leitura / Exclusão)
         // ----------------------------------------------------
-        // Verifica se existe conteúdo HTML salvo
         const hasSummary = review.htmlSummary && review.htmlSummary.length > 0;
 
-        // Estilização Dinâmica: Documento (Cheio) vs Nuvem (Vazio)
+        // 1. Botão Principal (Ação Positiva: Upload ou Ler)
         const summaryIcon = hasSummary ? 'file-text' : 'upload-cloud';
-        
         const summaryClass = hasSummary 
-            ? "text-emerald-700 bg-emerald-100 border-emerald-300 hover:bg-emerald-200" // Ativo/Verde
-            : "text-slate-400 bg-slate-50 border-transparent hover:text-emerald-500 hover:border-emerald-200 hover:bg-emerald-50"; // Vazio/Cinza
-
-        const summaryTitle = hasSummary 
-            ? "Ler Resumo (Anexado)" 
-            : "Anexar Resumo (.html)";
-
-        // Variável boolean para o manager (segurança na string do onclick)
+            ? "text-emerald-700 bg-emerald-100 border-emerald-300 hover:bg-emerald-200" // Estado: Ler
+            : "text-slate-400 bg-slate-50 border-transparent hover:text-emerald-500 hover:border-emerald-200 hover:bg-emerald-50"; // Estado: Upload
+        
+        const summaryTitle = hasSummary ? "Ler Resumo Anexado" : "Fazer Upload de Resumo (.html)";
         const hasSumString = hasSummary ? 'true' : 'false';
 
+        // 2. Botão Secundário (Ação Destrutiva: Remover Anexo) - Só aparece se tiver anexo
+        // Nota: Usa event.stopPropagation() para não abrir o editor do card ao clicar na lixeira
+        const deleteSummaryHtml = hasSummary ? `
+            <button onclick="store.deleteSummary('${review.id}'); event.stopPropagation();"
+                    class="w-6 h-6 flex items-center justify-center rounded-full border border-red-100 bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 hover:border-red-200 transition-all ml-1" 
+                    title="Remover APENAS o Resumo (Mantém o estudo)">
+                <i data-lucide="file-x" class="w-3 h-3"></i>
+            </button>
+        ` : '';
         // ----------------------------------------------------
 
         // Barra de Progresso

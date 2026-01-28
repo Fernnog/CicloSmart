@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.3.5 - Unified Logic)
+ * CICLOSMART CORE (v1.4.0 - Smart Attachments Update)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Lógica Avançada de Edição SRS e Arquivamento de Matérias.
+ * ATUALIZADO: Suporte a Anexos HTML, Gerenciamento de Resumos e Persistência de Arquivos.
  */
 
 // ==========================================
@@ -86,7 +86,6 @@ const toast = {
         error:   { icon: 'shield-alert',   classes: 'bg-red-50 border-red-500 text-red-900' }
     },
 
-    // ATUALIZAÇÃO (Prioridade 3): Adicionado suporte a botão de ação (action)
     show: (message, type = 'info', title = null, action = null) => {
         const container = document.getElementById('toast-container');
         if(!container) return; 
@@ -120,7 +119,6 @@ const toast = {
         
         requestAnimationFrame(() => el.classList.add('show'));
         
-        // Se houver ação, aumenta o tempo de exibição para dar tempo de clicar
         const duration = action ? 8000 : 5000;
 
         setTimeout(() => {
@@ -146,26 +144,23 @@ const store = {
     cycleStartDate: null,
     currentUser: null,
     
-    // Controle de Sessão (Volátil) - Para UX e Celebrações
+    // Controle de Sessão
     sessionState: {
         hasCelebrated: false
     },
     
-    // --- NOVO: SISTEMA DE OBSERVER (Reatividade) ---
+    // Sistema de Observer (Reatividade)
     listeners: [],
 
     subscribe: (fn) => {
-        // Evita duplicidade de ouvintes
         if (typeof fn === 'function' && !store.listeners.includes(fn)) {
             store.listeners.push(fn);
         }
     },
 
     notify: () => {
-        // Notifica todos os componentes inscritos que os dados mudaram
         store.listeners.forEach(fn => fn());
     },
-    // -----------------------------------------------
 
     // Lógica de Load
     load: (fromCloudData = null) => {
@@ -208,7 +203,7 @@ const store = {
             ui.render();
             if (typeof taskManager !== 'undefined') {
                 taskManager.render();
-                store.notify(); // Garante verificação de estado inicial (badges, etc)
+                store.notify(); 
             }
         }
     },
@@ -224,7 +219,7 @@ const store = {
         store.cycleStartDate = null; 
     },
 
-    // Lógica de Save Atualizada (Chama Notify)
+    // Lógica de Save
     save: () => {
         const dataToSave = {
             reviews: store.reviews,
@@ -238,26 +233,35 @@ const store = {
             lastUpdate: new Date().toISOString()
         };
 
-        localStorage.setItem(CONFIG.storageKey, JSON.stringify(dataToSave));
+        // Salva Local
+        try {
+            localStorage.setItem(CONFIG.storageKey, JSON.stringify(dataToSave));
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                toast.show('Espaço local cheio. O armazenamento depende do Cloud agora.', 'warning');
+            }
+        }
 
+        // Salva Cloud (Firebase)
         if (store.currentUser && window.fireMethods && window.fireDb) {
             const { ref, set } = window.fireMethods;
             set(ref(window.fireDb, 'users/' + store.currentUser.uid), dataToSave)
                 .then(() => console.log('[Core] Sincronizado com nuvem.'))
-                .catch(err => console.error("[Core] Erro na sincronização:", err));
+                .catch(err => {
+                    console.error("[Core] Erro na sincronização:", err);
+                    toast.show('Erro ao sincronizar dados.', 'error');
+                });
         }
 
-        // NOVO: Dispara notificação para atualizar UI dependente (listas, badges, etc)
         store.notify();
     },
 
     // --- Lógica de Gamificação (Streak) ---
     calculateStreak: () => {
-        // Filtra dias únicos onde houve estudo concluído
         const doneDates = [...new Set(store.reviews
             .filter(r => r.status === 'DONE')
             .map(r => r.date)
-        )].sort((a, b) => b.localeCompare(a)); // Ordena do mais recente (hoje) para o antigo
+        )].sort((a, b) => b.localeCompare(a));
 
         if (doneDates.length === 0) return 0;
 
@@ -265,27 +269,19 @@ const store = {
         const today = getLocalISODate();
         const yesterday = getRelativeDate(-1);
 
-        // Verifica se a chama está viva (estudou hoje ou ontem)
-        // Se a última data for antes de ontem, o streak quebrou.
         if (doneDates[0] !== today && doneDates[0] !== yesterday) return 0;
 
-        // Configura o cursor de verificação
         let checkDate = new Date();
-        
-        // Se o último estudo não foi hoje (foi ontem), começamos a contar de ontem
         if (doneDates[0] !== today) {
             checkDate.setDate(checkDate.getDate() - 1);
         }
 
-        // Loop de verificação regressiva
         for (let i = 0; i < doneDates.length; i++) {
             const dateStr = getLocalISODate(checkDate);
-            
             if (doneDates.includes(dateStr)) {
                 streak++;
-                checkDate.setDate(checkDate.getDate() - 1); // Volta 1 dia
+                checkDate.setDate(checkDate.getDate() - 1); 
             } else {
-                // Se encontrou um buraco, para a contagem
                 break;
             }
         }
@@ -307,14 +303,11 @@ const store = {
         }
     },
 
-    // [NOVO] Método para Arquivar/Desarquivar Matérias
     toggleSubjectArchived: (id) => {
         const sub = store.subjects.find(s => s.id === id);
         if (sub) {
-            // Se 'archived' não existe, assume false (ativo). Inverte o valor.
             sub.archived = !sub.archived;
             store.save();
-            // Atualiza a UI para refletir a mudança visual
             if (typeof ui !== 'undefined') ui.initSubjects();
         }
     },
@@ -327,18 +320,12 @@ const store = {
     },
 
     toggleStatus: (id) => {
-        // CORREÇÃO (Prioridades 1, 2 e 3): Comparação robusta (String vs String)
-        // Isso resolve o problema de IDs numéricos não serem encontrados quando vêm do HTML.
         const r = store.reviews.find(r => r.id.toString() === id.toString());
-        
         if (r) {
             r.status = r.status === 'PENDING' ? 'DONE' : 'PENDING';
-            store.save(); // Salva no LocalStorage e Firebase
-            
-            // Prioridade 2: Atualização Visual Imediata (Tick/Riscado)
+            store.save(); 
             if (typeof ui !== 'undefined') {
                 ui.render();
-                // Se o Radar estiver aberto, atualiza ele também
                 if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                     ui.renderHeatmap();
                 }
@@ -348,7 +335,6 @@ const store = {
         }
     },
 
-    // Atualização Simples (Legado/Quick)
     updateReview: (id, newTopic, newTime) => {
         const r = store.reviews.find(r => r.id === id);
         if (r) {
@@ -359,58 +345,42 @@ const store = {
         }
     },
 
-    // [NOVO] Atualização Completa Inteligente (Hierarquia Pai/Filho + SRS)
     updateReviewFull: (id, data) => {
         const { newSubjectId, newTopic, newTime, newLink } = data;
-        
-        // 1. Definição das Taxas de Compressão (Baseado no Engine.js 'Normal')
         const COMPRESSION_RATIOS = {
-            '24h': 0.20, 'Defesa': 0.20, // 20% do tempo original
-            '7d': 0.10,  '8d': 0.10,     // 10% do tempo original
-            '30d': 0.05, '31d': 0.05     // 5% do tempo original
+            '24h': 0.20, 'Defesa': 0.20,
+            '7d': 0.10,  '8d': 0.10,
+            '30d': 0.05, '31d': 0.05
         };
 
-        // 2. Busca Referências
         const subjectObj = store.subjects.find(s => s.id === newSubjectId);
         if (!subjectObj) return;
 
         const targetReview = store.reviews.find(r => r.id === id);
         if (!targetReview) return;
 
-        // Verifica se estamos editando o "Pai" (Estudo Original)
-        // Verifica pelos tipos comuns de estudo novo
         const isEditingParent = (targetReview.type === 'NOVO' || targetReview.type === 'NEW');
 
-        // 3. Função de Aplicação Inteligente
         const applyChanges = (r) => {
-            // A. Atualizações Textuais/Visuais (Sempre aplicadas a todos do ciclo)
             r.topic = newTopic;
-            r.subject = subjectObj.name; // Atualiza Nome da Matéria
-            r.color = subjectObj.color;  // Atualiza Cor da Matéria
+            r.subject = subjectObj.name;
+            r.color = subjectObj.color;
             if (newLink !== undefined) r.link = newLink;
 
-            // B. Lógica de Tempo (SRS Inteligente)
             if (isEditingParent) {
-                // Se editamos o PAI, recalculamos os FILHOS proporcionalmente
                 if (r.type === 'NOVO' || r.type === 'NEW') {
-                    r.time = parseInt(newTime); // O pai recebe o valor cheio
+                    r.time = parseInt(newTime); 
                 } else {
-                    // Os filhos recebem o percentual do novo tempo do pai
-                    // Fallback: Se o tipo não estiver na lista, usa 10% padrão
                     const ratio = COMPRESSION_RATIOS[r.type] || 0.10;
-                    // Garante mínimo de 5 minutos para não ficar irrelevante (Ilusão de Competência)
                     r.time = Math.max(5, Math.ceil(parseInt(newTime) * ratio));
                 }
             } else {
-                // Se estamos editando uma revisão específica (filho), altera SÓ ELA
-                // Isso permite "override" manual (ex: essa revisão demorou mais que o esperado)
                 if (r.id === id) {
                     r.time = parseInt(newTime);
                 }
             }
         };
 
-      // 4. Execução em Lote ou Individual
         if (targetReview.batchId) {
             store.reviews.forEach(r => {
                 if (r.batchId === targetReview.batchId) {
@@ -424,7 +394,6 @@ const store = {
                 
             toast.show(msg, 'success', 'Ciclo Sincronizado');
         } else {
-            // Estudo órfão (sem ciclo)
             applyChanges(targetReview);
             toast.show('Estudo atualizado.', 'success');
         }
@@ -436,12 +405,10 @@ const store = {
         }
     },
 
-    // --- NOVO: Atualização de Links Externos (Drive/Notion) ---
     updateReviewLink: (id, link) => {
         const r = store.reviews.find(item => item.id === id);
         if (r) {
             if (r.batchId) {
-                // Atualiza em lote para manter consistência no ciclo
                 store.reviews.forEach(item => {
                     if (item.batchId === r.batchId) item.link = link;
                 });
@@ -454,6 +421,51 @@ const store = {
             if (typeof ui !== 'undefined') ui.render();
         }
     },
+
+    // ----------------------------------------------
+    // NOVO: Gerenciamento de Anexos HTML (Prioridade 1, 2, 3)
+    // ----------------------------------------------
+    attachSummary: (id, htmlContent) => {
+        // Encontra o review alvo pelo ID (suporta string/number)
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        
+        if (review) {
+            // [Prioridade 3] Armazena o HTML raw. 
+            // NOTA DE ARQUITETURA: O armazenamento nativo em JSON já lida com caracteres
+            // especiais. Para sistemas com >10MB de anexos, recomenda-se compressão (ex: LZString).
+            review.htmlSummary = htmlContent;
+
+            // Dispara persistência (Local + Nuvem)
+            store.save();
+
+            console.log('[Core] Resumo anexado ao card:', id);
+            
+            // Atualização visual imediata
+            if (typeof ui !== 'undefined' && ui.render) ui.render();
+            toast.show('Resumo anexado e sincronizado.', 'success', 'Arquivo Salvo');
+        } else {
+            console.error('[Core Error] Não foi possível anexar resumo. Card não encontrado:', id);
+            toast.show('Erro ao encontrar card.', 'error');
+        }
+    },
+
+    // [Novo] Leitura segura do resumo (caso queiramos adicionar compressão no futuro)
+    getSummary: (id) => {
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        return review ? review.htmlSummary : null;
+    },
+
+    // [Novo] Remover anexo (limpeza)
+    deleteSummary: (id) => {
+        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        if(review && review.htmlSummary) {
+            delete review.htmlSummary; // Remove propriedade para economizar espaço
+            store.save();
+            if (typeof ui !== 'undefined' && ui.render) ui.render();
+            toast.show('Resumo removido.', 'info');
+        }
+    },
+    // ----------------------------------------------
 
     updateBatchTopic: (batchId, newTopic) => {
         let count = 0;
@@ -484,29 +496,22 @@ const store = {
         if (typeof ui !== 'undefined' && ui.render) ui.render();
     },
 
-    // --- NOVOS MÉTODOS DE SUBTAREFAS (MICRO-QUESTS) ---
-    // ATUALIZADO: Suporte a flags (Recorrência) e Edição
-    
-    // Helper Arquitetural: Busca robusta de ID (String vs Number)
+    // --- Métodos de Subtarefas ---
     _getReviewById: (id) => {
         if (!id) return undefined;
         return store.reviews.find(r => r.id.toString() === id.toString());
     },
 
-    // ATUALIZADO: Adiciona suporte a parâmetro 'options' (Priority 1)
     addSubtask: (reviewId, text, options = {}) => {
         const r = store._getReviewById(reviewId); 
         if (r) {
             if (!r.subtasks) r.subtasks = []; 
-            
-            // Priority 3: Padronização de ID para String (Type Safety)
             const newTask = { 
                 id: (Date.now() + Math.random()).toString().replace('.',''), 
                 text, 
                 done: false,
-                isRecurrent: options.isRecurrent || false // Flag de recorrência
+                isRecurrent: options.isRecurrent || false 
             };
-            
             r.subtasks.push(newTask);
             store.save(); 
         } else {
@@ -514,7 +519,6 @@ const store = {
         }
     },
 
-    // ATUALIZADO: Novo método para edição (Priority 3 - Preparation)
     updateSubtask: (reviewId, subtaskId, newText) => {
         const r = store._getReviewById(reviewId);
         if (r && r.subtasks) {
@@ -526,11 +530,9 @@ const store = {
         }
     },
 
-    // --- CORREÇÃO DE TIPOS: String vs Number ---
     toggleSubtask: (reviewId, subtaskId) => {
         const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
-            // Conversão robusta para String para garantir que IDs numéricos e strings sejam comparáveis
             const task = r.subtasks.find(t => t.id.toString() === subtaskId.toString());
             if (task) {
                 task.done = !task.done;
@@ -539,11 +541,9 @@ const store = {
         }
     },
 
-    // --- CORREÇÃO DE TIPOS: String vs Number ---
     removeSubtask: (reviewId, subtaskId) => {
         const r = store._getReviewById(reviewId); 
         if (r && r.subtasks) {
-            // Conversão robusta para String no filtro
             r.subtasks = r.subtasks.filter(t => t.id.toString() !== subtaskId.toString());
             store.save();
         }
@@ -552,17 +552,15 @@ const store = {
     // --- Métodos de Tarefas ---
     removeTask: (id) => {
         store.tasks = store.tasks.filter(t => t.id !== id);
-        // O store.save() agora dispara o notify(), que chamará taskManager.render() automaticamente.
         store.save();
     }
 };
 
 // ==========================================
-// 3. TASK MANAGER (ATUALIZADO: Reatividade & Agrupamento Inteligente)
+// 3. TASK MANAGER (ATUALIZADO)
 // ==========================================
 
 const taskManager = {
-    // ESTADO PARA TOGGLE DE HISTÓRICO
     showHistory: false,
 
     toggleHistory: () => {
@@ -570,9 +568,7 @@ const taskManager = {
         taskManager.renderLinkedTasks();
     },
 
-    // --- CORREÇÃO: "Flicker" (Flash) Visual ---
     openModal: () => {
-        // 1. Prepara o conteúdo do Select (Dados)
         const select = document.getElementById('task-subject');
         if(select) {
             select.innerHTML = store.subjects.map(s => 
@@ -580,31 +576,22 @@ const taskManager = {
             ).join('');
         }
         
-        // 2. Limpa o estado da UI ANTES de mostrar o modal (Previne o Flash)
         taskManager.cancelEdit();
         taskManager.switchTab('general');
         taskManager.toggleForm(false);
-        
-        // 3. Força a renderização "limpa" dos dados internos
         taskManager.render();
 
-        // 4. Exibe o modal visualmente apenas após a limpeza
         if (typeof ui !== 'undefined') {
-            // requestAnimationFrame garante que o navegador pintou as alterações acima
-            // antes de tornar o modal visível
             requestAnimationFrame(() => {
                 ui.toggleModal('modal-tasks', true);
             });
         }
     },
 
-  // Gerencia o Submit (Criar ou Editar)
     handleFormSubmit: (e) => {
         e.preventDefault();
         const idEditing = document.getElementById('task-id-editing')?.value;
-        
         if (idEditing) {
-            // CORREÇÃO: Passamos o ID como string pura, sem parseInt
             taskManager.updateTask(idEditing);
         } else {
             taskManager.addTask();
@@ -618,7 +605,6 @@ const taskManager = {
         const date = document.getElementById('task-date').value;
         const obs = document.getElementById('task-obs').value;
 
-        // Priority 3: Padronização de ID para String (Type Safety)
         store.tasks.push({
             id: Date.now().toString(),
             subjectId,
@@ -627,45 +613,33 @@ const taskManager = {
             obs
         });
         
-        // Dispara notify(), que atualizará a lista e badges
         store.save();
-        
-        // Limpa o formulário e sai do modo de edição
         taskManager.cancelEdit();
-        taskManager.toggleForm(false); // Fecha o formulário após salvar
-        
+        taskManager.toggleForm(false);
         toast.show('Menos uma pendência mental. Foco total agora.', 'success', 'Loop Aberto Fechado!');
     },
 
-   // Atualizar Tarefa Existente
     updateTask: (id) => {
-        // CORREÇÃO: Comparação robusta (String vs String)
         const taskIndex = store.tasks.findIndex(t => t.id.toString() === id.toString());
-        
         if (taskIndex > -1) {
             store.tasks[taskIndex].subjectId = document.getElementById('task-subject').value;
             store.tasks[taskIndex].subCategory = document.getElementById('task-subcategory').value;
             store.tasks[taskIndex].date = document.getElementById('task-date').value;
             store.tasks[taskIndex].obs = document.getElementById('task-obs').value;
             
-            // Dispara notify()
             store.save(); 
-            taskManager.cancelEdit(); // Sai do modo de edição
+            taskManager.cancelEdit(); 
             taskManager.toggleForm(false);
-            
             toast.show('Tarefa atualizada com sucesso!', 'success', 'Edição Concluída');
         } else {
             console.error("[TaskManager] Erro: ID não encontrado para atualização:", id);
         }
     },
 
-   // Iniciar Edição
     startEdit: (id) => {
-        // CORREÇÃO: Comparação robusta (String vs String)
         const task = store.tasks.find(t => t.id.toString() === id.toString());
         if (!task) return;
 
-        // Preenche campos
         const hiddenId = document.getElementById('task-id-editing');
         if(hiddenId) hiddenId.value = task.id;
         
@@ -674,18 +648,15 @@ const taskManager = {
         document.getElementById('task-date').value = task.date;
         document.getElementById('task-obs').value = task.obs || '';
 
-        // Ajusta UI dos botões
         const btnCancel = document.getElementById('btn-cancel-task');
         if(btnCancel) btnCancel.classList.remove('hidden');
         
         const btnText = document.getElementById('btn-task-text');
         if(btnText) btnText.innerText = 'Salvar Alterações';
 
-        // Abre o formulário se estiver fechado
         taskManager.toggleForm(true);
     },
 
-    // Cancelar/Limpar Edição
     cancelEdit: () => {
         const form = document.getElementById('form-task');
         if(form) form.reset();
@@ -699,44 +670,30 @@ const taskManager = {
         const btnText = document.getElementById('btn-task-text');
         if(btnText) btnText.innerText = 'Adicionar Tarefa';
         
-        // Define data padrão novamente
         const dateInput = document.getElementById('task-date');
         if(dateInput) dateInput.value = getLocalISODate();
     },
 
-    // Verificação de Atrasos (Visual) - ATUALIZADO PARA DUAL BADGE COM LÓGICA UNIFICADA
     checkOverdue: () => {
         const today = getLocalISODate();
-        
-        // 1. Tarefas Gerais Atrasadas
         const generalLateCount = store.tasks.filter(t => t.date < today).length;
-        
-        // 2. [NOVO] Checklists de Estudo Pendentes (Soma total de subtarefas não feitas)
         const studyPendingCount = store.reviews.reduce((total, review) => {
             if (!review.subtasks) return total;
             return total + review.subtasks.filter(t => !t.done).length;
         }, 0);
 
-        // 3. Soma Unificada para o Badge Vermelho
         const totalAlerts = generalLateCount + studyPendingCount;
-        
-        // Tarefas Gerais "Em dia" (Badge Verde)
         const okCount = store.tasks.filter(t => t.date >= today).length;
     
         const badgeLate = document.getElementById('badge-task-late');
         const badgeOk = document.getElementById('badge-task-ok');
         const icon = document.getElementById('task-icon-main');
         
-        // Lógica Visual Vermelha (Atrasados + Checklists)
         if (badgeLate) {
             if (totalAlerts > 0) {
                 badgeLate.innerText = totalAlerts > 99 ? '99+' : totalAlerts;
                 badgeLate.classList.remove('hidden');
-                
-                // Tooltip explicativo (Quick Win)
                 badgeLate.title = `${generalLateCount} Gerais + ${studyPendingCount} Checklists`;
-
-                // Pinta o ícone principal de vermelho se houver pendências reais
                 if(icon) {
                     icon.classList.add('text-red-500');
                     icon.classList.remove('text-slate-400');
@@ -751,7 +708,6 @@ const taskManager = {
             }
         }
     
-        // Lógica Visual Verde (Em dia - Apenas Gerais)
         if (badgeOk) {
             if (okCount > 0) {
                 badgeOk.innerText = okCount > 9 ? '9+' : okCount;
@@ -762,8 +718,6 @@ const taskManager = {
         }
     },
 
-    // --- Lógica de UI do Modal de Tarefas (NOVO) ---
-    
     toggleForm: (show) => {
         const btn = document.getElementById('btn-show-task-form');
         const form = document.getElementById('form-task');
@@ -775,16 +729,14 @@ const taskManager = {
         } else {
             if(btn) btn.classList.remove('hidden');
             if(form) form.classList.add('hidden');
-            taskManager.cancelEdit(); // Limpa se tiver algo
+            taskManager.cancelEdit(); 
         }
     },
 
     switchTab: (tabName) => {
-        // Estilos de Aba Ativa vs Inativa
         const activeClass = ['border-indigo-600', 'text-indigo-600', 'border-b-2', 'font-bold'];
         const inactiveClass = ['border-transparent', 'text-slate-500', 'font-medium'];
 
-        // Reset
         ['general', 'linked'].forEach(t => {
             const btn = document.getElementById(`tab-task-${t}`);
             const view = document.getElementById(`view-task-${t}`);
@@ -793,11 +745,10 @@ const taskManager = {
                 btn.classList.remove(...activeClass);
                 btn.classList.add(...inactiveClass);
                 view.classList.add('hidden');
-                view.classList.remove('flex', 'flex-col'); // Importante para o layout flex do geral
+                view.classList.remove('flex', 'flex-col');
             }
         });
 
-        // Activate
         const btnActive = document.getElementById(`tab-task-${tabName}`);
         const viewActive = document.getElementById(`view-task-${tabName}`);
         
@@ -805,43 +756,31 @@ const taskManager = {
             btnActive.classList.remove(...inactiveClass);
             btnActive.classList.add(...activeClass);
             viewActive.classList.remove('hidden');
-            if (tabName === 'general') viewActive.classList.add('flex', 'flex-col'); // Restaura flexbox
+            if (tabName === 'general') viewActive.classList.add('flex', 'flex-col');
             
-            // NOVO: Controle de visibilidade do toggle de histórico
             const toggleWrapper = document.getElementById('history-toggle-wrapper');
             if (toggleWrapper) {
                 tabName === 'linked' ? toggleWrapper.classList.remove('hidden') : toggleWrapper.classList.add('hidden');
             }
 
-            // Se for a aba de linked, renderiza na hora para garantir dados frescos
             if (tabName === 'linked') taskManager.renderLinkedTasks();
         }
     },
 
-    // --- RENDERIZADOR DA ABA "CHECKLISTS DE ESTUDO" (ATUALIZADO: Filtro de Limpeza e Histórico) ---
     renderLinkedTasks: () => {
         const container = document.getElementById('linked-task-list');
         if (!container) return;
         
-        // Garante que o wrapper do toggle apareça ao renderizar
         const toggleWrapper = document.getElementById('history-toggle-wrapper');
         if (toggleWrapper) toggleWrapper.classList.remove('hidden');
 
         const today = getLocalISODate();
 
-        // 1. Filtrar estudos que possuem subtarefas e aplicam a regra de Histórico
         const reviewsWithTasks = store.reviews.filter(r => {
-            // Se não tem subtarefas, ignora
             if (!r.subtasks || r.subtasks.length === 0) return false;
-
-            // Se "Mostrar Histórico" estiver ATIVO, mostra tudo
             if (taskManager.showHistory) return true;
-
-            // Se estiver INATIVO (Padrão), aplica a limpeza:
-            // Regra 1: Não mostra passado. Regra 2: Não mostra concluídos.
             const isPast = r.date < today;
             const isDone = r.status === 'DONE';
-            
             return !isPast && !isDone;
         });
         
@@ -854,12 +793,9 @@ const taskManager = {
             return;
         }
 
-        // Ordenar por data (Prioridade)
         reviewsWithTasks.sort((a, b) => a.date.localeCompare(b.date));
 
         container.innerHTML = reviewsWithTasks.map(r => {
-            // Gera HTML das subtarefas
-            // CORREÇÃO: Aspas adicionadas em '${t.id}' e uso da nova função handleLinkedTaskToggle
             const tasksHtml = r.subtasks.map(t => `
                 <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded transition-colors">
                     <input type="checkbox" onchange="app.handleLinkedTaskToggle('${r.id}', '${t.id}')" 
@@ -871,7 +807,6 @@ const taskManager = {
 
             return `
                 <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-3">
-                    <!-- HEADER CLICÁVEL (Deep Linking) -->
                     <div onclick="app.locateAndHighlight('${r.id}')" 
                          class="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-indigo-50 transition-colors group">
                         
@@ -882,7 +817,6 @@ const taskManager = {
                                 <p class="text-xs font-bold text-slate-800 truncate leading-tight mt-0.5 group-hover:text-indigo-900 transition-colors" title="${r.topic}">${r.topic}</p>
                             </div>
                         </div>
-                        <!-- Ícone visual de link externo -->
                         <i data-lucide="external-link" class="w-3 h-3 text-slate-300 group-hover:text-indigo-500"></i>
                     </div>
                     <div class="p-3">
@@ -893,7 +827,6 @@ const taskManager = {
         }).join('');
     },
     
-    // --- NOVA LÓGICA DE RENDERIZAÇÃO AGRUPADA (ABA GERAL) ---
     render: () => {
         const container = document.getElementById('task-list-container');
         if (!container) return;
@@ -905,12 +838,10 @@ const taskManager = {
 
         const today = getLocalISODate();
 
-        // 1. Separação dos Grupos
         const late = store.tasks.filter(t => t.date < today).sort((a,b) => a.date.localeCompare(b.date));
         const present = store.tasks.filter(t => t.date === today);
         const future = store.tasks.filter(t => t.date > today).sort((a,b) => a.date.localeCompare(b.date));
 
-        // 2. Componente Helper de Renderização de Grupo
         const renderGroup = (title, tasks, headerClass) => {
             if (tasks.length === 0) return '';
             
@@ -919,7 +850,6 @@ const taskManager = {
                 const textColor = getContrastYIQ(subject.color);
                 const isLate = t.date < today;
                 
-                // CORREÇÃO: Aspas adicionadas em '${t.id}' nos onclicks
                 return `
                 <div class="relative rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow group flex items-start gap-3 mb-2" 
                      style="background-color: ${subject.color}; color: ${textColor}">
@@ -962,7 +892,6 @@ const taskManager = {
             `;
         };
 
-        // 3. Montagem Final
         let html = '';
         html += renderGroup('🚨 Atrasados', late, 'text-red-600 border-red-100');
         html += renderGroup('⭐ Foco Hoje', present, 'text-indigo-600 border-indigo-100');
@@ -972,3 +901,5 @@ const taskManager = {
         if(window.lucide) lucide.createIcons();
     }
 };
+
+/* --- END OF FILE core.js --- */

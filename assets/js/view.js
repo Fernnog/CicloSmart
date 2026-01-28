@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/VIEW.JS --- */
 /**
- * UI RENDERER (View Layer) - v1.3.5 Updated
+ * UI RENDERER (View Layer) - v1.3.6 (Com Anexo Inteligente)
  * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
- * ATUALIZADO: Suporte a Edição Avançada e Arquivamento de Matérias.
+ * ATUALIZADO: Implementação do Botão de Resumo (Smart Attachment).
  */
 
 const ui = {
@@ -301,10 +301,7 @@ const ui = {
         ui.toggleModal('modal-changelog', show);
     },
 
-    // --- ATUALIZAÇÃO (PRIORIDADES 1 E 2): LISTA DE MATÉRIAS E FILTROS ---
     initSubjects: () => {
-        // 1. Popula SELECT de Novo Estudo (Filtrando Arquivados)
-        // Mostra apenas os ativos (ou seja, archived !== true)
         const activeSubjects = store.subjects.filter(s => !s.archived);
         const optionsHtml = activeSubjects.map(s => 
             `<option value="${s.id}" data-color="${s.color}">${s.name}</option>`
@@ -313,21 +310,16 @@ const ui = {
         const selectNew = document.getElementById('input-subject');
         if(selectNew) selectNew.innerHTML = optionsHtml;
         
-        // 2. Popula SELECT do Modal de Edição (Prioridade 1)
         const selectEdit = document.getElementById('edit-input-subject');
         if(selectEdit) selectEdit.innerHTML = optionsHtml;
 
-        // 3. Popula LISTA de Configurações (Mostra TODOS + Botão de Olho)
         const list = document.getElementById('subject-list');
         if(list) {
             list.innerHTML = store.subjects.map(s => {
-                // Lógica de Estado (Prioridade 2)
                 const isArchived = s.archived === true;
                 const eyeIcon = isArchived ? 'eye-off' : 'eye';
                 const eyeTitle = isArchived ? 'Desarquivar (Tornar visível)' : 'Arquivar (Ocultar da lista)';
                 
-                // Estilos Visuais para Arquivado (Opacidade e Riscado)
-                // Usando Tailwind classes padrão para evitar dependência excessiva de CSS externo
                 const containerClass = isArchived 
                     ? 'bg-slate-100 border-dashed border-slate-300 opacity-70' 
                     : 'bg-slate-50 border-slate-100';
@@ -343,11 +335,9 @@ const ui = {
                         <span class="text-sm font-medium ${textClass}">${s.name}</span>
                     </div>
                     <div class="flex items-center gap-1">
-                        <!-- Botão Arquivar/Desarquivar -->
                         <button onclick="store.toggleSubjectArchived('${s.id}')" class="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="${eyeTitle}">
                             <i data-lucide="${eyeIcon}" class="w-4 h-4"></i>
                         </button>
-                        <!-- Botão Excluir -->
                         <button onclick="store.removeSubject('${s.id}')" class="p-1.5 text-slate-400 hover:text-red-500 transition-colors" title="Excluir Permanentemente">
                             <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
@@ -355,12 +345,10 @@ const ui = {
                 </li>
             `}).join('');
             
-            // Garante que os novos ícones (eye, eye-off) sejam renderizados
             if(window.lucide) lucide.createIcons();
         }
     },
 
-    // --- RENDERIZAÇÃO PRINCIPAL (ATUALIZADO: Correção de Layout Grid) ---
     render: () => {
         const executeRender = () => {
             const todayStr = getLocalISODate();
@@ -380,14 +368,12 @@ const ui = {
                 if (a.date !== b.date) {
                     return a.date.localeCompare(b.date);
                 }
-
-                // 2. Prioridade: Status (Pendentes no topo, Feitos no fundo)
+                // 2. Prioridade: Status
                 const statusA = a.status === 'DONE' ? 1 : 0;
                 const statusB = b.status === 'DONE' ? 1 : 0;
                 if (statusA !== statusB) {
                     return statusA - statusB;
                 }
-
                 // 3. Tipo de Estudo
                 const typeScore = (type) => {
                     const t = type ? type.toUpperCase() : '';
@@ -413,7 +399,7 @@ const ui = {
                 }
             });
     
-            // --- Renderização Avançada (Future: Weather + Busca) ---
+            // --- Renderização Avançada (Future) ---
             const filterTerm = window.app && window.app.futureFilterTerm ? window.app.futureFilterTerm : '';
             
             const futureItems = sorted.filter(r => {
@@ -472,10 +458,6 @@ const ui = {
             }
     
             // --- Atualização de Layout & Contadores ---
-            
-            // CORREÇÃO: Removemos a lógica antiga que alterava classes do "mainEl" via JS.
-            // O layout agora é controlado exclusivamente pelo HTML (lg:grid-cols-3).
-         
             ['late', 'today', 'future'].forEach(key => {
                 const countEl = document.getElementById(`count-${key}`);
                 if(countEl) countEl.innerText = counts[key];
@@ -485,9 +467,7 @@ const ui = {
             });
     
             // --- EMPTY STATES & CELEBRAÇÃO ---
-            
             if(!counts.late) {
-                // UX Improvement: Botão de ação útil
                 containers.late.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-8 text-emerald-500/80">
                         <div class="bg-emerald-50 p-2 rounded-full mb-2">
@@ -503,7 +483,6 @@ const ui = {
     
             if(!counts.today) {
                 const hasCompletedWorkToday = store.reviews.some(r => r.date === todayStr && r.status === 'DONE');
-                
                 if (hasCompletedWorkToday) {
                     containers.today.innerHTML = `
                         <div class="flex flex-col items-center justify-center h-full py-10 animate-fade-in opacity-80">
@@ -544,35 +523,32 @@ const ui = {
     
             ui.updateCapacityStats(todayLoad);
             ui.updateStreak();
-        }; // fim executeRender
+        };
 
-        // Wrapper para View Transitions API
         if (document.startViewTransition) {
             document.startViewTransition(() => {
                 executeRender();
                 if(window.lucide) lucide.createIcons();
             });
         } else {
-            // Fallback
             executeRender();
             if(window.lucide) lucide.createIcons();
         }
     },
 
-    // --- CRIAÇÃO DO CARTÃO (ATUALIZADO: Hard Dependency / Trava de Qualidade / View Transition ID) ---
+    // --- CRIAÇÃO DO CARTÃO COM ANEXO INTELIGENTE ---
     createCardHTML: (review) => {
         const isDone = review.status === 'DONE';
         
-        // 1. Verificação de Hard Dependency (Bloqueio)
+        // 1. Hard Dependency (Bloqueio)
         const pendingSubtasks = (review.subtasks || []).filter(t => !t.done).length;
-        const isBlocked = !isDone && pendingSubtasks > 0; // Só bloqueia se não estiver feito E tiver pendências
+        const isBlocked = !isDone && pendingSubtasks > 0;
 
-        // Estilos Condicionais para o Checkbox
+        // Estilos do Checkbox
         const checkboxClass = isBlocked 
-            ? "checkbox-blocked appearance-none w-5 h-5 border-2 border-slate-300 rounded bg-slate-100 disabled:opacity-50" // Bloqueado
-            : "appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block"; // Normal
+            ? "checkbox-blocked appearance-none w-5 h-5 border-2 border-slate-300 rounded bg-slate-100 disabled:opacity-50" 
+            : "appearance-none w-5 h-5 border-2 border-slate-300 rounded checked:bg-indigo-600 checked:border-indigo-600 cursor-pointer transition-colors relative after:content-['✓'] after:absolute after:text-white after:text-xs after:left-1 after:top-0 after:hidden checked:after:block";
 
-        // Wrapper para Tooltip CSS (se necessário no futuro)
         const checkboxWrapperClass = isBlocked ? "checkbox-wrapper-blocked" : "";
 
         const containerClasses = isDone 
@@ -607,11 +583,10 @@ const ui = {
 
         const styleConfig = getTypeStyles(review.type);
 
-       const cycleHtml = review.batchId && review.cycleIndex 
-        ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
-        : '';
+        const cycleHtml = review.batchId && review.cycleIndex 
+            ? `<span onclick="ui.showCycleInfo('${review.batchId}', event)" class="cycle-badge ml-2" title="Ver Família de Estudos">#${review.cycleIndex}</span>` 
+            : '';
         
-        // UX Aprimorada: Tooltip com contexto de origem
         const originText = review.originalDate 
             ? `Original: ${formatDateDisplay(review.originalDate)}` 
             : 'Item emprestado';
@@ -632,6 +607,35 @@ const ui = {
             checkBtnClass += " text-slate-300 hover:text-indigo-600 border border-transparent";
         }
 
+        // Lógica de Link/Drive Existente
+        const hasLink = review.link && review.link.length > 5;
+        const driveIconClass = hasLink 
+            ? "text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100" 
+            : "text-slate-300 bg-slate-50 border-transparent hover:text-blue-500 hover:border-blue-200";
+        const driveTitle = hasLink ? 'Abrir Material (Link)' : 'Vincular Material (Drive)';
+
+        // ----------------------------------------------------
+        // LÓGICA DO NOVO ANEXO INTELIGENTE (Prioridade 1/2)
+        // ----------------------------------------------------
+        // Verifica se existe conteúdo HTML salvo
+        const hasSummary = review.htmlSummary && review.htmlSummary.length > 0;
+
+        // Estilização Dinâmica: Documento (Cheio) vs Nuvem (Vazio)
+        const summaryIcon = hasSummary ? 'file-text' : 'upload-cloud';
+        
+        const summaryClass = hasSummary 
+            ? "text-emerald-700 bg-emerald-100 border-emerald-300 hover:bg-emerald-200" // Ativo/Verde
+            : "text-slate-400 bg-slate-50 border-transparent hover:text-emerald-500 hover:border-emerald-200 hover:bg-emerald-50"; // Vazio/Cinza
+
+        const summaryTitle = hasSummary 
+            ? "Ler Resumo (Anexado)" 
+            : "Anexar Resumo (.html)";
+
+        // Variável boolean para o manager (segurança na string do onclick)
+        const hasSumString = hasSummary ? 'true' : 'false';
+
+        // ----------------------------------------------------
+
         // Barra de Progresso
         const subtasks = review.subtasks || [];
         const totalSub = subtasks.length;
@@ -650,18 +654,6 @@ const ui = {
             </div>
         ` : '';
 
-        // --- NOVA LÓGICA DE BOTÃO LINK/DRIVE ---
-        const hasLink = review.link && review.link.length > 5;
-        const driveIconClass = hasLink 
-            ? "text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100" // Tem link (Ativo)
-            : "text-slate-300 bg-slate-50 border-transparent hover:text-blue-500 hover:border-blue-200"; // Sem link (Inativo/Add)
-        
-        const driveIcon = hasLink ? 'hard-drive' : 'plus-circle'; // Ícone muda visualmente (embora ambos usem lucide icons)
-        // Nota: O ícone é definido no data-lucide abaixo
-        const driveTitle = hasLink ? 'Abrir Material' : 'Vincular Material (Drive)';
-
-        // Adicionado style para View Transitions
-        // NOTA: 'app.promptEdit' agora deve abrir o modal de edição (controlado pelo controller.js)
         return `
             <div id="card-${review.id}" draggable="true" 
                 ondragstart="app.handleKanbanDragStart(event, '${review.id}')"
@@ -689,12 +681,20 @@ const ui = {
                                 ${cycleHtml}
                                 ${tempIndicator}
 
-                                <!-- BOTÃO DRIVE/LINK -->
+                                <!-- BOTÃO DRIVE/LINK (Existente) -->
                                 <button onclick="app.handleLinkAction('${review.id}', '${review.link || ''}')"
                                         class="w-6 h-6 flex items-center justify-center rounded-full border text-[10px] transition-all ${driveIconClass}" 
                                         title="${driveTitle}">
                                     <i data-lucide="${hasLink ? 'hard-drive' : 'link'}" class="w-3 h-3"></i>
                                 </button>
+
+                                <!-- BOTÃO ANEXO INTELIGENTE (Novo) -->
+                                <button onclick="if(typeof fileManager !== 'undefined') { fileManager.handleAction('${review.id}', ${hasSumString}); event.stopPropagation(); } else { alert('Módulo FileManager carregando...'); }"
+                                        class="w-6 h-6 flex items-center justify-center rounded-full border text-[10px] transition-all ${summaryClass}" 
+                                        title="${summaryTitle}">
+                                    <i data-lucide="${summaryIcon}" class="w-3 h-3"></i>
+                                </button>
+
                             </div>
                         </div>
                     </div>
@@ -733,7 +733,6 @@ const ui = {
         `;
     },
 
-    // --- RENDERIZAÇÃO DE LISTA DE SUBTAREFAS ---
     renderSubtaskList: (review) => {
         const container = document.getElementById('subtask-list');
         if (!container) return;
@@ -755,7 +754,6 @@ const ui = {
 
                 return `
                 <div class="subtask-item flex items-center gap-3 p-2 rounded border border-slate-100 bg-white shadow-sm transition-colors hover:bg-slate-50">
-                    <!-- CORREÇÃO PRIORIDADE 1: Aspas adicionadas em '${t.id}' para proteger o ID numérico grande -->
                     <input type="checkbox" onchange="app.handleToggleSubtask('${t.id}')" ${t.done ? 'checked' : ''} class="subtask-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0">
                     
                     <span class="flex-1 text-xs text-slate-700 font-medium break-words flex items-center ${t.done ? 'line-through text-slate-400' : ''}">
@@ -763,8 +761,6 @@ const ui = {
                         ${recurrentIcon}
                     </span>
                     
-                    <!-- CORREÇÃO PRIORIDADE 1: Aspas adicionadas em '${t.id}' -->
-                    <!-- MELHORIA UX: Atributo title adicionado -->
                     <button onclick="app.handleDeleteSubtask('${t.id}')" class="text-slate-300 hover:text-red-500 p-1 shrink-0" title="Excluir item"><i data-lucide="x" class="w-3 h-3"></i></button>
                 </div>
             `}).join('');
@@ -849,7 +845,6 @@ const ui = {
             `;
         }).join('');
 
-        // --- ATUALIZAÇÃO: CABEÇALHO COM BOTÃO DE COPIAR ---
         popover.innerHTML = `
             <div class="mb-3 border-b border-slate-100 pb-2">
                 <div class="flex justify-between items-start">
@@ -859,14 +854,11 @@ const ui = {
                     </div>
                     
                     <div class="flex items-center gap-1">
-                        <!-- BOTÃO DE COPIAR (NOVO) -->
                         <button onclick="app.copyStudyInfo('${family[0].cycleIndex}', '${family[0].topic.replace(/'/g, "\\'")}')" 
                                 class="p-1.5 bg-slate-100 text-slate-500 rounded hover:bg-indigo-100 hover:text-indigo-600 transition-colors flex items-center justify-center h-8 w-8" 
                                 title="Copiar: #${family[0].cycleIndex} - Tópico">
                             <i data-lucide="copy" class="w-4 h-4"></i>
                         </button>
-                        
-                        <!-- BOTÃO FECHAR -->
                         <button onclick="document.getElementById('cycle-popover').classList.remove('visible'); document.getElementById('cycle-popover-backdrop').classList.remove('visible');" 
                             class="text-slate-300 hover:text-red-500 font-bold p-1.5 h-8 w-8 flex items-center justify-center transition-colors">✕</button>
                     </div>
@@ -887,7 +879,6 @@ const ui = {
         backdrop.classList.add('visible');
         popover.classList.add('visible');
         
-        // Garante que o ícone de copiar (lucide) seja renderizado
         if(window.lucide) lucide.createIcons();
     },
 

@@ -691,12 +691,15 @@ const ui = {
                                     <i data-lucide="${hasLink ? 'hard-drive' : 'link'}" class="w-3 h-3"></i>
                                 </button>
 
-                                <!-- BOTÃO ANEXO INTELIGENTE (Novo) -->
-                                <button onclick="if(typeof fileManager !== 'undefined') { fileManager.handleAction('${review.id}', ${hasSumString}); event.stopPropagation(); } else { alert('Módulo FileManager carregando...'); }"
+                                <!-- BOTÃO ANEXO (Upload/Ler) -->
+                                <button onclick="if(typeof fileManager !== 'undefined') { fileManager.handleAction('${review.id}', ${hasSumString}); event.stopPropagation(); } else { alert('Carregando módulo...'); }"
                                         class="w-6 h-6 flex items-center justify-center rounded-full border text-[10px] transition-all ${summaryClass}" 
                                         title="${summaryTitle}">
                                     <i data-lucide="${summaryIcon}" class="w-3 h-3"></i>
                                 </button>
+
+                                <!-- BOTÃO DELETAR ANEXO (Condicional) -->
+                                ${deleteSummaryHtml}
 
                             </div>
                         </div>

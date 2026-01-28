@@ -423,46 +423,74 @@ const store = {
     },
 
     // ----------------------------------------------
-    // NOVO: Gerenciamento de Anexos HTML (Prioridade 1, 2, 3)
+    // ATUALIZAÇÃO: Gerenciamento de Anexos com Propagação em Lote (Batch)
     // ----------------------------------------------
     attachSummary: (id, htmlContent) => {
-        // Encontra o review alvo pelo ID (suporta string/number)
-        const review = store.reviews.find(r => r.id.toString() === id.toString());
+        const targetReview = store.reviews.find(r => r.id.toString() === id.toString());
         
-        if (review) {
-            // [Prioridade 3] Armazena o HTML raw. 
-            // NOTA DE ARQUITETURA: O armazenamento nativo em JSON já lida com caracteres
-            // especiais. Para sistemas com >10MB de anexos, recomenda-se compressão (ex: LZString).
-            review.htmlSummary = htmlContent;
+        if (targetReview) {
+            let updateCount = 0;
 
-            // Dispara persistência (Local + Nuvem)
-            store.save();
+            // Função auxiliar para aplicar o anexo
+            const apply = (r) => {
+                r.htmlSummary = htmlContent;
+                updateCount++;
+            };
 
-            console.log('[Core] Resumo anexado ao card:', id);
+            // Lógica de Propagação: Se tem batchId, atualiza todos os irmãos
+            if (targetReview.batchId) {
+                store.reviews.forEach(r => {
+                    if (r.batchId === targetReview.batchId) apply(r);
+                });
+            } else {
+                // Se é um estudo órfão, atualiza só ele
+                apply(targetReview);
+            }
+
+            store.save(); // Persistência
+            
+            console.log(`[Core] Resumo anexado e propagado para ${updateCount} cartões.`);
             
             // Atualização visual imediata
             if (typeof ui !== 'undefined' && ui.render) ui.render();
-            toast.show('Resumo anexado e sincronizado.', 'success', 'Arquivo Salvo');
+            toast.show(`Resumo sincronizado em ${updateCount} cartões do ciclo.`, 'success', 'Mochila Digital Atualizada');
         } else {
-            console.error('[Core Error] Não foi possível anexar resumo. Card não encontrado:', id);
+            console.error('[Core Error] Card não encontrado:', id);
             toast.show('Erro ao encontrar card.', 'error');
         }
     },
 
-    // [Novo] Leitura segura do resumo (caso queiramos adicionar compressão no futuro)
     getSummary: (id) => {
         const review = store.reviews.find(r => r.id.toString() === id.toString());
         return review ? review.htmlSummary : null;
     },
 
-    // [Novo] Remover anexo (limpeza)
     deleteSummary: (id) => {
-        const review = store.reviews.find(r => r.id.toString() === id.toString());
-        if(review && review.htmlSummary) {
-            delete review.htmlSummary; // Remove propriedade para economizar espaço
+        const targetReview = store.reviews.find(r => r.id.toString() === id.toString());
+        
+        if (targetReview) {
+            if (!confirm("Tem certeza que deseja remover este resumo? Isso afetará todas as revisões deste ciclo.")) return;
+
+            let deleteCount = 0;
+
+            const remove = (r) => {
+                if (r.htmlSummary) {
+                    delete r.htmlSummary;
+                    deleteCount++;
+                }
+            };
+
+            if (targetReview.batchId) {
+                store.reviews.forEach(r => {
+                    if (r.batchId === targetReview.batchId) remove(r);
+                });
+            } else {
+                remove(targetReview);
+            }
+
             store.save();
             if (typeof ui !== 'undefined' && ui.render) ui.render();
-            toast.show('Resumo removido.', 'info');
+            toast.show(`Resumo removido de ${deleteCount} cartões.`, 'info', 'Limpeza Concluída');
         }
     },
     // ----------------------------------------------

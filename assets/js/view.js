@@ -1,3 +1,65 @@
+/* --- ASSETS/JS/VIEW.JS --- */
+/**
+ * UI RENDERER (View Layer) - v1.3.7 (Refatoração: Drag-and-Drop Heatmap)
+ * Responsável exclusivamente por: Manipulação de DOM, Templates HTML e Feedback Visual.
+ */
+
+const ui = {
+    // Navegação e Layout
+    switchTab: (tabName) => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById(`tab-${tabName}`);
+        if(btn) btn.classList.add('active');
+
+        const cols = document.querySelectorAll('.kanban-column');
+        cols.forEach(c => {
+            c.classList.remove('flex');
+            c.classList.add('hidden');
+        });
+
+        const activeCol = document.getElementById(`col-${tabName}`);
+        if(activeCol) {
+            activeCol.classList.remove('hidden');
+            activeCol.classList.add('flex');
+        }
+    },
+
+    updateModeUI: () => {
+        const btnMode = document.getElementById('mode-toggle');
+        const iconMode = document.getElementById('mode-icon');
+        const textMode = document.getElementById('mode-text');
+        const btnNew = document.getElementById('btn-new-study');
+        const iconNew = document.getElementById('icon-new-study');
+
+        if (!btnMode || !btnNew) return;
+
+        if (store.profile !== 'pendular') {
+            btnMode.classList.add('hidden');
+            btnNew.disabled = false;
+            btnNew.classList.remove('opacity-50', 'cursor-not-allowed');
+            if(iconNew) iconNew.setAttribute('data-lucide', 'plus');
+            if(window.lucide) lucide.createIcons();
+            return;
+        }
+
+        btnMode.classList.remove('hidden');
+
+        if (store.cycleState === 'ATTACK') {
+            btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-attack';
+            textMode.innerText = 'Dia de Ataque';
+            iconMode.setAttribute('data-lucide', 'sword');
+            btnNew.disabled = false;
+            iconNew.setAttribute('data-lucide', 'plus');
+        } else {
+            btnMode.className = 'hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide cursor-pointer hover:shadow-md ml-4 mode-defense';
+            textMode.innerText = 'Dia de Defesa';
+            iconMode.setAttribute('data-lucide', 'shield');
+            
+            btnNew.disabled = false; 
+            iconNew.setAttribute('data-lucide', 'calendar-plus'); 
+            btnNew.classList.remove('opacity-50', 'cursor-not-allowed'); 
+        }
+        
         if (window.lucide) lucide.createIcons();
     },
 

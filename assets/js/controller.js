@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.3.7 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.3.8 - Logic Layer)
  * Contém: Orquestração de UI, Auth e Eventos.
- * ATUALIZADO: Refinamento de Drag-and-Drop no Heatmap com Validação de Cronologia.
+ * ATUALIZADO: Implementação de Drag-and-Drop Híbrido (Coexistência Desktop/Mobile).
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -35,6 +35,11 @@ const app = {
         // Inicialização Visual Inicial
         ui.initSubjects(); 
         ui.render();
+
+        // --- NOVO: Ativar Gerente de Arraste Híbrido ---
+        // Delay seguro para garantir que o DOM (Heatmap) foi renderizado antes de vincular eventos
+        setTimeout(() => app.setupUnifiedDragDrop(), 500);
+
         taskManager.checkOverdue(); 
         
         app.setupEventListeners();
@@ -44,18 +49,65 @@ const app = {
         ui.switchTab('today');
 
         // --- [NOVO] VARREDURA DE INÍCIO DE SESSÃO (PRIORIDADE 1) ---
-        // Verifica pendências silenciosamente e abre o modal se necessário
         setTimeout(() => app.checkPendingTasksOnStartup(), 800);
 
         // --- VERIFICAÇÃO DE INTEGRIDADE ---
-        // Delegado para o Engine
         setTimeout(() => app.checkCycleIntegrity(), 1000);
 
-        // --- MANUTENÇÃO AUTOMÁTICA DE DADOS (Data Sanitation) ---
-        // Executa limpeza silenciosa de tarefas antigas e checklists obsoletos
+        // --- MANUTENÇÃO AUTOMÁTICA DE DADOS ---
         if (window.engine && engine.runDataSanitation) {
             setTimeout(() => engine.runDataSanitation(), 2500);
         }
+    },
+
+    setupUnifiedDragDrop: () => {
+        const grid = document.getElementById('heatmap-grid');
+        if (!grid) return;
+
+        // Remover listeners antigos clonando o nó para evitar duplicação em re-renderizações
+        const newGrid = grid.cloneNode(true);
+        grid.parentNode.replaceChild(newGrid, grid);
+        
+        // 1. DRAG START (Início do arraste)
+        newGrid.addEventListener('dragstart', (e) => {
+            const card = e.target.closest('[draggable="true"]');
+            if (!card) return;
+            
+            // Tenta obter o ID via dataset ou extrair do atributo id (card-XYZ)
+            let id = card.dataset.id; 
+            if (!id && card.id) id = card.id.replace('card-', '');
+
+            if (id) {
+                app.handleDragStart(e, id);
+            }
+        });
+
+        // 2. DRAG OVER (Movimentação sobre células)
+        newGrid.addEventListener('dragover', (e) => {
+            const cell = e.target.closest('.heatmap-day-cell');
+            if (cell) {
+                app.handleDragOver(e);
+                app.handleDragEnter(e, cell);
+            }
+        });
+
+        // 3. DRAG LEAVE (Sair de uma célula)
+        newGrid.addEventListener('dragleave', (e) => {
+            const cell = e.target.closest('.heatmap-day-cell');
+            if (cell) app.handleDragLeave(e, cell);
+        });
+
+        // 4. DROP (Soltar o card)
+        newGrid.addEventListener('drop', (e) => {
+            const cell = e.target.closest('.heatmap-day-cell');
+            if (cell && cell.dataset.date) {
+                app.handleDrop(e, cell.dataset.date);
+                // Limpeza visual garantida após o drop
+                document.querySelectorAll('.heatmap-day-cell').forEach(el => el.classList.remove('drag-hover'));
+            }
+        });
+        
+        console.log("[CicloSmart] Gerente de Arraste Híbrido sincronizado.");
     },
 
     checkPendingTasksOnStartup: () => {
@@ -567,10 +619,9 @@ const app = {
 
     // --- DRAG AND DROP HANDLERS (HEATMAP) ---
 
-    // --- LÓGICA DE DRAG & DROP DO RADAR ---
-
     handleDragStart: (e, id) => {
-        e.dataTransfer.setData("text/plain", id);
+        // Garante que o ID seja texto para compatibilidade total entre Polyfill e Native
+        e.dataTransfer.setData("text/plain", String(id));
         e.dataTransfer.effectAllowed = "move";
         document.body.classList.add('is-dragging');
     },
@@ -636,7 +687,6 @@ const app = {
         const capacity = store.capacity || 240;
 
         if (newTotal > capacity) {
-             // Apenas um alerta visual, mas permite a ação para dar liberdade ao usuário
              toast.show(`Atenção: O dia ficará com ${newTotal}min (Meta: ${capacity}min).`, 'warning', '⚠️ Sobrecarga');
         }
 

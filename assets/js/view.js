@@ -243,8 +243,7 @@ const ui = {
                 const tooltipText = `Matéria: ${s.subject}\nTópico: ${s.topic}\nTipo: ${s.type}`;
                 
                 return `
-                    return `
-                    <div draggable="true" 
+                   <div draggable="true" 
                          data-id="${s.id}"
                          id="card-${s.id}"
                          title="${tooltipText}" 

@@ -261,7 +261,6 @@ const ui = {
             }).join('');
 
             container.innerHTML += `
-                container.innerHTML += `
                 <div data-date="${isoDate}"
                      class="heatmap-day-cell p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all group">
                     

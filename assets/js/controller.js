@@ -567,6 +567,8 @@ const app = {
 
     // --- DRAG AND DROP HANDLERS (HEATMAP) ---
 
+    // --- LÓGICA DE DRAG & DROP DO RADAR ---
+
     handleDragStart: (e, id) => {
         e.dataTransfer.setData("text/plain", id);
         e.dataTransfer.effectAllowed = "move";
@@ -582,33 +584,31 @@ const app = {
         e.dataTransfer.dropEffect = "move";
     },
 
-    // 1. Feedback Visual de Entrada
     handleDragEnter: (e, element) => {
         e.preventDefault();
         element.classList.add('drag-hover');
     },
 
-    // 2. Feedback Visual de Saída
     handleDragLeave: (e, element) => {
         e.preventDefault();
         element.classList.remove('drag-hover');
     },
 
-    // 3. Lógica de Drop (Soltar e Salvar) Refinada
     handleDrop: (e, targetDateStr) => {
         e.preventDefault();
         document.body.classList.remove('is-dragging');
         
-        // Limpa feedback visual de todos os dias (segurança)
+        // Limpeza visual de segurança
         document.querySelectorAll('.heatmap-day-cell').forEach(el => el.classList.remove('drag-hover'));
 
         const idRaw = e.dataTransfer.getData("text/plain");
+        // Busca robusta para garantir compatibilidade de tipos
         const review = store.reviews.find(r => r.id.toString() === idRaw.toString());
         
         if (!review) return;
-        if (review.date === targetDateStr) return; // Soltou no mesmo dia
+        if (review.date === targetDateStr) return; 
 
-        // --- VALIDAÇÃO 1: Cronologia (Não quebrar a sequência) ---
+        // 1. Validação de Cronologia (Impedir quebra de sequência)
         if (review.batchId) {
             const siblings = store.reviews
                 .filter(r => r.batchId === review.batchId)
@@ -616,20 +616,18 @@ const app = {
             
             const currentIndex = siblings.findIndex(r => r.id.toString() === review.id.toString());
             
-            // Verifica se tentou jogar para DEPOIS da próxima revisão
             const nextReview = siblings[currentIndex + 1];
             if (nextReview && targetDateStr >= nextReview.date) {
-                return toast.show(`Bloqueado: A próxima revisão deste ciclo é em ${formatDateDisplay(nextReview.date)}.`, 'error', '⛔ Ordem Cronológica');
+                return toast.show(`Bloqueado: Próxima revisão é em ${formatDateDisplay(nextReview.date)}.`, 'error', '⛔ Cronologia');
             }
             
-            // Verifica se tentou jogar para ANTES da revisão anterior
             const prevReview = siblings[currentIndex - 1];
             if (prevReview && targetDateStr <= prevReview.date) {
-                 return toast.show(`Bloqueado: A revisão anterior foi em ${formatDateDisplay(prevReview.date)}.`, 'error', '⛔ Ordem Cronológica');
+                 return toast.show(`Bloqueado: Revisão anterior foi em ${formatDateDisplay(prevReview.date)}.`, 'error', '⛔ Cronologia');
             }
         }
 
-        // --- VALIDAÇÃO 2: Capacidade (Evitar Sobrecarga) ---
+        // 2. Validação de Capacidade (Alerta de Sobrecarga - Permissivo)
         const targetDayLoad = store.reviews
             .filter(r => r.date === targetDateStr && r.id.toString() !== review.id.toString())
             .reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
@@ -638,15 +636,16 @@ const app = {
         const capacity = store.capacity || 240;
 
         if (newTotal > capacity) {
-            return toast.show(`Ação negada: O dia ficaria com ${newTotal}min (Teto: ${capacity}min). Libere espaço antes.`, 'warning', '⚠️ Dia Cheio');
+             // Apenas um alerta visual, mas permite a ação para dar liberdade ao usuário
+             toast.show(`Atenção: O dia ficará com ${newTotal}min (Meta: ${capacity}min).`, 'warning', '⚠️ Sobrecarga');
         }
 
-        // --- EXECUÇÃO: Move APENAS este card ---
+        // Executa a movimentação
         review.date = targetDateStr;
         store.save();
         
-        ui.renderHeatmap(); // Re-renderiza o radar para atualizar cores
-        ui.render();        // Atualiza listas gerais
+        ui.renderHeatmap(); 
+        ui.render(); 
         
         toast.show(`Revisão movida para ${formatDateDisplay(targetDateStr)}.`, 'success', '📅 Reagendado');
     },

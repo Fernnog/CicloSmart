@@ -243,9 +243,10 @@ const ui = {
                 const tooltipText = `Matéria: ${s.subject}\nTópico: ${s.topic}\nTipo: ${s.type}`;
                 
                 return `
+                    return `
                     <div draggable="true" 
-                         ondragstart="app.handleDragStart(event, '${s.id}')"
-                         ondragend="app.handleDragEnd(event)"
+                         data-id="${s.id}"
+                         id="card-${s.id}"
                          title="${tooltipText}" 
                          class="text-[9px] flex items-center justify-between px-1.5 py-1 rounded mb-1 border border-slate-100/20 truncate cursor-grab active:cursor-grabbing hover:ring-1 hover:ring-indigo-300 transition-all" 
                          style="${borderStyle} ${bgStyle}">
@@ -261,10 +262,8 @@ const ui = {
             }).join('');
 
             container.innerHTML += `
-                <div ondragover="app.handleDragOver(event)" 
-                     ondragenter="app.handleDragEnter(event, this)" 
-                     ondragleave="app.handleDragLeave(event, this)"
-                     ondrop="app.handleDrop(event, '${isoDate}')"
+                container.innerHTML += `
+                <div data-date="${isoDate}"
                      class="heatmap-day-cell p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all group">
                     
                     <div class="flex justify-between items-center mb-1 pb-1 border-b border-black/5 pointer-events-none">

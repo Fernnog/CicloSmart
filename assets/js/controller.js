@@ -1,8 +1,8 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.3.8 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.3.7 - Logic Layer)
  * Contém: Orquestração de UI, Auth e Eventos.
- * ATUALIZADO: Implementação de Drag-and-Drop Híbrido (Coexistência Desktop/Mobile).
+ * ATUALIZADO: Implementação de DIAGNÓSTICO PROFUNDO de Drag & Drop (Log Tracing).
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
@@ -35,11 +35,6 @@ const app = {
         // Inicialização Visual Inicial
         ui.initSubjects(); 
         ui.render();
-
-        // --- NOVO: Ativar Gerente de Arraste Híbrido ---
-        // Delay seguro para garantir que o DOM (Heatmap) foi renderizado antes de vincular eventos
-        setTimeout(() => app.setupUnifiedDragDrop(), 500);
-
         taskManager.checkOverdue(); 
         
         app.setupEventListeners();
@@ -49,65 +44,107 @@ const app = {
         ui.switchTab('today');
 
         // --- [NOVO] VARREDURA DE INÍCIO DE SESSÃO (PRIORIDADE 1) ---
+        // Verifica pendências silenciosamente e abre o modal se necessário
         setTimeout(() => app.checkPendingTasksOnStartup(), 800);
 
         // --- VERIFICAÇÃO DE INTEGRIDADE ---
+        // Delegado para o Engine
         setTimeout(() => app.checkCycleIntegrity(), 1000);
 
-        // --- MANUTENÇÃO AUTOMÁTICA DE DADOS ---
+        // --- MANUTENÇÃO AUTOMÁTICA DE DADOS (Data Sanitation) ---
+        // Executa limpeza silenciosa de tarefas antigas e checklists obsoletos
         if (window.engine && engine.runDataSanitation) {
             setTimeout(() => engine.runDataSanitation(), 2500);
         }
+
+        // --- [DIAGNÓSTICO] AGENDAMENTO DO SETUP DE DRAG & DROP ---
+        // Delay seguro para garantir que o HTML do Radar existe antes de ligar os sensores
+        console.log("⏳ [DEBUG] Agendando setup do Drag & Drop em 500ms...");
+        setTimeout(() => {
+            app.setupUnifiedDragDrop();
+        }, 500);
     },
 
+    // --- [DIAGNÓSTICO] GERENTE DE ARRASTE COM LOGS DETALHADOS ---
     setupUnifiedDragDrop: () => {
+        console.group("🕵️‍♂️ [DEBUG] Setup Drag & Drop");
         const grid = document.getElementById('heatmap-grid');
-        if (!grid) return;
+        
+        if (!grid) {
+            console.error("❌ ERRO CRÍTICO: Elemento #heatmap-grid não foi encontrado no DOM. O script rodou cedo demais?");
+            console.groupEnd();
+            return;
+        }
+        
+        console.log("✅ Elemento #heatmap-grid localizado. Reiniciando listeners...");
 
-        // Remover listeners antigos clonando o nó para evitar duplicação em re-renderizações
+        // Clona para limpar listeners antigos (Garbage Collection de eventos)
         const newGrid = grid.cloneNode(true);
         grid.parentNode.replaceChild(newGrid, grid);
-        
-        // 1. DRAG START (Início do arraste)
-        newGrid.addEventListener('dragstart', (e) => {
-            const card = e.target.closest('[draggable="true"]');
-            if (!card) return;
-            
-            // Tenta obter o ID via dataset ou extrair do atributo id (card-XYZ)
-            let id = card.dataset.id; 
-            if (!id && card.id) id = card.id.replace('card-', '');
+        console.log("♻️ Grid clonado e limpo.");
 
-            if (id) {
-                app.handleDragStart(e, id);
+        // 1. MONITOR DE CLICK (Para verificar se o elemento é clicável e não bloqueado por CSS)
+        newGrid.addEventListener('mousedown', (e) => {
+            console.log("🖱️ [DEBUG] Click detectado em:", e.target);
+            const card = e.target.closest('[draggable="true"]');
+            if (card) {
+                console.log("   ↳ Alvo válido identificado (draggable=true):", card.id);
+            } else {
+                console.warn("   ↳ Clique fora de um card arrastável ou pointer-events bloqueado.");
             }
         });
 
-        // 2. DRAG OVER (Movimentação sobre células)
+        // 2. DRAG START (O momento crítico onde costuma falhar)
+        newGrid.addEventListener('dragstart', (e) => {
+            console.log("🚀 [DEBUG] Evento 'dragstart' disparado!");
+            
+            const card = e.target.closest('[draggable="true"]');
+            if (!card) {
+                console.error("❌ [DEBUG] 'dragstart' ocorreu, mas não achei o elemento pai com draggable='true'.");
+                return;
+            }
+
+            // Tenta extrair o ID de várias formas (blindagem)
+            let id = card.dataset.id; 
+            if (!id && card.id) id = card.id.replace('card-', '');
+
+            console.log(`✅ [DEBUG] Card capturado. ID: ${id} | HTML:`, card);
+
+            if (id) {
+                app.handleDragStart(e, id);
+            } else {
+                console.error("❌ [DEBUG] ID não encontrado no elemento.");
+            }
+        });
+
+        // 3. DRAG OVER (Permite soltar)
         newGrid.addEventListener('dragover', (e) => {
+            // console.log("... dragover ..."); // Comentado para evitar spam no console
             const cell = e.target.closest('.heatmap-day-cell');
             if (cell) {
-                app.handleDragOver(e);
+                e.preventDefault(); // OBRIGATÓRIO para permitir o drop
                 app.handleDragEnter(e, cell);
             }
         });
 
-        // 3. DRAG LEAVE (Sair de uma célula)
-        newGrid.addEventListener('dragleave', (e) => {
-            const cell = e.target.closest('.heatmap-day-cell');
-            if (cell) app.handleDragLeave(e, cell);
-        });
-
-        // 4. DROP (Soltar o card)
+        // 4. DROP (Finalização)
         newGrid.addEventListener('drop', (e) => {
+            console.log("🎯 [DEBUG] Evento 'drop' disparado.");
             const cell = e.target.closest('.heatmap-day-cell');
+            
             if (cell && cell.dataset.date) {
+                console.log(`✅ [DEBUG] Soltando na data: ${cell.dataset.date}`);
                 app.handleDrop(e, cell.dataset.date);
-                // Limpeza visual garantida após o drop
+                
+                // Limpeza visual manual para garantir
                 document.querySelectorAll('.heatmap-day-cell').forEach(el => el.classList.remove('drag-hover'));
+            } else {
+                console.warn("⚠️ [DEBUG] Drop ocorreu fora de uma célula válida.");
             }
         });
-        
-        console.log("[CicloSmart] Gerente de Arraste Híbrido sincronizado.");
+
+        console.log("✅ Listeners anexados com sucesso.");
+        console.groupEnd();
     },
 
     checkPendingTasksOnStartup: () => {
@@ -619,8 +656,10 @@ const app = {
 
     // --- DRAG AND DROP HANDLERS (HEATMAP) ---
 
+    // --- LÓGICA DE DRAG & DROP DO RADAR ---
+
     handleDragStart: (e, id) => {
-        // Garante que o ID seja texto para compatibilidade total entre Polyfill e Native
+        // [ATUALIZAÇÃO DE DEBUG] Garante conversão para String para compatibilidade total
         e.dataTransfer.setData("text/plain", String(id));
         e.dataTransfer.effectAllowed = "move";
         document.body.classList.add('is-dragging');
@@ -687,6 +726,7 @@ const app = {
         const capacity = store.capacity || 240;
 
         if (newTotal > capacity) {
+             // Apenas um alerta visual, mas permite a ação para dar liberdade ao usuário
              toast.show(`Atenção: O dia ficará com ${newTotal}min (Meta: ${capacity}min).`, 'warning', '⚠️ Sobrecarga');
         }
 

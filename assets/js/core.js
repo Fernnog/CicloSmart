@@ -1,9 +1,9 @@
 /* --- START OF FILE core.js --- */
 
 /**
- * CICLOSMART CORE (v1.4.0 - Smart Attachments Update)
+ * CICLOSMART CORE (v1.4.1 - Bug Fix: Delete Review Type Safety)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Suporte a Anexos HTML, Gerenciamento de Resumos e Persistência de Arquivos.
+ * ATUALIZADO: Correção na exclusão de reviews (comparações String/Number).
  */
 
 // ==========================================
@@ -519,7 +519,9 @@ const store = {
     },
 
     deleteReview: (id) => {
-        store.reviews = store.reviews.filter(r => r.id !== id);
+        // Correção Crítica: Uso de toString() para garantir comparação exata (String vs Number)
+        store.reviews = store.reviews.filter(r => r.id.toString() !== id.toString());
+        
         store.save();
         if (typeof ui !== 'undefined' && ui.render) ui.render();
     },

@@ -1,16 +1,17 @@
 /* --- ASSETS/JS/CONTROLLER.JS --- */
 /**
- * CICLOSMART APP CONTROLLER (v1.3.7 - Logic Layer)
+ * CICLOSMART APP CONTROLLER (v1.3.8 - Logic Layer)
  * Contém: Orquestração de UI, Auth e Eventos.
- * ATUALIZADO: Implementação de DIAGNÓSTICO PROFUNDO de Drag & Drop (Log Tracing).
+ * ATUALIZAÇÃO: Correção de Escopo de Busca e Lógica de Limpeza de Filtros.
  */
 
 // Variável de Estado para o Modal de Decisão de Ciclo
 let pendingStudyData = null;
-// Variável de Estado para Busca na Coluna Futuro
-let futureFilterTerm = '';
 
 const app = {
+    // Variável de Estado para Busca na Coluna Futuro (Movida para o escopo do app)
+    futureFilterTerm: '',
+
     init: () => {
         store.load();
         
@@ -585,8 +586,29 @@ const app = {
     },
 
     handleFutureSearch: (term) => {
-        futureFilterTerm = term.toLowerCase().trim();
+        // Correção Crítica: Salva no escopo global 'app' para o view.js enxergar
+        app.futureFilterTerm = term.toLowerCase().trim();
+        
+        // Lógica do Botão X
+        const btn = document.getElementById('btn-clear-search');
+        if (btn) {
+            if (term.length > 0) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+        
         ui.render();
+    },
+
+    clearSearch: () => {
+        const input = document.getElementById('future-search');
+        if (input) {
+            input.value = '';
+            app.handleFutureSearch(''); // Reseta o filtro e esconde o botão
+            input.focus(); // Devolve o foco para o usuário digitar de novo se quiser
+        }
     },
 
     confirmDelete: (id) => {

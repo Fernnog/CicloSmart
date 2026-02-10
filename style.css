@@ -483,3 +483,21 @@ body.is-dragging .heatmap-day-cell * {
         touch-action: none !important; /* Força o Polyfill a assumir o controle */
     }
 }
+
+/* --- BUSCA E FILTROS (Aprimoramento) --- */
+
+/* Garante alinhamento vertical perfeito do botão de limpar busca */
+#btn-clear-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    top: 0;
+    right: 0;
+    padding: 0 8px; /* Área de clique maior */
+    cursor: pointer;
+}
+
+#btn-clear-search.hidden {
+    display: none;
+}

@@ -1,0 +1,514 @@
+/* --- START OF FILE style.css --- */
+
+/* 1. Configurações Globais */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 2. Scrollbars Customizadas (Padrão Geral) */
+.custom-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+}
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+
+/* 3. Utilitários para Input de Cor */
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+}
+
+/* 4. Animações e Utilitários de UI */
+.fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animação suave para o modal de alerta (Soft Block) */
+#modal-drag-warning .bg-white {
+    animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes popIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+[x-cloak] { display: none !important; }
+
+/* --- Toast Notifications (Smart Feedback System) --- */
+.toast {
+    pointer-events: auto;
+    transform: translateX(120%); /* Começa fora da tela */
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito elástico */
+    will-change: transform, opacity;
+}
+
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Tipografia interna do Toast */
+.toast h4 {
+    margin-bottom: 2px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+.toast p {
+    line-height: 1.4;
+    opacity: 0.95;
+}
+
+/* Ajuste específico para links ou negritos dentro da mensagem */
+.toast b, .toast strong {
+    font-weight: 700;
+}
+
+/* 5. Lógica de Navegação: Mobile (Abas) vs Desktop (Grid) */
+
+/* Estilo do Botão de Aba Ativo (Mobile) */
+.tab-btn.active {
+    color: #4f46e5; /* indigo-600 */
+    border-bottom: 2px solid #4f46e5;
+    background-color: #eef2ff; /* indigo-50 */
+}
+
+/* --- Estados do Modo Pendular (Ataque/Defesa) --- */
+
+/* Modo Ataque: Tema Vermelho (Alerta/Ação) */
+.mode-attack {
+    background-color: #fef2f2; /* red-50 */
+    border-color: #fecaca;     /* red-200 */
+    color: #b91c1c;            /* red-700 */
+}
+
+/* Modo Defesa: Tema Azul (Calma/Consolidação) */
+.mode-defense {
+    background-color: #eff6ff; /* blue-50 */
+    border-color: #bfdbfe;     /* blue-200 */
+    color: #1d4ed8;            /* blue-700 */
+}
+
+/* Animação suave para troca de ícone no HUD */
+#mode-toggle i {
+    transition: transform 0.3s ease;
+}
+
+#mode-toggle:active i {
+    transform: scale(0.8);
+}
+
+/* --- NOVA FUNCIONALIDADE: Badge de Ciclo e Modal (Mobile First) --- */
+
+/* Badge clicável - Estilo Botão (Pill Shape) */
+.cycle-badge {
+    cursor: pointer;
+    background-color: #f1f5f9; /* Slate-100 */
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px; /* Pill shape */
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    color: #64748b;
+    transition: all 0.1s ease;
+    user-select: none; /* Evita selecionar texto ao clicar */
+    display: inline-block; /* Garante área de clique */
+    white-space: nowrap;
+}
+
+/* Feedback visual ao tocar */
+.cycle-badge:active, .cycle-badge:hover {
+    background-color: #6366f1; /* Indigo-500 */
+    color: white;
+    border-color: #4f46e5;
+    transform: scale(1.05);
+    box-shadow: 0 2px 5px rgba(99, 102, 241, 0.3);
+}
+
+/* Modal Centralizado (Overlay) */
+#cycle-popover {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95); /* Começa levemente menor */
+    z-index: 9999; /* Z-Index extremo para garantir visibilidade */
+    
+    background: white;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border-radius: 16px;
+    padding: 16px;
+    
+    width: 85%; 
+    max-width: 320px; 
+    
+    display: none; 
+    opacity: 0;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); /* Animação suave "pop" */
+}
+
+/* Backdrop escuro */
+#cycle-popover-backdrop {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(15, 23, 42, 0.6); /* Slate-900 com opacidade */
+    z-index: 9998; /* Logo abaixo do modal */
+    backdrop-filter: blur(2px); /* Efeito moderno */
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Classes de Estado Visível */
+#cycle-popover.visible {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#cycle-popover-backdrop.visible {
+    display: block;
+    opacity: 1;
+}
+
+/* --- AUTENTICAÇÃO FIREBASE --- */
+
+/* Estado de Carregamento (previne cliques duplos) */
+.auth-loading {
+    opacity: 0.5;
+    pointer-events: none;
+    cursor: wait;
+}
+
+/* Responsividade: Ocultar auth bar em telas muito pequenas se necessário */
+@media (max-width: 768px) {
+    #auth-container {
+        display: none; /* Em mobile, isso garante que o header não quebre */
+    }
+}
+
+/* ==========================================================================
+   6. MELHORIAS E CORREÇÕES DE LAYOUT (Scroll Fixes)
+   ========================================================================== 
+*/
+
+/* Garante que o container principal não exceda a altura da tela 
+   e respeite o flex-shrink em navegadores como Firefox/Chrome.
+*/
+#main-kanban {
+    min-height: 0; 
+}
+
+/* Define que as colunas do Kanban devem ocupar no máximo 100% da altura do pai
+   e permite que elas encolham (min-height: 0) para forçar o scroll interno.
+*/
+.kanban-column {
+    min-height: 0; 
+    max-height: 100%; 
+    display: flex;
+    flex-direction: column;
+}
+
+/* Assegura que a lista interna (onde estão os cards) tenha permissão para rolar (scroll)
+   e o cabeçalho permaneça fixo no topo da coluna.
+*/
+#list-late, #list-today, #list-future {
+    flex: 1 1 auto; /* Permite crescer e encolher conforme necessário */
+    min-height: 0;  /* Habilita o cálculo correto do overflow */
+    overflow-y: auto; /* Força a aparição da barra de rolagem quando necessário */
+}
+
+/* ==========================================================================
+   7. COMPONENTES ESPECÍFICOS (OVERRIDES) - Prioridade 2
+   ========================================================================== 
+*/
+
+/* Refinamento para scrollbars dentro dos cards do heatmap (Radar) */
+/* Necessário pois os cards são pequenos (h-32) e a barra padrão ocupa muito espaço */
+#heatmap-grid .custom-scroll::-webkit-scrollbar {
+    width: 3px; /* Barra bem fina */
+}
+
+#heatmap-grid .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+/* Ajuste fino para etiquetas dentro do Heatmap */
+#heatmap-grid .text-\[7px\] {
+    line-height: 1;
+    min-width: 14px;
+    text-align: center;
+}
+
+/* ==========================================================================
+   8. FEEDBACK VISUAL DE DRAG & DROP (RADAR) - v1.3.0
+   ========================================================================== 
+*/
+
+/* Transição base para as células do Heatmap */
+.heatmap-day-cell {
+    transition: all 0.2s ease;
+}
+
+/* Feedback visual para o dia de destino no Heatmap (ativado via JS) */
+.heatmap-day-cell.drag-hover {
+    background-color: #f0fdf4 !important; /* Verde suave (emerald-50) */
+    border-color: #4ade80 !important;      /* Borda verde (emerald-400) */
+    box-shadow: inset 0 0 0 2px #4ade80;  /* Destaque interno */
+    transform: scale(1.02);                /* Leve "pop" para indicar interatividade */
+    z-index: 10;
+}
+
+/* Garante que o item sendo arrastado tenha estilo de 'grab' */
+.heatmap-day-cell div[draggable="true"] {
+    cursor: grab;
+}
+.heatmap-day-cell div[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* Remove eventos de mouse dos filhos durante o drag
+   Isso evita o "flicker" (piscar) quando o mouse passa sobre 
+   textos ou badges dentro do dia, garantindo que o hover 
+   fique estável no container pai (.heatmap-day-cell).
+*/
+body.is-dragging .heatmap-day-cell * {
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   9. AGENDAMENTO ELÁSTICO (Kanban Drag & Drop) - v1.2.3
+   ========================================================================== 
+*/
+
+/* Feedback visual para zonas de Drop no Kanban */
+.kanban-column.drag-hover {
+    background-color: #f0fdf4 !important; /* emerald-50: Um verde bem suave */
+    border-color: #4ade80 !important;     /* emerald-400 */
+    box-shadow: inset 0 0 0 2px #4ade80;
+    transition: all 0.2s ease;
+}
+
+/* Feedback visual para itens sendo arrastados com potencial conflito (Soft Block) */
+.kanban-column.drag-warning {
+    background-color: #fffbeb !important; /* amber-50 */
+    border-color: #fcd34d !important;     /* amber-300 */
+    box-shadow: inset 0 0 0 2px #fcd34d;
+}
+
+/* Indicador visual de item "Emprestado/Temporário" */
+.badge-temp {
+    background-color: #fffbeb; /* amber-50 */
+    color: #b45309;            /* amber-700 */
+    border: 1px dashed #f59e0b;/* amber-500 */
+}
+
+/* Transição de feedback para as colunas */
+.kanban-column {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* ==========================================================================
+   10. SUBTAREFAS / MICRO-QUESTS (Checklist Styles)
+   ========================================================================== 
+*/
+
+/* Efeito de "Riscado" quando concluído */
+.subtask-checkbox:checked + span {
+    text-decoration: line-through;
+    color: #94a3b8; /* slate-400 */
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+/* Hover nos itens da lista */
+.subtask-item {
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.subtask-item:hover {
+    background-color: #f8fafc; /* slate-50 */
+}
+
+/* Micro-animação ao clicar */
+.subtask-item:active {
+    transform: scale(0.99);
+}
+
+/* ==========================================================================
+   11. DEEP LINKING & NAVIGATION (v1.2.8) - Prioridades 1, 2, 3
+   ========================================================================== 
+*/
+
+/* Animação de Pulso para Destacar o Cartão */
+@keyframes highlight-pulse {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); 
+        transform: scale(1.02); 
+        border-color: #6366f1; 
+    }
+    70% { 
+        box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); 
+        transform: scale(1); 
+        border-color: #6366f1; 
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); 
+        transform: scale(1); 
+    }
+}
+
+/* Classe aplicada via JS ao encontrar o cartão */
+.highlight-card {
+    animation: highlight-pulse 2s cubic-bezier(0.4, 0, 0.6, 1);
+    z-index: 20 !important; /* Traz para frente durante a animação */
+    position: relative;
+    background-color: white !important; /* Garante destaque se houver camadas */
+}
+
+/* --- Weather Forecast Headers --- */
+.day-weather-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    background-color: #f1f5f9; /* slate-100 */
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.day-weather-header:first-child { margin-top: 0; }
+
+/* --- Hard Dependency (Checkbox Bloqueado) --- */
+.checkbox-blocked {
+    cursor: not-allowed !important;
+    opacity: 0.4;
+    filter: grayscale(100%);
+    position: relative;
+}
+
+/* Tooltip nativo via CSS para explicar o bloqueio */
+.checkbox-wrapper-blocked:hover::after {
+    content: "Complete as checklists primeiro!";
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: #1e293b;
+    color: white;
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 50;
+    margin-bottom: 4px;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   12. VIEW TRANSITIONS API (Animação de Reordenação)
+   ========================================================================== 
+*/
+
+/* Define a duração e a curva de animação para qualquer elemento movendo-se */
+::view-transition-group(root) {
+    animation-duration: 0.4s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   13. ESTILOS DE ARQUIVAMENTO (MATÉRIAS) - v1.4.0
+   ========================================================================== 
+*/
+
+/* Estilo para itens arquivados na lista de configurações */
+.subject-item-archived {
+    opacity: 0.6;
+    background-color: #f1f5f9; /* slate-100 */
+    border-style: dashed;
+}
+
+.subject-item-archived .subject-name {
+    text-decoration: line-through;
+    color: #94a3b8; /* slate-400 */
+}
+
+/* ==========================================================================
+   14. FUNCIONALIDADE DRAG-AND-DROP (RADAR) - CORREÇÃO HÍBRIDA & DEBUG
+   ========================================================================== 
+   ATUALIZADO: Regras de força bruta para garantir cursor e interatividade
+   tanto no Desktop quanto Mobile.
+*/
+
+/* CONFIGURAÇÃO DE INTERATIVIDADE (MOUSE/TOUCH) */
+
+/* Garante que o container do card seja o alvo do evento, não seus filhos */
+/* Isso evita o erro de "ID não encontrado" no log do controller */
+.heatmap-day-cell div[draggable="true"] * {
+    pointer-events: none !important;
+}
+
+/* Regras Base (Desktop/Mouse) - Força a visibilidade da mãozinha */
+.heatmap-day-cell div[draggable="true"] {
+    cursor: grab !important;       /* Força a mãozinha */
+    user-select: none;             /* Evita selecionar texto */
+    touch-action: pan-y;           /* Permite scroll vertical no desktop */
+    pointer-events: auto !important; /* Garante que o mouse 'vê' o elemento */
+    position: relative;            /* Necessário para z-index */
+    z-index: 50;                   /* Traz para frente */
+}
+
+/* Estado Ativo (Agarrando) */
+.heatmap-day-cell div[draggable="true"]:active {
+    cursor: grabbing !important;
+}
+
+/* Regra Específica para Mobile (Bloqueia scroll para permitir arraste) */
+@media (pointer: coarse) {
+    .heatmap-day-cell div[draggable="true"] {
+        touch-action: none !important; /* Força o Polyfill a assumir o controle */
+    }
+}
+
+/* --- BUSCA E FILTROS (Aprimoramento) --- */
+
+/* Garante alinhamento vertical perfeito do botão de limpar busca */
+#btn-clear-search {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    top: 0;
+    right: 0;
+    padding: 0 8px; /* Área de clique maior */
+    cursor: pointer;
+}
+
+#btn-clear-search.hidden {
+    display: none;
+}

@@ -318,6 +318,7 @@
                     </p>
                 </div>
 
+                <!-- NOVO INPUT: Link do Material -->
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">
                         Link do Material (Drive/Notion) <span class="text-[10px] text-slate-400 font-normal normal-case">(Opcional)</span>
@@ -725,6 +726,7 @@
         </div>
     </div>
     
+    <!-- NOVO MODAL DE EDIÇÃO DE ESTUDO (Abaixo de modal-subtasks) -->
     <div id="modal-edit-study" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
             <div class="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex justify-between items-center shrink-0">
@@ -755,6 +757,7 @@
                     <input type="number" id="edit-input-time" min="5" max="300" class="w-full border border-slate-300 rounded-lg p-3 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
                 
+                <!-- Link Field (Optional) -->
                 <div>
                      <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5 tracking-wide">Link Material</label>
                      <input type="url" id="edit-input-link" class="w-full border border-slate-300 rounded-lg p-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -765,29 +768,6 @@
                     <button type="submit" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-md">Salvar Alterações</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <div id="modal-drag-warning" class="fixed inset-0 bg-slate-900/60 z-[80] hidden flex items-center justify-center backdrop-blur-sm" aria-hidden="true">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm m-4 overflow-hidden transform transition-all flex flex-col p-6">
-            <div class="flex items-center gap-3 mb-4 text-amber-600">
-                <div class="p-2 bg-amber-50 rounded-full border border-amber-100">
-                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-lg font-bold text-slate-800">Atenção no Ajuste</h3>
-            </div>
-            
-            <p id="drag-warning-text" class="text-sm text-slate-600 mb-6 leading-relaxed">
-                </p>
-    
-            <div class="flex gap-3">
-                <button onclick="ui.toggleModal('modal-drag-warning', false)" class="flex-1 py-2.5 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors text-xs uppercase">
-                    Cancelar
-                </button>
-                <button id="btn-confirm-drag" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 shadow-md transition-all text-xs uppercase">
-                    Mover Mesmo Assim
-                </button>
-            </div>
         </div>
     </div>
 
@@ -803,16 +783,22 @@
         }
     </script>
 
+    <!-- INÍCIO DAS IMPORTAÇÕES DOS ARQUIVOS -->
     <script src="assets/js/changelog.js"></script>
     
+    <!-- Lógica de Banco de Dados -->
     <script src="assets/js/core.js"></script>
     
+    <!-- Lógica de Negócio (Engine) - Corrigido o caminho -->
     <script src="assets/js/engine.js"></script>
 
+    <!-- !!! O NOVO ARQUIVO DE ANEXOS !!! -->
     <script src="assets/js/fileManager.js"></script> 
     
+    <!-- !!! A PARTE VISUAL QUE ESTAVA FALTANDO !!! -->
     <script src="assets/js/view.js"></script>
 
+    <!-- Controlador Final -->
     <script src="assets/js/controller.js"></script> 
 </body>
-</html>
+                    </html>

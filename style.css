@@ -41,16 +41,6 @@ input[type="color"]::-webkit-color-swatch {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Animação suave para o modal de alerta (Soft Block) */
-#modal-drag-warning .bg-white {
-    animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes popIn {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
 [x-cloak] { display: none !important; }
 
 /* --- Toast Notifications (Smart Feedback System) --- */
@@ -303,17 +293,10 @@ body.is-dragging .heatmap-day-cell * {
 
 /* Feedback visual para zonas de Drop no Kanban */
 .kanban-column.drag-hover {
-    background-color: #f0fdf4 !important; /* emerald-50: Um verde bem suave */
-    border-color: #4ade80 !important;     /* emerald-400 */
+    background-color: #f0fdf4; /* emerald-50: Um verde bem suave */
+    border-color: #4ade80;     /* emerald-400 */
     box-shadow: inset 0 0 0 2px #4ade80;
     transition: all 0.2s ease;
-}
-
-/* Feedback visual para itens sendo arrastados com potencial conflito (Soft Block) */
-.kanban-column.drag-warning {
-    background-color: #fffbeb !important; /* amber-50 */
-    border-color: #fcd34d !important;     /* amber-300 */
-    box-shadow: inset 0 0 0 2px #fcd34d;
 }
 
 /* Indicador visual de item "Emprestado/Temporário" */
@@ -323,9 +306,15 @@ body.is-dragging .heatmap-day-cell * {
     border: 1px dashed #f59e0b;/* amber-500 */
 }
 
-/* Transição de feedback para as colunas */
+/* Feedback visual para zonas de Drop no Kanban */
 .kanban-column {
     transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.kanban-column.drag-hover {
+    background-color: #f0fdf4 !important; /* emerald-50 */
+    border-color: #4ade80 !important;     /* emerald-400 */
+    box-shadow: inset 0 0 0 2px #4ade80;
 }
 
 /* ==========================================================================

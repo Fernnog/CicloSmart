@@ -2,6 +2,14 @@
 
 const changelogData = [
     {
+        version: '1.3.8',
+        date: '06/04/2026',
+        changes: [
+            '🌴 <b>Pausa Programada (Modo Férias):</b> Precisa de um descanso? Agora você pode congelar sua agenda! Informe a data de início e a duração da pausa, e o sistema empurrará todos os seus estudos para frente automaticamente. O motor inteligente (Waterfall) redistribui a carga para garantir que você não sofra com sobrecarga no dia do seu retorno.',
+            '🐛 <b>Correção do Início de Ciclo (Dia #1):</b> O sistema agora respeita rigorosamente o comando de "Novo Ciclo". Resolvemos um comportamento onde revisões futuras projetadas interferiam na contagem matemática, garantindo que sua nova etapa recomece limpa e exatamente a partir do #1.'
+        ]
+    },
+    {
         version: '1.3.7',
         date: '04/02/2025',
         changes: [

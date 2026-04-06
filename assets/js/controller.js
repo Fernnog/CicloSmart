@@ -682,6 +682,22 @@ const app = {
         if(window.engine) engine.applyVacationMode();
     },
 
+    undoLastAction: () => {
+        if(store.restoreBackup()) {
+            ui.render();
+            if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
+                ui.renderHeatmap();
+            }
+            
+            const btnUndo = document.getElementById('btn-undo-vacation');
+            if(btnUndo) btnUndo.classList.add('hidden');
+            
+            toast.show('A agenda retornou exatamente como estava antes.', 'success', '↩️ Ação Desfeita');
+        } else {
+            toast.show('Não há histórico recente para desfazer.', 'warning');
+        }
+    },
+
     // --- DRAG AND DROP HANDLERS (HEATMAP) ---
 
     // --- LÓGICA DE DRAG & DROP DO RADAR ---

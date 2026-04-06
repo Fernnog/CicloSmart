@@ -26,18 +26,20 @@ const engine = {
             exemploItem: store.reviews && store.reviews.length > 0 ? store.reviews[0] : 'Nenhum'
         });
 
-        // 2. Diagnóstico da Varredura
-        if (store.reviews && store.reviews.length > 0) {
-            store.reviews.forEach((r, i) => {
-                // MODIFICADO: Trava de Escopo de Ciclo
-                // Ignora completamente os cards que foram criados antes da data âncora do ciclo atual
-                if (store.cycleStartDate && r.date < store.cycleStartDate) {
-                    return; // Ignora e vai para o próximo item do loop
-                }
+// Diagnóstico da Varredura
+            if (store.reviews && store.reviews.length > 0) {
+                store.reviews.forEach((r, i) => {
+                    // MODIFICADO: Trava de Escopo de Ciclo
+                    // Ignora completamente os cards que foram criados antes da data âncora do ciclo atual
+                    if (store.cycleStartDate && r.date < store.cycleStartDate) return;
+                    
+                    // CRÍTICO (CORREÇÃO DE BUG): Avaliar apenas os estudos originais ('NOVO' / 'NEW').
+                    // Isso impede que as revisões projetadas para o futuro contaminem o cálculo do novo ciclo.
+                    if (r.type !== 'NOVO' && r.type !== 'NEW') return;
 
-                // Tenta ler cycleIndex ou cycle_index (caso haja variação de legado)
-                // Loga apenas se o item tiver cycleIndex para não poluir
-                if (r.cycleIndex) {
+                    // Tenta ler cycleIndex ou cycle_index (caso haja variação de legado)
+                    // Loga apenas se o item tiver cycleIndex para não poluir
+                    if (r.cycleIndex) {
                     const currentIdx = parseInt(r.cycleIndex, 10);
                     
                     // Loga apenas quando encontra um novo máximo (para economizar linhas)

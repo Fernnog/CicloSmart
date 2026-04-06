@@ -470,7 +470,8 @@ const app = {
             toast.show('Ciclo reiniciado! Dia #1 definido.', 'neuro', '🚩 Novo Ciclo');
         }
         
-        if(window.engine) engine.processStudyEntry(pendingStudyData);
+        // MODIFICADO: Passamos a variável 'startNew' para o Engine saber se deve forçar o #1
+        if(window.engine) engine.processStudyEntry(pendingStudyData, startNew);
         
         ui.toggleModal('modal-cycle-confirm', false);
         ui.toggleModal('modal-new', false);

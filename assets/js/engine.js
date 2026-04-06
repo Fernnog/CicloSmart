@@ -389,7 +389,7 @@ const engine = {
         }
 
         // 4. Persistência e Feedback (Se houve limpeza ou normalização)
-        if (tasksRemoved > 0 || checklistsCleaned > 0 || idFixedCount > 0) {
+      if (tasksRemoved > 0 || checklistsCleaned > 0 || idFixedCount > 0) {
             store.save(); // Salva a versão "limpa/normalizada" no LocalStorage/Firebase
             
             console.log(`[Engine] Manutenção Concluída: ${tasksRemoved} tarefas removidas, ${checklistsCleaned} checklists otimizados.`);
@@ -403,6 +403,66 @@ const engine = {
                 );
             }, 2000); // Delay para não competir com o "Bem-vindo"
         }
+    },
+
+    // --- Modo Pausa Programada (Férias) ---
+    applyVacationMode: () => {
+        const startStr = document.getElementById('input-vacation-start').value;
+        const daysStr = document.getElementById('input-vacation-days').value;
+
+        if (!startStr || !daysStr) return toast.show('Preencha a data de início e a quantidade de dias.', 'warning');
+
+        const daysToShift = parseInt(daysStr);
+        if (daysToShift <= 0) return toast.show('A duração da pausa deve ser de pelo menos 1 dia.', 'warning');
+
+        if (!confirm(`Congelar a agenda por ${daysToShift} dias a partir de ${formatDateDisplay(startStr)}?`)) return;
+
+        let shiftCount = 0;
+
+        // 1. Fase de Salto Temporal
+        store.reviews.forEach(r => {
+            // Empurra tudo que for da data da pausa em diante e que não estiver concluído
+            if (r.status === 'PENDING' && r.date >= startStr) {
+                const current = new Date(r.date + 'T00:00:00');
+                current.setDate(current.getDate() + daysToShift);
+                r.date = getLocalISODate(current);
+                shiftCount++;
+            }
+        });
+
+        // 2. Fase de Redistribuição Segura (Waterfall)
+        let dateCursor = new Date(startStr + 'T00:00:00');
+        dateCursor.setDate(dateCursor.getDate() + daysToShift); // Inicia verificação na data de retorno
+        let hasChanges = true;
+        let daysProcessed = 0;
+        
+        while (hasChanges && daysProcessed < 120) { // Escopo maior de segurança
+            hasChanges = false;
+            const cursorStr = getLocalISODate(dateCursor);
+            const dayLoad = store.reviews.filter(r => r.date === cursorStr && r.status === 'PENDING').reduce((acc, curr) => acc + (parseInt(curr.time) || 0), 0);
+            let overflowNeeded = dayLoad - (store.capacity || 240);
+
+            if (overflowNeeded > 0) {
+                const itemsOnDay = store.reviews.filter(r => r.date === cursorStr && r.status === 'PENDING').sort((a, b) => b.cycleIndex - a.cycleIndex); 
+                const nextDay = new Date(dateCursor); nextDay.setDate(nextDay.getDate() + 1); const nextDayStr = getLocalISODate(nextDay);
+                for (let item of itemsOnDay) {
+                    if (overflowNeeded <= 0) break;
+                    item.date = nextDayStr;
+                    overflowNeeded -= item.time;
+                    hasChanges = true; 
+                }
+            }
+            dateCursor.setDate(dateCursor.getDate() + 1);
+            daysProcessed++;
+        }
+
+        store.save(); 
+        if (typeof ui !== 'undefined') {
+            ui.render();
+            ui.renderHeatmap();
+            ui.toggleSubjectModal(false);
+        }
+        toast.show(`Pausa ativada! ${shiftCount} tarefas remanejadas preservando a carga.`, 'neuro', '🌴 Férias Programadas');
     }
 }; 
 

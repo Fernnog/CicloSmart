@@ -670,12 +670,16 @@ const app = {
         }
     },
 
-    generateICS: () => {
+   generateICS: () => {
         if(window.engine) engine.generateICS();
     },
 
     handleReschedule: () => {
         if(window.engine) engine.handleReschedule();
+    },
+
+    handleVacationMode: () => {
+        if(window.engine) engine.applyVacationMode();
     },
 
     // --- DRAG AND DROP HANDLERS (HEATMAP) ---

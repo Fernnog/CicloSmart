@@ -29,6 +29,12 @@ const engine = {
         // 2. Diagnóstico da Varredura
         if (store.reviews && store.reviews.length > 0) {
             store.reviews.forEach((r, i) => {
+                // MODIFICADO: Trava de Escopo de Ciclo
+                // Ignora completamente os cards que foram criados antes da data âncora do ciclo atual
+                if (store.cycleStartDate && r.date < store.cycleStartDate) {
+                    return; // Ignora e vai para o próximo item do loop
+                }
+
                 // Tenta ler cycleIndex ou cycle_index (caso haja variação de legado)
                 // Loga apenas se o item tiver cycleIndex para não poluir
                 if (r.cycleIndex) {
@@ -53,7 +59,8 @@ const engine = {
     },
 
     // --- Algoritmo SRS (Criação de Cards) ---
-    processStudyEntry: (data) => {
+    // MODIFICADO: Adicionado parâmetro 'forceNewCycle' com valor padrão 'false'
+    processStudyEntry: (data, forceNewCycle = false) => {
         // Recebe 'complexity' para definir o tempo das revisões (Funcionalidade v1.3.3)
         // Recebe 'link' para Integração com Drive/Notion (Funcionalidade v1.4.0)
         const { subjectName, subjectColor, topic, studyTime, selectedDateStr, complexity, link } = data;
@@ -78,8 +85,8 @@ const engine = {
         const REVIEW_CEILING_RATIO = 0.40; 
         const reviewLimitMinutes = Math.floor(store.capacity * REVIEW_CEILING_RATIO);
         
-        // CORREÇÃO: Usa a nova função de cálculo sem depender de datas
-        const finalCycleIndex = engine.calculateCycleIndex();
+        // MODIFICADO: Se o usuário pediu novo ciclo, crava 1. Senão, calcula o próximo.
+        const finalCycleIndex = forceNewCycle ? 1 : engine.calculateCycleIndex();
         
         const newReviews = [];
         let blocker = null;

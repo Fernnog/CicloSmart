@@ -405,7 +405,7 @@ const engine = {
         }
     },
 
-    // --- Modo Pausa Programada (Férias) ---
+   // --- Modo Pausa Programada (Férias) ---
     applyVacationMode: () => {
         const startStr = document.getElementById('input-vacation-start').value;
         const daysStr = document.getElementById('input-vacation-days').value;

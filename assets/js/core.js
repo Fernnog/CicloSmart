@@ -149,6 +149,24 @@ const store = {
         hasCelebrated: false
     },
     
+    // Sistema de Backup em Memória (Undo)
+    _backupState: null,
+    
+    createBackup: () => {
+        // Tira uma foto profunda do estado atual das revisões
+        store._backupState = JSON.stringify(store.reviews);
+    },
+
+    restoreBackup: () => {
+        if (store._backupState) {
+            store.reviews = JSON.parse(store._backupState);
+            store._backupState = null; // Limpa o backup após o uso
+            store.save(); // Salva no LocalStorage/Firebase o estado restaurado
+            return true;
+        }
+        return false;
+    },
+
     // Sistema de Observer (Reatividade)
     listeners: [],
 

@@ -166,6 +166,7 @@ const ui = {
     toggleSubjectModal: (show) => {
         if(show) {
             ui.switchSettingsTab('subjects');
+            ui.updateVacationUI();
         }
         ui.toggleModal('modal-subjects', show);
     },

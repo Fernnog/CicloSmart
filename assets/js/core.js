@@ -142,6 +142,8 @@ const store = {
     cycleState: 'ATTACK', 
     lastAttackDate: null, 
     cycleStartDate: null,
+    vacationStart: null,
+    vacationReturnDate: null,
     currentUser: null,
     
     // Controle de Sessão

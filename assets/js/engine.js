@@ -115,7 +115,14 @@ const engine = {
             }
             const targetDate = new Date(baseDate);
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
-            const isoDate = getLocalISODate(targetDate); 
+            let isoDate = getLocalISODate(targetDate); 
+            
+            // ESCUDO DE FÉRIAS: Verifica se a revisão cai no buraco negro das férias
+            if (store.vacationStart && store.vacationEnd && isoDate >= store.vacationStart && isoDate <= store.vacationEnd) {
+                const returnDate = new Date(store.vacationEnd + 'T00:00:00');
+                returnDate.setDate(returnDate.getDate() + 1);
+                isoDate = getLocalISODate(returnDate);
+            }
             
            // Aplica a compressão selecionada (Normal ou Alta)
             // ATUALIZADO v1.3.7: Piso mínimo de 5 min para evitar "ilusão de competência"
@@ -413,6 +420,13 @@ const engine = {
         if (!startStr || !daysStr) return toast.show('Preencha a data de início e a quantidade de dias.', 'warning');
 
         const daysToShift = parseInt(daysStr);
+        
+        // SALVAR ESTADO DE FÉRIAS (Escudo de Calendário)
+        store.vacationStart = startStr;
+        const endDateObj = new Date(startStr + 'T00:00:00');
+        endDateObj.setDate(endDateObj.getDate() + daysToShift - 1);
+        store.vacationEnd = getLocalISODate(endDateObj);
+
         if (daysToShift <= 0) return toast.show('A duração da pausa deve ser de pelo menos 1 dia.', 'warning');
 
         if (!confirm(`Congelar a agenda por ${daysToShift} dias a partir de ${formatDateDisplay(startStr)}?`)) return;

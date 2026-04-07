@@ -115,7 +115,15 @@ const engine = {
             }
             const targetDate = new Date(baseDate);
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
-            const isoDate = getLocalISODate(targetDate); 
+            let isoDate = getLocalISODate(targetDate); 
+            
+            // --- NOVA TRAVA: PEDÁGIO DO MODO FÉRIAS ---
+            if (store.vacationStart && store.vacationReturnDate) {
+                if (isoDate >= store.vacationStart && isoDate < store.vacationReturnDate) {
+                    isoDate = store.vacationReturnDate;
+                }
+            }
+            // ------------------------------------------
             
            // Aplica a compressão selecionada (Normal ou Alta)
             // ATUALIZADO v1.3.7: Piso mínimo de 5 min para evitar "ilusão de competência"

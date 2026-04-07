@@ -210,6 +210,8 @@ const store = {
                     store.cycleState = data.cycleState || 'ATTACK';
                     store.lastAttackDate = data.lastAttackDate || null;
                     store.cycleStartDate = data.cycleStartDate || null; 
+                    store.vacationStart = data.vacationStart || null;
+                    store.vacationReturnDate = data.vacationReturnDate || null;
                 } catch (e) {
                     console.error("Erro ao ler dados locais", e);
                     store.resetDefaults();

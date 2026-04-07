@@ -191,10 +191,12 @@ const store = {
             store.tasks = data.tasks || []; 
             store.capacity = data.capacity || CONFIG.defaultCapacity;
             store.profile = data.profile || CONFIG.profiles.STANDARD;
-            store.cycleState = data.cycleState || 'ATTACK';
-            store.lastAttackDate = data.lastAttackDate || null;
-            store.cycleStartDate = data.cycleStartDate || null;
-            console.log('[Core] Dados carregados via Firebase Cloud.');
+                store.cycleState = data.cycleState || 'ATTACK';
+                store.lastAttackDate = data.lastAttackDate || null;
+                store.cycleStartDate = data.cycleStartDate || null;
+                store.vacationStart = data.vacationStart || null;
+                store.vacationReturnDate = data.vacationReturnDate || null;
+                console.log('[Core] Dados carregados via Firebase Cloud.');
         } else {
             const raw = localStorage.getItem(CONFIG.storageKey);
             if (raw) {

@@ -241,6 +241,8 @@ const store = {
         store.cycleState = 'ATTACK';
         store.lastAttackDate = null;
         store.cycleStartDate = null; 
+        store.vacationStart = null;
+        store.vacationReturnDate = null;
     },
 
     // Lógica de Save

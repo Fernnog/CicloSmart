@@ -215,8 +215,15 @@ const ui = {
             const capacity = store.capacity > 0 ? store.capacity : 240;
             const percentage = (dayLoad / capacity) * 100;
             
+            const isVacation = store.vacationStart && store.vacationEnd && isoDate >= store.vacationStart && isoDate <= store.vacationEnd;
+            
             let colorClass = 'bg-emerald-50 border-emerald-200 text-emerald-900';
-            if (dayLoad === 0) {
+            let vacationBadgeHtml = '';
+
+            if (isVacation) {
+                colorClass = 'bg-indigo-50 border-indigo-200 text-indigo-900 vacation-bg';
+                vacationBadgeHtml = '<div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none"><i data-lucide="palmtree" class="w-12 h-12"></i></div>';
+            } else if (dayLoad === 0) {
                 colorClass = 'bg-slate-50 border-slate-100 text-slate-400 opacity-60';
             } else if (percentage > 100) {
                 colorClass = 'bg-slate-800 border-slate-900 text-white'; 
@@ -226,7 +233,7 @@ const ui = {
                 colorClass = 'bg-amber-50 border-amber-200 text-amber-900';
             }
 
-            const isDarkBg = percentage > 100;
+            const isDarkBg = percentage > 100 && !isVacation;
             
             const listHtml = dayStudies.map(s => {
                 const cycleNum = s.cycleIndex ? `#${s.cycleIndex}` : 'N/A';
@@ -262,18 +269,18 @@ const ui = {
 
             container.innerHTML += `
                 <div data-date="${isoDate}"
-                     class="heatmap-day-cell p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all group">
-                    
+                     class="heatmap-day-cell p-2 rounded-lg border ${colorClass} flex flex-col h-32 relative transition-all group overflow-hidden">
+                    ${vacationBadgeHtml}
                     <div class="flex justify-between items-center mb-1 pb-1 border-b border-black/5 pointer-events-none">
                         <span class="text-xs font-bold opacity-80">${displayDate}</span>
                         <span class="text-[9px] font-bold opacity-60">${dayLoad > 0 ? Math.round(percentage) + '%' : ''}</span>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto custom-scroll pr-0.5 space-y-0.5">
+                    <div class="flex-1 overflow-y-auto custom-scroll pr-0.5 space-y-0.5 z-10 relative">
                         ${listHtml || '<span class="text-[9px] italic opacity-50 block text-center mt-2 pointer-events-none">- Livre -</span>'}
                     </div>
 
-                    <div class="text-[9px] text-right font-bold opacity-60 mt-1 pt-1 border-t border-black/5 pointer-events-none">
+                    <div class="text-[9px] text-right font-bold opacity-60 mt-1 pt-1 border-t border-black/5 pointer-events-none z-10 relative">
                         ${dayLoad}m
                     </div>
                 </div>

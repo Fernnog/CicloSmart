@@ -417,6 +417,13 @@ const engine = {
 
         if (!confirm(`Congelar a agenda por ${daysToShift} dias a partir de ${formatDateDisplay(startStr)}?`)) return;
 
+        // SALVAR A REGRA GLOBALMENTE NO STORE
+        const startDateObj = new Date(startStr + 'T00:00:00');
+        const returnDateObj = new Date(startDateObj);
+        returnDateObj.setDate(returnDateObj.getDate() + daysToShift);
+        store.vacationStart = startStr;
+        store.vacationReturnDate = getLocalISODate(returnDateObj);
+
         let shiftCount = 0;
 
         // 1. Fase de Salto Temporal

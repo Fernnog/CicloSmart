@@ -105,8 +105,22 @@ const ui = {
         const container = document.getElementById('streak-container');
         const label = document.getElementById('streak-count');
 
-        if (container && label) {
+       if (container && label) {
             label.innerText = streakCount;
+        }
+    },
+
+    updateVacationUI: () => {
+        const alertBox = document.getElementById('vacation-active-alert');
+        const textDate = document.getElementById('vacation-period-text');
+        
+        if (alertBox && textDate) {
+            if (store.vacationReturnDate) {
+                textDate.innerText = `Retorno em: ${formatDateDisplay(store.vacationReturnDate)}`;
+                alertBox.classList.remove('hidden');
+            } else {
+                alertBox.classList.add('hidden');
+            }
         }
     },
 

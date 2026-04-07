@@ -2,6 +2,16 @@
 
 const changelogData = [
     {
+        version: '1.3.9',
+        date: '07/04/2026',
+        changes: [
+            '🌴 <b>Escudo de Férias Proativo:</b> Transformamos o Modo Férias em um bloqueio definitivo. Ao programar sua pausa, o motor SRS agora "grava" essa regra. Qualquer nova revisão ou ciclo criado que tente agendar estudos para esse período será desviado automaticamente para o seu retorno.',
+            '🗺️ <b>Radar Blindado (Visual):</b> O Heatmap agora exibe uma textura visual especial (hachurada) e um ícone temático nos dias bloqueados pelas férias, dando a você a confirmação imediata de que o período de repouso está protegido na plataforma.',
+            '🛑 <b>Cancelamento Flexível de Pausa:</b> Seus planos de viagem mudaram? Adicionamos uma forma simples de remover o bloqueio permanentemente: basta definir a duração de férias como "0 dias" nas configurações para limpar a trava do sistema.',
+            '🌊 <b>Amortecedor Pós-Férias (Diluição de Carga):</b> Para evitar um "pesadelo de acúmulo" no seu primeiro dia de volta, o algoritmo ganhou inteligência de diluição. Se o dia do seu retorno bater 100% da sua capacidade diária configurada, as revisões excedentes transbordarão suavemente para os dias seguintes, preservando seu limite cognitivo.'
+        ]
+    },
+    {
         version: '1.3.8',
         date: '06/04/2026',
         changes: [
@@ -82,7 +92,6 @@ const changelogData = [
             '🔍 <strong>Busca Rápida:</strong> Adicionado um campo de pesquisa no topo da coluna "Próximos". Filtre instantaneamente revisões futuras por Matéria ou Tópico sem precisar rolar a tela infinitamente.'
         ]
     },
-    // --- VERSÃO 1.2.9 (Organização & Nuvem) ---
     {
         version: '1.2.9',
         date: 'Anterior',
@@ -92,7 +101,6 @@ const changelogData = [
             '✨ <strong>Interface Mais Limpa:</strong> A navegação entre Matérias, Estratégia e Ajustes ficou mais fluida e intuitiva, reduzindo a carga cognitiva na hora de configurar seu plano de estudos.'
         ]
     },
-    // --- VERSÃO 1.2.8 (Prioridades UX & Deep Linking) ---
     {
         version: '1.2.8',
         date: 'Anterior',
@@ -103,7 +111,6 @@ const changelogData = [
             'ℹ️ <strong>Raio-X de Pendências:</strong> Passe o mouse sobre o contador de tarefas para ver o detalhe (ex: "X Gerais + Y Checklists").'
         ]
     },
-    // --- VERSÃO 1.2.7 (Central de Comando & Raio-X) ---
     {
         version: '1.2.7',
         date: 'Anterior',
@@ -113,7 +120,6 @@ const changelogData = [
             '✨ <strong>Interface Limpa (Progressive Disclosure):</strong> O formulário de nova tarefa agora fica oculto por padrão para reduzir a poluição visual, aparecendo apenas quando você clica em "Adicionar".'
         ]
     },
-    // --- VERSÃO 1.2.6 (Trava de Segurança - Micro-Quests) ---
     {
         version: '1.2.6',
         date: 'Anterior',
@@ -123,7 +129,6 @@ const changelogData = [
             '🗑️ <strong>Exclusão Segura:</strong> A proteção também se aplica ao botão de lixeira, evitando que você apague acidentalmente um estudo que ainda tinha pendências importantes não resolvidas.'
         ]
     },
-    // --- VERSÃO 1.2.5 (Micro-Quests & Checklists) ---
     {
         version: '1.2.5',
         date: 'Anterior',
@@ -133,7 +138,6 @@ const changelogData = [
             '✨ <strong>Modal de Detalhamento:</strong> Uma nova interface limpa e focada para gerenciar o "passo a passo" da sua sessão de estudo sem perder o contexto da matéria.'
         ]
     },
-    // --- VERSÃO 1.2.4 (Fix: Drag-and-Drop & UX Boost) ---
     {
         version: '1.2.4',
         date: 'Anterior',
@@ -144,7 +148,6 @@ const changelogData = [
             '🛡️ <strong>Arquitetura Robusta (UUID):</strong> Atualizamos a geração de IDs de novos estudos para o padrão universal UUID, prevenindo erros matemáticos de identificação no futuro.'
         ]
     },
-    // --- VERSÃO 1.2.3 (Agendamento Elástico & Drag-and-Drop) ---
     {
         version: '1.2.3',
         date: 'Anterior',
@@ -155,7 +158,6 @@ const changelogData = [
             '✨ <strong>Indicadores Visuais:</strong> Novos badges nos cartões identificam itens emprestados temporariamente.'
         ]
     },
-    // --- VERSÃO 1.2.2 (Gamificação & UX) ---
     { 
         version: '1.2.2', 
         date: 'Anterior', 
@@ -165,7 +167,6 @@ const changelogData = [
             '🏆 <strong>Feedback de Vitória:</strong> Reforço positivo imediato! Ao completar sua meta diária (zerar a coluna "Hoje"), o sistema exibe uma confirmação visual de sucesso para consolidar a sensação de dever cumprido.'
         ] 
     },
-    // --- VERSÃO 1.2.1 (Atualização de Usabilidade) ---
     { 
         version: '1.2.1', 
         date: 'Anterior', 
@@ -175,7 +176,6 @@ const changelogData = [
             '🖱️ <strong>Estabilidade de Interface:</strong> Refinamento na lógica de arrasto (Drag End) para garantir que os efeitos visuais sejam limpos instantaneamente, mesmo se o usuário cancelar a ação ou soltar o item fora da área válida.'
         ] 
     },
-    // --- VERSÃO 1.2.0 ---
     { 
         version: '1.2.0', 
         date: 'Anterior', 
@@ -189,7 +189,6 @@ const changelogData = [
             '🐛 <strong>Correção:</strong> Tratamento de casos onde `batchId` ou `cycleIndex` podiam estar ausentes em estudos legados para evitar erros no Drag & Drop e nas validações.'
         ] 
     },
-    // --- VERSÕES ANTERIORES ---
     { 
         version: '1.1.9', 
         date: 'Anterior', 
@@ -228,3 +227,5 @@ const changelogData = [
         ] 
     }     
 ];
+
+/* --- END OF FILE changelog.js --- */

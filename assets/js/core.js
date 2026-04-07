@@ -256,6 +256,8 @@ const store = {
             cycleState: store.cycleState,
             lastAttackDate: store.lastAttackDate,
             cycleStartDate: store.cycleStartDate,
+            vacationStart: store.vacationStart,
+            vacationReturnDate: store.vacationReturnDate,
             lastUpdate: new Date().toISOString()
         };
 

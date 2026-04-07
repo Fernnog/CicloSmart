@@ -3,7 +3,7 @@
 /**
  * CICLOSMART CORE (v1.5.0 - Evolution: Progress Metrics)
  * Contém: Configurações, Utilitários, Store (Dados) e TaskManager.
- * ATUALIZADO: Adicionado suporte a métricas de tempo (Expectativa vs Realidade).
+ * ATUALIZADO: Adicionado suporte a métricas de tempo (Expectativa vs Realidade) e Bloqueio de Férias.
  */
 
 // ==========================================
@@ -143,6 +143,8 @@ const store = {
     lastAttackDate: null, 
     cycleStartDate: null,
     currentUser: null,
+    vacationStart: null, // Escudo de Calendário: Início
+    vacationEnd: null,   // Escudo de Calendário: Fim
     
     // Controle de Sessão
     sessionState: {
@@ -192,6 +194,8 @@ const store = {
             store.cycleState = data.cycleState || 'ATTACK';
             store.lastAttackDate = data.lastAttackDate || null;
             store.cycleStartDate = data.cycleStartDate || null;
+            store.vacationStart = data.vacationStart || null;
+            store.vacationEnd = data.vacationEnd || null;
             console.log('[Core] Dados carregados via Firebase Cloud.');
         } else {
             const raw = localStorage.getItem(CONFIG.storageKey);
@@ -206,6 +210,8 @@ const store = {
                     store.cycleState = data.cycleState || 'ATTACK';
                     store.lastAttackDate = data.lastAttackDate || null;
                     store.cycleStartDate = data.cycleStartDate || null; 
+                    store.vacationStart = data.vacationStart || null;
+                    store.vacationEnd = data.vacationEnd || null;
                 } catch (e) {
                     console.error("Erro ao ler dados locais", e);
                     store.resetDefaults();
@@ -235,6 +241,8 @@ const store = {
         store.cycleState = 'ATTACK';
         store.lastAttackDate = null;
         store.cycleStartDate = null; 
+        store.vacationStart = null;
+        store.vacationEnd = null;
     },
 
     // Lógica de Save
@@ -248,6 +256,8 @@ const store = {
             cycleState: store.cycleState,
             lastAttackDate: store.lastAttackDate,
             cycleStartDate: store.cycleStartDate,
+            vacationStart: store.vacationStart,
+            vacationEnd: store.vacationEnd,
             lastUpdate: new Date().toISOString()
         };
 

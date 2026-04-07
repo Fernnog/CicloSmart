@@ -142,8 +142,6 @@ const store = {
     cycleState: 'ATTACK', 
     lastAttackDate: null, 
     cycleStartDate: null,
-    vacationStart: null,
-    vacationReturnDate: null,
     currentUser: null,
     
     // Controle de Sessão
@@ -191,12 +189,10 @@ const store = {
             store.tasks = data.tasks || []; 
             store.capacity = data.capacity || CONFIG.defaultCapacity;
             store.profile = data.profile || CONFIG.profiles.STANDARD;
-                store.cycleState = data.cycleState || 'ATTACK';
-                store.lastAttackDate = data.lastAttackDate || null;
-                store.cycleStartDate = data.cycleStartDate || null;
-                store.vacationStart = data.vacationStart || null;
-                store.vacationReturnDate = data.vacationReturnDate || null;
-                console.log('[Core] Dados carregados via Firebase Cloud.');
+            store.cycleState = data.cycleState || 'ATTACK';
+            store.lastAttackDate = data.lastAttackDate || null;
+            store.cycleStartDate = data.cycleStartDate || null;
+            console.log('[Core] Dados carregados via Firebase Cloud.');
         } else {
             const raw = localStorage.getItem(CONFIG.storageKey);
             if (raw) {
@@ -210,8 +206,6 @@ const store = {
                     store.cycleState = data.cycleState || 'ATTACK';
                     store.lastAttackDate = data.lastAttackDate || null;
                     store.cycleStartDate = data.cycleStartDate || null; 
-                    store.vacationStart = data.vacationStart || null;
-                    store.vacationReturnDate = data.vacationReturnDate || null;
                 } catch (e) {
                     console.error("Erro ao ler dados locais", e);
                     store.resetDefaults();
@@ -241,8 +235,6 @@ const store = {
         store.cycleState = 'ATTACK';
         store.lastAttackDate = null;
         store.cycleStartDate = null; 
-        store.vacationStart = null;
-        store.vacationReturnDate = null;
     },
 
     // Lógica de Save
@@ -256,8 +248,6 @@ const store = {
             cycleState: store.cycleState,
             lastAttackDate: store.lastAttackDate,
             cycleStartDate: store.cycleStartDate,
-            vacationStart: store.vacationStart,
-            vacationReturnDate: store.vacationReturnDate,
             lastUpdate: new Date().toISOString()
         };
 

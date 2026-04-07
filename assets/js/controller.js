@@ -674,7 +674,7 @@ const app = {
         if(window.engine) engine.generateICS();
     },
 
-   handleReschedule: () => {
+    handleReschedule: () => {
         if(window.engine) engine.handleReschedule();
     },
 
@@ -682,20 +682,8 @@ const app = {
         if(window.engine) engine.applyVacationMode();
     },
 
-    clearVacationMode: () => {
-        store.vacationStart = null;
-        store.vacationReturnDate = null;
-        store.save();
-        
-        ui.updateVacationUI();
-        toast.show('Bloqueio de calendário desativado. Novos ciclos seguirão as datas normais.', 'info', 'Regra Cancelada');
-    },
-
     undoLastAction: () => {
         if(store.restoreBackup()) {
-            store.vacationStart = null;
-            store.vacationReturnDate = null;
-            
             ui.render();
             if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                 ui.renderHeatmap();

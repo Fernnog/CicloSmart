@@ -115,15 +115,7 @@ const engine = {
             }
             const targetDate = new Date(baseDate);
             targetDate.setDate(baseDate.getDate() + effectiveInterval);
-            let isoDate = getLocalISODate(targetDate); 
-            
-            // --- NOVA TRAVA: PEDÁGIO DO MODO FÉRIAS ---
-            if (store.vacationStart && store.vacationReturnDate) {
-                if (isoDate >= store.vacationStart && isoDate < store.vacationReturnDate) {
-                    isoDate = store.vacationReturnDate;
-                }
-            }
-            // ------------------------------------------
+            const isoDate = getLocalISODate(targetDate); 
             
            // Aplica a compressão selecionada (Normal ou Alta)
             // ATUALIZADO v1.3.7: Piso mínimo de 5 min para evitar "ilusão de competência"
@@ -424,13 +416,6 @@ const engine = {
         if (daysToShift <= 0) return toast.show('A duração da pausa deve ser de pelo menos 1 dia.', 'warning');
 
         if (!confirm(`Congelar a agenda por ${daysToShift} dias a partir de ${formatDateDisplay(startStr)}?`)) return;
-
-        // SALVAR A REGRA GLOBALMENTE NO STORE
-        const startDateObj = new Date(startStr + 'T00:00:00');
-        const returnDateObj = new Date(startDateObj);
-        returnDateObj.setDate(returnDateObj.getDate() + daysToShift);
-        store.vacationStart = startStr;
-        store.vacationReturnDate = getLocalISODate(returnDateObj);
 
         let shiftCount = 0;
 

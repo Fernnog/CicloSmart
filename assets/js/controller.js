@@ -674,11 +674,10 @@ const app = {
         if(window.engine) engine.generateICS();
     },
 
-    handleReschedule: () => {
+   handleReschedule: () => {
         if(window.engine) engine.handleReschedule();
     },
 
-    handleVacationMode: () => {
     handleVacationMode: () => {
         if(window.engine) engine.applyVacationMode();
     },
@@ -696,6 +695,7 @@ const app = {
         if(store.restoreBackup()) {
             store.vacationStart = null;
             store.vacationReturnDate = null;
+            
             ui.render();
             if(!document.getElementById('modal-heatmap').classList.contains('hidden')) {
                 ui.renderHeatmap();
